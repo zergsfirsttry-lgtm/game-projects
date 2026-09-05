@@ -88,9 +88,16 @@ const App = {
         </div>
         <button class="btn-primary" id="btn-new-run">Begin Adventure</button>
         <button class="btn-secondary" id="btn-sanctuary">Sanctuary</button>
+        <button class="btn-secondary" id="btn-settings">⚙️ Settings</button>
+        <button class="btn-secondary" id="btn-how-to-play">❔ How to Play</button>
       </div>`;
     document.getElementById('btn-new-run').addEventListener('click', () => this.showClassSelect());
     document.getElementById('btn-sanctuary').addEventListener('click', () => this.showSanctuary());
+    document.getElementById('btn-settings').addEventListener('click', () => this.showSettingsModal());
+    document.getElementById('btn-how-to-play').addEventListener('click', () => this.showTutorialModal());
+    // A brand-new player (never dismissed it before) gets the walkthrough
+    // automatically, once, the first time they ever see the title screen.
+    if (!pdata.tutorialSeen) this.showTutorialModal();
   },
 
   showClassSelect() {
@@ -322,10 +329,10 @@ const App = {
     }
     else if (node.type === 'elite') this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
     else if (node.type === 'boss') this.enterCombat(node, scaleEnemy(BOSSES[(Game.act - 1) % BOSSES.length], Game.act));
-    else if (node.type === 'event') this.showEvent(node);
-    else if (node.type === 'rest') this.showRest(node);
-    else if (node.type === 'shop') this.showShop(node);
-    else if (node.type === 'treasure') this.showTreasure(node);
+    else if (node.type === 'event') { grantReputation(getActTheme(Game.act).id, 8); this.showEvent(node); }
+    else if (node.type === 'rest') { grantReputation(getActTheme(Game.act).id, 8); this.showRest(node); }
+    else if (node.type === 'shop') { grantReputation(getActTheme(Game.act).id, 8); this.showShop(node); }
+    else if (node.type === 'treasure') { grantReputation(getActTheme(Game.act).id, 12); this.showTreasure(node); }
     else if (node.type === 'classTrial') this.enterClassTrial(node);
     else if (node.type === 'legendary') this.enterLegendaryEncounter(node);
     else if (node.type === 'taming') this.enterTaming(node);
@@ -380,7 +387,13 @@ const App = {
     const alreadyOwned = owned.includes(reward.id);
     if (!alreadyOwned) owned.push(reward.id);
     Game.grantProfessionXp(rand(4, 9));
+    grantReputation(getActTheme(Game.act).id, 15);
     Persistent.save();
+    if (this.autoCombat) {
+      this.showAutoToast(combatReward ? this.autoToastSummary(`${reward.def.icon} ${reward.def.name} tamed!`, combatReward) : `<strong>${reward.def.icon} ${reward.def.name} tamed!</strong>`);
+      this.showMap();
+      return;
+    }
     const lines = [
       autoTamed
         ? 'Reading its every move perfectly, you win its trust completely - it is tamed without a fight.'
@@ -534,6 +547,15 @@ const App = {
       lines.push(`Your archaeological eye spots something buried deeper: ${RELICS[reward.bonusRelic].name}!`);
     }
     Game.grantProfessionXp(rand(4, 9));
+    if (this.autoCombat) {
+      const parts = [`+${reward.gold}🪙`];
+      if (reward.relic) parts.push(RELICS[reward.relic].name);
+      if (reward.item) parts.push(ITEMS[reward.item].name);
+      if (reward.bonusRelic) parts.push(RELICS[reward.bonusRelic].name);
+      this.showAutoToast(`<strong>Treasure!</strong><div class="small-text">${parts.join(' · ')}</div>`);
+      this.showMap();
+      return;
+    }
     this.root.innerHTML = `
       ${this.renderHud()}
       <div class="panel">
@@ -694,6 +716,41 @@ const App = {
     return cls;
   },
 
+  // A recruited companion's portrait (with ITS OWN pet/mount, frozen in at
+  // recruit time - see recruitCompanionFromSave) - like renderCompanionRig
+  // but takes explicit ids instead of reading Persistent.getCharacter(),
+  // since a companion's pet/mount come from someone else's save, not ours.
+  renderRecruitedCompanionRig(companion, sizePx, pulsing) {
+    const riderSvg = anyCharacterSvg(companion.classId, sizePx);
+    const mountSvg = companion.mountId ? anyCharacterSvg(companion.mountId, Math.round(sizePx * 0.8)) : '';
+    const petSvg = companion.petId ? anyCharacterSvg(companion.petId, Math.round(sizePx * 0.5)) : '';
+    const nameplate = `<span class="nameplate">${escapeHtml(companion.name)}</span>`;
+    return `<span class="companion-row">` +
+      (mountSvg ? `<span class="companion-mount">${mountSvg}</span>` : '') +
+      `<span class="companion-rider ${pulsing ? 'companion-pulse' : ''}">${nameplate}${riderSvg}</span>` +
+      (petSvg ? `<span class="companion-pet">${petSvg}</span>` : '') +
+      `</span>`;
+  },
+
+  // Equipped companions ("in group", up to 4) fight alongside the player in
+  // every adventure/dungeon/raid encounter - a flat stat contribution (see
+  // companionGroupStatBonus in progression.js), not an independently
+  // controlled combatant, so there's nothing for the player to click for
+  // them. They still visually act: whenever the player takes any action,
+  // every companion portrait pulses in sync (see the .companion-pulse CSS).
+  renderCompanionParty(pulsing) {
+    if (Game.raid) return ''; // raids render their own party row (ghosts or real companions) below
+    const companions = getEquippedCompanions();
+    if (!companions.length) return '';
+    return `<div class="raid-party">
+      ${companions.map(c => `
+        <div class="raid-ghost companion-card">
+          ${this.renderRecruitedCompanionRig(c, 26, pulsing)}
+          <div class="small-text">Lv.${c.level} ${CLASSES[c.classId].name}</div>
+        </div>`).join('')}
+    </div>`;
+  },
+
   renderCombatScreen(node) {
     const s = Combat.state;
     const p = Game.player;
@@ -730,8 +787,14 @@ const App = {
                 <span class="sprite-mini">${anyCharacterSvg(g.classId, 26)}</span>
                 <div class="small-text">👻 ${escapeHtml(g.name)}<br>Lv.${g.level} ${CLASSES[g.classId].name}</div>
               </div>`).join('')}
+            ${(Game.raid.companions || []).map(c => `
+              <div class="raid-ghost companion-card">
+                ${this.renderRecruitedCompanionRig(c, 26, !!s.anim.player)}
+                <div class="small-text">Lv.${c.level} ${CLASSES[c.classId].name}</div>
+              </div>`).join('')}
           </div>
         ` : ''}
+        ${this.renderCompanionParty(!!s.anim.player)}
         <div class="combat-arena">
           <div class="combatant player">
             <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE)}</div>
@@ -753,9 +816,9 @@ const App = {
 
         <div class="combat-log" id="combat-log">${s.log.map(l => `<div>${l}</div>`).join('')}</div>
 
-        ${s.over ? `
+        ${s.over ? (this.autoCombat ? '' : `
           <button class="btn-primary" id="btn-combat-continue">Continue</button>
-        ` : `
+        `) : `
           <div class="combat-actions">
             <button id="act-attack" ${inputLocked ? 'disabled' : ''}>Attack</button>
             <button id="act-skill" ${inputLocked || skill.cooldownLeft > 0 ? 'disabled' : ''}>${skill.name}${skill.cooldownLeft > 0 ? ` (${skill.cooldownLeft})` : ''}</button>
@@ -775,7 +838,8 @@ const App = {
     if (log) log.scrollTop = log.scrollHeight;
 
     if (s.over) {
-      document.getElementById('btn-combat-continue').addEventListener('click', () => this.resolveCombatEnd(node));
+      if (this.autoCombat) setTimeout(() => { if (Game.player && Combat.state === s) this.resolveCombatEnd(node); }, 500);
+      else document.getElementById('btn-combat-continue').addEventListener('click', () => this.resolveCombatEnd(node));
       return;
     }
 
@@ -802,6 +866,11 @@ const App = {
     const s = Combat.state;
     if (!s.over && s.locked) {
       setTimeout(() => {
+        // The run/match this timer belongs to may have already ended (e.g.
+        // the player abandoned the run) before this fires - Combat.state is
+        // nulled out or replaced by a new combat's state in that case, so
+        // bail rather than act on stale state with a null Game.player.
+        if (!Game.player || Combat.state !== s) return;
         Combat.resolveEnemyTurn();
         this.renderCombatScreen(node);
         this.continueAutoIfEnabled(node);
@@ -840,6 +909,45 @@ const App = {
     this.runPlayerAction(node, fn);
   },
 
+  // A small self-dismissing toast (not a full-screen panel) - what AUTO
+  // shows instead of the normal victory/reward screen, so the run keeps
+  // moving without a click. Re-uses one persistent DOM node so back-to-back
+  // victories don't stack up a pile of toasts.
+  showAutoToast(html, durationMs) {
+    let el = document.getElementById('auto-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'auto-toast';
+      el.className = 'auto-toast';
+      document.body.appendChild(el);
+    }
+    el.classList.remove('auto-toast-hide');
+    el.innerHTML = html;
+    clearTimeout(this._autoToastTimer);
+    this._autoToastTimer = setTimeout(() => { el.classList.add('auto-toast-hide'); }, durationMs || 3200);
+  },
+
+  // Compact "what just happened" line for the toast - the same facts
+  // rewardLines() spells out in full sentences, just condensed to one row.
+  autoToastSummary(title, reward) {
+    const parts = [`+${reward.goldReward}🪙`, `+${reward.xpReward}✨`];
+    if (reward.levelResult && reward.levelResult.levelsGained > 0) parts.push(`Level ${Persistent.getCharacter(Game.player.classId).level}!`);
+    if (reward.loot) parts.push(`${reward.loot.icon} ${reward.loot.name}`);
+    if (reward.material) parts.push(`+${reward.material.amount} ${reward.material.kind}`);
+    if (reward.recipeItem) parts.push(`📜 ${reward.recipeItem.name}`);
+    if (reward.honor) parts.push(`+${reward.honor} Honor`);
+    if (reward.bloodyBagAwarded) parts.push(`${CONTAINERS.bloodyBag.icon} Bloody Bag`);
+    return `<strong>${title}</strong><div class="small-text">${parts.join(' · ')}</div>`;
+  },
+
+  // AUTO's stand-in for showRelicChoice - picks one of the same 3 candidates
+  // at random rather than pausing for a click.
+  autoRelicChoice(onDone) {
+    const choiceIds = pickRelicChoices(Game.player.classId, 3);
+    Game.player.relics.push(choiceIds[rand(0, choiceIds.length - 1)]);
+    onDone();
+  },
+
   resolveCombatEnd(node) {
     const s = Combat.state;
     if (Game.isDead()) {
@@ -854,6 +962,7 @@ const App = {
     if (s.fled) { Game.gauntlet = null; this.showMap(); return; }
     if (s.victory) {
       if (Game.pvp) { this.showPvpOutcome(true); return; }
+      grantReputation(getActTheme(Game.act).id, s.enemy.boss ? 50 : s.enemy.elite ? 25 : 10);
       recordQuestProgress('kills', 1);
       if (s.enemy.boss && !s.enemy.rivalGhost) recordQuestProgress('bossKills', 1);
       else if (s.enemy.elite) recordQuestProgress('eliteKills', 1);
@@ -913,6 +1022,11 @@ const App = {
     if (!pdata.unlockedClasses.includes(classId)) pdata.unlockedClasses.push(classId);
     const goldReward = Game.addGold(rand(enemy.gold[0], enemy.gold[1]));
     Persistent.save();
+    if (this.autoCombat) {
+      this.showAutoToast(`<strong>${CLASSES[classId].name} unlocked!</strong><div class="small-text">+${goldReward}🪙</div>`);
+      this.autoRelicChoice(() => this.showMap());
+      return;
+    }
     this.root.innerHTML = `
       ${this.renderHud()}
       <div class="panel">
@@ -969,6 +1083,11 @@ const App = {
   },
 
   showCombatReward(reward, enemy) {
+    if (this.autoCombat) {
+      this.showAutoToast(this.autoToastSummary(`Defeated ${enemy.name}`, reward));
+      this.autoRelicChoice(() => this.showMap());
+      return;
+    }
     const lines = [`Defeated ${enemy.name}.`, ...this.rewardLines(reward)];
     this.root.innerHTML = `
       ${this.renderHud()}
@@ -986,14 +1105,28 @@ const App = {
   // act has a chance of inflicting a random curse that lasts the rest of
   // this run, on top of everything else getting harder.
   showActComplete(reward) {
-    const lines = ['You struck down the act boss.', ...this.rewardLines(reward)];
     let cursedThisAct = null;
     if (Game.act % 10 === 0 && Math.random() < 0.7) {
       const curseId = pickNewCurse(Game.player.curses);
       Game.player.curses.push(curseId);
       cursedThisAct = CURSES[curseId];
-      lines.push(`<strong style="color:#c0392b">A curse falls upon you: ${cursedThisAct.icon} ${cursedThisAct.name}</strong> - ${cursedThisAct.desc}`);
     }
+    const advance = () => {
+      this.autoRelicChoice(() => {
+        Game.act += 1;
+        Game.startAct();
+        this.showMap();
+      });
+    };
+    if (this.autoCombat) {
+      let toastHtml = this.autoToastSummary(`Act ${Game.act} Complete`, reward);
+      if (cursedThisAct) toastHtml += `<div class="small-text" style="color:#c0392b">Cursed: ${cursedThisAct.icon} ${cursedThisAct.name}</div>`;
+      this.showAutoToast(toastHtml);
+      advance();
+      return;
+    }
+    const lines = ['You struck down the act boss.', ...this.rewardLines(reward)];
+    if (cursedThisAct) lines.push(`<strong style="color:#c0392b">A curse falls upon you: ${cursedThisAct.icon} ${cursedThisAct.name}</strong> - ${cursedThisAct.desc}`);
     this.root.innerHTML = `
       ${this.renderHud()}
       <div class="panel">
@@ -1037,6 +1170,7 @@ const App = {
     const unlockedClasses = Object.values(CLASSES).filter(c => isClassUnlocked(c.id));
     classId = classId && isClassUnlocked(classId) ? classId : unlockedClasses[0].id;
     tab = tab || 'character';
+    if (tab === 'cheats' && !Persistent.load().showCheats) tab = 'character';
     // Whichever character the player last actually looked at is who the
     // AFK/idle system (computeAfkProgress) advances next time the game opens.
     Persistent.load().lastPlayedClassId = classId;
@@ -1129,7 +1263,7 @@ const App = {
           <button type="button" class="tab-btn ${tab === 'raids' ? 'active' : ''}" data-tab="raids">Dungeons & Raids</button>
           <button type="button" class="tab-btn ${tab === 'house' ? 'active' : ''}" data-tab="house">🏠 House</button>
           <button type="button" class="tab-btn ${tab === 'save' ? 'active' : ''}" data-tab="save">Save</button>
-          <button type="button" class="tab-btn tab-btn-cheat ${tab === 'cheats' ? 'active' : ''}" data-tab="cheats">🐞 Cheats</button>
+          ${pdata.showCheats ? `<button type="button" class="tab-btn tab-btn-cheat ${tab === 'cheats' ? 'active' : ''}" data-tab="cheats">🐞 Cheats</button>` : ''}
         </div>
         <div class="sanctuary-body">${body}</div>
         <button class="btn-secondary" id="btn-sanctuary-back">Back to Title</button>
@@ -1797,6 +1931,24 @@ const App = {
       }).join('');
     };
 
+    const recruitedRows = pdata.recruitedCompanions.length ? pdata.recruitedCompanions.map(c => {
+      const equipped = pdata.equippedCompanionIds.includes(c.id);
+      const cls = CLASSES[c.classId];
+      const petDef = c.petId ? PETS[c.petId] : null;
+      const mountDef = c.mountId ? MOUNTS[c.mountId] : null;
+      const groupFull = pdata.equippedCompanionIds.length >= COMPANION_MAX_EQUIPPED;
+      return `<div class="gear-row house-row ${equipped ? 'profession-active' : ''}">
+        <div class="desc"><span class="sprite-mini">${characterSpriteFor(c.classId, 30)}</span><div>
+          <strong>${c.name}</strong> <span class="small-text">Lv.${c.level} ${cls.name}${equipped ? ' - In Group' : ''}</span>
+          <div class="small-text">ATK ${c.stats.atk} · DEF ${c.stats.def} · HP ${c.stats.maxHp}${petDef ? ` · ${petDef.icon} ${petDef.name}` : ''}${mountDef ? ` · ${mountDef.icon} ${mountDef.name}` : ''}</div>
+        </div></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-secondary" data-toggle-companion="${c.id}" ${!equipped && groupFull ? 'disabled' : ''} title="${!equipped && groupFull ? `Group is full (max ${COMPANION_MAX_EQUIPPED})` : ''}">${equipped ? 'Remove from Group' : 'Add to Group'}</button>
+          <button class="btn-secondary" data-dismiss-companion="${c.id}" title="Permanently remove this companion">Dismiss</button>
+        </div>
+      </div>`;
+    }).join('') : '<p class="small-text">No companions recruited yet - use Settings on the title screen to Recruit a Companion from another player\'s save.</p>';
+
     return `
       <h4>🏠 House</h4>
       <p class="flavor">Feed your pets and mounts food from Cooking to grant them experience (up to level ${PROFESSION_MAX_LEVEL}) and grant YOURSELF a 1-hour buff matching their own ability. An equipped pet/mount also earns experience automatically alongside you, whether fed or not.</p>
@@ -1808,6 +1960,11 @@ const App = {
         <summary>Mounts <span class="small-text">(${pdata.ownedMounts.length} tamed)</span></summary>
         ${companionSection('mount', MOUNTS, pdata.ownedMounts)}
       </details>
+      ${pdata.recruitedCompanions.length ? `
+      <details class="shop-category" data-key="companions" open>
+        <summary>Companions <span class="small-text">(${pdata.equippedCompanionIds.length}/${COMPANION_MAX_EQUIPPED} in group - fight alongside you in every adventure, dungeon, and raid)</span></summary>
+        ${recruitedRows}
+      </details>` : ''}
       <h4 style="margin-top:16px">Active Buffs</h4>
       ${this.renderActiveBuffsList()}
     `;
@@ -1928,8 +2085,22 @@ const App = {
     const armorSlots = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'ring', 'trinket'];
     const armorSections = armorSlots.map(slot => section(`armor-${slot}`, SLOT_LABELS[slot], gearCards(t => t.slot === slot))).join('');
 
+    const reputationRows = ACT_THEMES.map(theme => {
+      const { rep, tier, next, idx } = getReputationProgress(theme.id);
+      const pct = next ? Math.min(100, Math.round(((rep - tier.threshold) / (next.threshold - tier.threshold)) * 100)) : 100;
+      return `<div class="gear-row">
+        <div class="desc"><span>${theme.particle}</span><div>
+          <strong style="color:${theme.accent}">${theme.name}</strong> <span class="small-text">${tier.name}${idx > 0 ? ` (+${(idx * REPUTATION_GOLD_BONUS_PER_TIER * 100).toFixed(1)}% gold)` : ''}</span>
+          <div class="xp-bar-wrap" style="margin-top:4px;width:180px"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+          <div class="small-text">${next ? `${rep} / ${next.threshold} to ${next.name}` : `${rep} rep - Exalted (max)`}</div>
+        </div></div>
+      </div>`;
+    }).join('');
+
     return `
-      <h4>Weapons</h4>
+      <h4>Reputation <span class="small-text">(earned by completing nodes while adventuring in that zone)</span></h4>
+      ${reputationRows}
+      <h4 style="margin-top:16px">Weapons</h4>
       ${weaponTypeSections}
       <h4 style="margin-top:16px">Armor & Accessories</h4>
       ${armorSections}
@@ -2088,9 +2259,20 @@ const App = {
 
   enterRaid(classId, bossId) {
     const boss = RAID_BOSSES.find(b => b.id === bossId);
-    Game.raid = { classId, bossId, ghosts: [generateGhostCompanion(classId), generateGhostCompanion(classId)] };
+    // Equipped companions (real, recruited player characters - see the
+    // House tab) automatically stand in for the 2 anonymous Ghosts whenever
+    // any are equipped - their stat contribution already comes through
+    // companionGroupStatBonus generically, so this only needs to skip the
+    // old flat placeholder bonus and swap what the raid party displays.
+    const equippedCompanions = getEquippedCompanions();
+    const usingRealCompanions = equippedCompanions.length > 0;
+    Game.raid = {
+      classId, bossId,
+      ghosts: usingRealCompanions ? [] : [generateGhostCompanion(classId), generateGhostCompanion(classId)],
+      companions: usingRealCompanions ? equippedCompanions : []
+    };
     Game.player = Game.buildRaidPlayer(classId);
-    Game.player.raidGhostBonus = { atk: 6, def: 4, maxHp: 16 };
+    if (!usingRealCompanions) Game.player.raidGhostBonus = { atk: 6, def: 4, maxHp: 16 };
     Game.player.hp = Game.effectiveStats().maxHp;
     this.enterCombat({ type: 'raidBoss' }, { ...boss });
   },
@@ -2162,14 +2344,138 @@ const App = {
     overlay.querySelector('#modal-no').addEventListener('click', () => { close(); if (onNo) onNo(); });
   },
 
+  // Opens a native file picker and hands the parsed JSON to `onLoaded` - used
+  // both by "Import Save" (overwrite) and "Recruit Companion" (import as a
+  // companion) in the Settings popup, since both start the same way.
+  importSaveFile(onLoaded) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { onLoaded(JSON.parse(reader.result)); }
+        catch (e) { window.alert("That file couldn't be read as a save file."); }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  },
+
+  // The title screen's Settings popup - cheat-tab visibility, a quick Save,
+  // and the two file-import flows (overwrite your own save / recruit a
+  // companion from someone else's). Appended to <body> like showConfirmModal
+  // so it's independent of the title screen underneath it.
+  // A short, five-step walkthrough of the whole gameplay loop - shown
+  // automatically once for a brand-new player (see showTitle), and
+  // reachable anytime after via the title screen's "How to Play" button.
+  showTutorialModal() {
+    const step = (icon, title, text) => `
+      <div class="tutorial-step">
+        <span class="tutorial-step-icon">${icon}</span>
+        <div><strong>${title}</strong><div class="small-text">${text}</div></div>
+      </div>`;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="panel modal-panel">
+        <h4>Welcome to World of Salcraft!</h4>
+        <div class="tutorial-steps">
+          ${step('⚔️', '1. Choose a class, begin an adventure', "Each class fights differently and can only use certain weapon types. Once you set out, you'll walk a branching path of encounters.")}
+          ${step('🗺️', '2. Pick your path', 'Battles, elites, rest sites, shops, treasure, and stranger things all wait on different nodes. Reach the act boss at the end to push into a new, harder zone.')}
+          ${step('💀', '3. Fight smart', "Attack or use your class's Skill each round. Watch your HP - use an item or flee if a fight turns against you. Dying ends the run.")}
+          ${step('🏠', '4. Build your Sanctuary', 'Character level, gear, gold, professions, reputation, and companions are all PERMANENT, stored in your Sanctuary - only what you carried in-pocket for that one run is lost on death.')}
+          ${step('🤖', '5. Let AUTO take over', "Check the AUTO box (top of the screen, any time) to have your character fight and explore on its own, picking the toughest path forward - even keep progressing while you're away from the game.")}
+        </div>
+        <button class="btn-primary" id="tutorial-close" style="width:100%;margin-top:12px">Got it, let's go!</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.remove();
+      const pdata = Persistent.load();
+      if (!pdata.tutorialSeen) { pdata.tutorialSeen = true; Persistent.save(); }
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector('#tutorial-close').addEventListener('click', close);
+  },
+
+  showSettingsModal() {
+    const pdata = Persistent.load();
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="panel modal-panel">
+        <h4>⚙️ Settings</h4>
+        <label class="customize-row" style="max-width:100%">
+          <span>Show Cheats tab (debugging)</span>
+          <input type="checkbox" id="settings-show-cheats" ${pdata.showCheats ? 'checked' : ''}>
+        </label>
+        <button class="btn-primary" id="settings-save" style="margin-top:14px;width:100%">💾 Save Game</button>
+        <div class="save-status" id="settings-save-status"></div>
+        <button class="btn-secondary" id="settings-import-save" style="margin-top:10px;width:100%">📂 Import Save (overwrites your current save)</button>
+        <button class="btn-secondary" id="settings-recruit" style="margin-top:10px;width:100%">🤝 Recruit Companion (import another player's save)</button>
+        <div class="small-text" id="settings-recruit-status" style="margin-top:6px"></div>
+        <button class="btn-secondary" id="settings-close" style="margin-top:14px;width:100%">Close</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector('#settings-close').addEventListener('click', close);
+
+    overlay.querySelector('#settings-show-cheats').addEventListener('change', (e) => {
+      pdata.showCheats = e.target.checked;
+      Persistent.save();
+    });
+
+    overlay.querySelector('#settings-save').addEventListener('click', () => {
+      this.showConfirmModal(
+        'Save Game',
+        "Save to the default location (your browser's Downloads folder)? Choose \"No\" to pick a custom file location instead.",
+        'Yes, Default Location', 'No, Choose Location',
+        () => this.performSaveGame(false, 'settings-save-status'),
+        () => this.performSaveGame(true, 'settings-save-status')
+      );
+    });
+
+    overlay.querySelector('#settings-import-save').addEventListener('click', () => {
+      this.showConfirmModal(
+        'Import Save',
+        "This will permanently OVERWRITE your current save with the imported file - your current progress cannot be recovered afterward unless you've exported it first. Continue?",
+        'Yes, Overwrite', 'Cancel',
+        () => this.importSaveFile((data) => {
+          if (!data || !data.persistent) { window.alert('That file is not a valid World of Salcraft save.'); return; }
+          localStorage.setItem(Persistent.key, JSON.stringify(data.persistent));
+          if (data.meta) localStorage.setItem(Meta.key, JSON.stringify(data.meta));
+          Persistent.data = null;
+          close();
+          this.showTitle();
+        })
+      );
+    });
+
+    overlay.querySelector('#settings-recruit').addEventListener('click', () => {
+      this.importSaveFile((data) => {
+        const statusEl = document.getElementById('settings-recruit-status');
+        if (!data || !data.persistent) { if (statusEl) statusEl.textContent = 'That file is not a valid save.'; return; }
+        const result = recruitCompanionFromSave(data.persistent);
+        if (statusEl) {
+          statusEl.textContent = result.error || `Recruited ${result.companion.name} (Lv.${result.companion.level} ${CLASSES[result.companion.classId].name})! Equip them from the House tab.`;
+        }
+      });
+    });
+  },
+
   // Exports the whole persistent save as a downloadable JSON file. `useFilePicker`
   // routes through the File System Access API (a real native "choose where to
   // save" dialog - Chromium browsers only) instead of the default Downloads
-  // folder. The #save-status element is updated directly (not via
-  // showSanctuary) so the spinner/checkmark animate smoothly without a full
-  // Sanctuary re-render interrupting them.
-  async performSaveGame(useFilePicker) {
-    const statusEl = document.getElementById('save-status');
+  // folder. `statusElId` is updated directly (not via showSanctuary) so the
+  // spinner/checkmark animate smoothly without a full re-render interrupting
+  // them - defaults to the Sanctuary Save tab's element, but the title
+  // screen's Settings popup passes its own so the two never collide.
+  async performSaveGame(useFilePicker, statusElId) {
+    const statusEl = document.getElementById(statusElId || 'save-status');
     const setStatus = (html) => { if (statusEl) statusEl.innerHTML = html; };
     setStatus('<span class="save-spinner">💾</span> <span class="small-text">Saving...</span>');
     const payload = JSON.stringify({ persistent: Persistent.load(), meta: Meta.load(), savedAt: new Date().toISOString() }, null, 2);
@@ -2539,6 +2845,25 @@ const App = {
           grantCompanionXp(kind, id, Math.round(20 * RARITIES[food.rarity].mult));
           const def = (kind === 'pet' ? PETS : MOUNTS)[id];
           grantTempBuff(`Fed: ${def.name}`, def.icon, def.effect);
+          Persistent.save();
+          this.showSanctuary(classId, tab);
+        });
+      });
+      this.root.querySelectorAll('[data-toggle-companion]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.toggleCompanion;
+          const idx = pdata.equippedCompanionIds.indexOf(id);
+          if (idx !== -1) pdata.equippedCompanionIds.splice(idx, 1);
+          else if (pdata.equippedCompanionIds.length < COMPANION_MAX_EQUIPPED) pdata.equippedCompanionIds.push(id);
+          Persistent.save();
+          this.showSanctuary(classId, tab);
+        });
+      });
+      this.root.querySelectorAll('[data-dismiss-companion]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.dismissCompanion;
+          pdata.recruitedCompanions = pdata.recruitedCompanions.filter(c => c.id !== id);
+          pdata.equippedCompanionIds = pdata.equippedCompanionIds.filter(cid => cid !== id);
           Persistent.save();
           this.showSanctuary(classId, tab);
         });

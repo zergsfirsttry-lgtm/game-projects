@@ -301,6 +301,23 @@ function getActTheme(act) {
   return ACT_THEMES[(act * 7 + 3) % ACT_THEMES.length];
 }
 
+// --- Reputation (WoW-inspired) ---
+// One reputation track per zone (see ACT_THEMES) - every node completed
+// while adventuring in that zone's act range nudges it up (see
+// grantReputation in progression.js, called from selectNode/resolveCombatEnd/
+// grantTamingReward in main.js). Thresholds roughly mirror WoW's real
+// per-tier costs (3000/6000/12000/21000, cumulative). Each tier reached
+// grants a small permanent +gold bonus (reputationStatBonus in progression.js) -
+// standing with a zone quite literally pays off, same idea as a vendor discount.
+const REPUTATION_TIERS = [
+  { name: 'Neutral', threshold: 0 },
+  { name: 'Friendly', threshold: 3000 },
+  { name: 'Honored', threshold: 9000 },
+  { name: 'Revered', threshold: 21000 },
+  { name: 'Exalted', threshold: 42000 }
+];
+const REPUTATION_GOLD_BONUS_PER_TIER = 0.005; // +0.5% gold per tier, per zone
+
 // --- Curses ---
 // The adventure is limitless - there's no final boss, only how deep you can go
 // before you die. Every 10th act completed has a CHANCE (not a guarantee) of

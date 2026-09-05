@@ -514,6 +514,16 @@ button {
 .companion-mount svg, .companion-pet svg { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
 .companion-mount { opacity: 0.92; }
 
+/* A recruited companion "acting" in sync with the player's own turn (see
+   renderCompanionParty/renderRecruitedCompanionRig in main.js) - a quick
+   lunge-and-settle, since the player can't individually direct them. */
+.companion-rider.companion-pulse { animation: companionPulse 0.4s ease; }
+@keyframes companionPulse {
+  0%, 100% { transform: translateX(0); }
+  40% { transform: translateX(4px) scale(1.08); }
+}
+.companion-card { opacity: 0.95; }
+
 /* A WoW-style floating nameplate above the character's own head (not the
    mount/pet) - see renderCompanionRig() in progression.js. */
 .companion-rider { position: relative; }
@@ -688,6 +698,30 @@ button {
   30% { transform: translate(-50%, -10px) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
 }
+
+/* AUTO's small "here's what just happened" toast (see showAutoToast in
+   main.js) - stands in for the full-screen victory/reward panel so a fully
+   automated run never needs a click. Fixed to the viewport (not the app
+   root) so it survives whatever screen re-renders underneath it. */
+.auto-toast {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 90vw;
+  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 12px rgba(212,175,90,0.4);
+  z-index: 300;
+  animation: autoToastIn 0.25s ease-out;
+  pointer-events: none;
+}
+.auto-toast.auto-toast-hide { animation: autoToastOut 0.4s ease-in forwards; }
+@keyframes autoToastIn { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes autoToastOut { from { opacity: 1; } to { opacity: 0; transform: translate(-50%, -8px); } }
 
 .auto-toggle {
   display: flex;
@@ -1015,6 +1049,10 @@ button {
 }
 @keyframes modalPopIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .armory-picker { margin: 0; }
+
+.tutorial-steps { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.tutorial-step { display: flex; gap: 10px; align-items: flex-start; }
+.tutorial-step-icon { font-size: 1.4rem; flex-shrink: 0; line-height: 1.3; }
 .stat-compare { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: 0.78rem; }
 .stat-compare .stat-better { color: var(--good); }
 .stat-compare .stat-worse { color: var(--bad); }

@@ -990,6 +990,116 @@ function activeBuffStatBonus() {
   return base;
 }
 
+// --- Reputation ---
+// Account-wide (like Honor/materials) rather than per-character - it's your
+// standing with a place, not a personal stat. See REPUTATION_TIERS/
+// ACT_THEMES in data.js.
+function grantReputation(zoneId, amount) {
+  const pdata = Persistent.load();
+  const scaled = Math.round(amount * (1 + groupBonusPct()));
+  pdata.reputation[zoneId] = (pdata.reputation[zoneId] || 0) + scaled;
+  Persistent.save();
+}
+
+function getReputationTierIndex(zoneId) {
+  const pdata = Persistent.load();
+  const rep = pdata.reputation[zoneId] || 0;
+  let idx = 0;
+  REPUTATION_TIERS.forEach((t, i) => { if (rep >= t.threshold) idx = i; });
+  return idx;
+}
+
+function getReputationProgress(zoneId) {
+  const pdata = Persistent.load();
+  const rep = pdata.reputation[zoneId] || 0;
+  const idx = getReputationTierIndex(zoneId);
+  const tier = REPUTATION_TIERS[idx];
+  const next = REPUTATION_TIERS[idx + 1] || null;
+  return { rep, tier, next, idx };
+}
+
+// Every reputation tier reached, in every zone, chips in a small permanent
+// gold bonus - folded into Game.effectiveStats()/previewClassStats() the
+// same way every other stat source is.
+function reputationStatBonus() {
+  const base = {};
+  RELIC_EFFECT_KEYS.forEach(k => { base[k] = 0; });
+  ACT_THEMES.forEach(theme => { base.goldBonus += getReputationTierIndex(theme.id) * REPUTATION_GOLD_BONUS_PER_TIER; });
+  return base;
+}
+
+// --- Recruited companions ---
+// A companion is a frozen SNAPSHOT of another player's character (imported
+// from their exported save - see performSaveGame/importSaveFile in main.js),
+// not a live link to their save. It fights alongside you exactly like a
+// raid Ghost already did (a flat support stat contribution, no independent
+// turn of its own to control) but is visually present in combat with its
+// own portrait, animation, and pet/mount - see renderCombatScreen. Up to 4
+// can be equipped ("in group") at once; each equipped companion adds +5%
+// gold/XP/reputation (see groupBonusPct) on top of its stat contribution.
+const COMPANION_MAX_EQUIPPED = 4;
+const COMPANION_STAT_SHARE = 0.35; // how much of a companion's own snapshot stats carry over
+const GROUP_BONUS_PER_COMPANION = 0.05;
+
+function groupBonusPct() {
+  const pdata = Persistent.load();
+  return GROUP_BONUS_PER_COMPANION * (pdata.equippedCompanionIds || []).length;
+}
+
+function getEquippedCompanions() {
+  const pdata = Persistent.load();
+  const ids = new Set(pdata.equippedCompanionIds);
+  return pdata.recruitedCompanions.filter(c => ids.has(c.id));
+}
+
+function companionGroupStatBonus() {
+  const base = {};
+  RELIC_EFFECT_KEYS.forEach(k => { base[k] = 0; });
+  getEquippedCompanions().forEach(c => {
+    base.atk += Math.round(c.stats.atk * COMPANION_STAT_SHARE);
+    base.def += Math.round(c.stats.def * COMPANION_STAT_SHARE);
+    base.maxHp += Math.round(c.stats.maxHp * COMPANION_STAT_SHARE);
+  });
+  return base;
+}
+
+// Builds a companion card from ANOTHER player's exported save data (the
+// `persistent` object from a save file, not our own Persistent.data) -
+// snapshots that character's current combat stats once, at recruit time,
+// rather than keeping any live reference to their save. Recruits whichever
+// character that save last had active (falls back to its first character).
+function recruitCompanionFromSave(importedData) {
+  if (!importedData || !importedData.characters) return { error: "That file isn't a valid save." };
+  const classId = (importedData.lastPlayedClassId && importedData.characters[importedData.lastPlayedClassId])
+    ? importedData.lastPlayedClassId
+    : Object.keys(importedData.characters)[0];
+  if (!classId || !CLASSES[classId]) return { error: "That save doesn't have a character to recruit." };
+
+  // previewClassStats/getCompanionProgress/etc. all read through
+  // Persistent.load(), so a temporary swap is the simplest way to compute
+  // stats against someone else's data without duplicating that whole calc.
+  const backupData = Persistent.data;
+  Persistent.data = importedData;
+  Persistent.applyDefaults();
+  const rec = Persistent.getCharacter(classId);
+  const stats = previewClassStats(classId);
+  const companion = {
+    id: 'comp' + Math.random().toString(36).slice(2, 10),
+    name: (rec.customization && rec.customization.name) || CLASSES[classId].name,
+    classId, level: rec.level,
+    stats: { atk: stats.atk, def: stats.def, maxHp: stats.maxHp, speed: stats.speed },
+    petId: rec.equipped.pet || null,
+    mountId: rec.equipped.mount || null,
+    spellId: rec.equipped.spell || CLASSES[classId].defaultSpell
+  };
+  Persistent.data = backupData;
+
+  const pdata = Persistent.load();
+  pdata.recruitedCompanions.push(companion);
+  Persistent.save();
+  return { companion };
+}
+
 // --- Talents ---
 // One point per character level (see grantXpToCharacter's caller in state.js
 // for where levels come from). See TALENT_TREES in data.js for the tier-
@@ -1091,7 +1201,8 @@ const Persistent = {
       bankGold: 0, materials: { ore: 0, leather: 0, essence: 0, herbs: 0, wood: 0, fish: 0 }, inventory: [], permanentRelics: [], unlockedSpells: [], unlockedClasses: [], ownedLegendaries: [], characters: {},
       ownedPets: [], ownedMounts: [], activeQuestIds: [], questProgress: {}, questTiers: {}, completedQuestIds: [],
       honor: 0, honorInventory: [], honorPotionCount: 0, pvpInventory: [], randomPvpEnabled: false, recipeRarityBoost: {},
-      companionLevels: { pet: {}, mount: {} }, activeBuffs: [], lastSeenAt: Date.now()
+      companionLevels: { pet: {}, mount: {} }, activeBuffs: [], lastSeenAt: Date.now(), reputation: {},
+      recruitedCompanions: [], equippedCompanionIds: [], showCheats: true, tutorialSeen: false
     };
   },
 
@@ -1176,13 +1287,14 @@ function previewClassStats(classId) {
   const companion = companionStatBonus(rec);
   const talent = talentStatBonus(classId, rec);
   const buff = activeBuffStatBonus();
+  const reputation = reputationStatBonus();
   const lvlMult = levelStatMultiplier(rec.level);
   return {
     atk: Math.round((cls.atk + gear.atk) * lvlMult) + bonus.atk + companion.atk + talent.atk + buff.atk,
     def: cls.def + gear.def + bonus.def + companion.def + talent.def + buff.def,
     maxHp: Math.round((cls.maxHp + gear.maxHp) * lvlMult) + bonus.maxHp + companion.maxHp + talent.maxHp + buff.maxHp,
     speed: cls.speed + bonus.speed + companion.speed + talent.speed + buff.speed,
-    goldBonus: bonus.goldBonus + gear.goldBonus + companion.goldBonus + talent.goldBonus + buff.goldBonus
+    goldBonus: bonus.goldBonus + gear.goldBonus + companion.goldBonus + talent.goldBonus + buff.goldBonus + reputation.goldBonus
   };
 }
 

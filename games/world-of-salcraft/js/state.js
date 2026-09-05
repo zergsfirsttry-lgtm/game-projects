@@ -137,15 +137,24 @@ const Game = {
     // in progression.js) - apply everywhere (adventure, raid, PvP, Sanctuary
     // preview) for as long as they're active, same as any other stat source.
     const buff = activeBuffStatBonus();
+    // Permanent, account-wide - +0.5% gold per reputation tier reached, per
+    // zone (see reputationStatBonus in progression.js).
+    const reputation = reputationStatBonus();
+    // Recruited companions "in group" (up to 4, imported from other players'
+    // saves) - a flat support contribution exactly like a raid Ghost's, not
+    // an independently-controlled combatant (see companionGroupStatBonus in
+    // progression.js). Separate from `companion` above, which is this
+    // character's own equipped PET/MOUNT.
+    const party = companionGroupStatBonus();
     const lvlMult = levelStatMultiplier(charRecord.level);
 
     return {
-      atk: Math.max(0, Math.round((p.baseAtk + gear.atk) * lvlMult) + bonus.atk + companion.atk + curse.atk + ghost.atk + talent.atk + pvpGear.atk + buff.atk),
-      def: Math.max(0, p.baseDef + gear.def + bonus.def + companion.def + curse.def + ghost.def + talent.def + pvpGear.def + buff.def),
-      maxHp: Math.max(1, Math.round((p.maxHp + gear.maxHp) * lvlMult) + bonus.maxHp + companion.maxHp + curse.maxHp + ghost.maxHp + talent.maxHp + pvpGear.maxHp + buff.maxHp),
+      atk: Math.max(0, Math.round((p.baseAtk + gear.atk) * lvlMult) + bonus.atk + companion.atk + curse.atk + ghost.atk + talent.atk + pvpGear.atk + buff.atk + party.atk),
+      def: Math.max(0, p.baseDef + gear.def + bonus.def + companion.def + curse.def + ghost.def + talent.def + pvpGear.def + buff.def + party.def),
+      maxHp: Math.max(1, Math.round((p.maxHp + gear.maxHp) * lvlMult) + bonus.maxHp + companion.maxHp + curse.maxHp + ghost.maxHp + talent.maxHp + pvpGear.maxHp + buff.maxHp + party.maxHp),
       speed: Math.max(1, p.baseSpeed + bonus.speed + companion.speed + curse.speed + talent.speed + buff.speed),
       critBonus: bonus.critBonus + companion.critBonus + curse.critBonus + talent.critBonus + gear.critBonus + pvpGear.critBonus + buff.critBonus,
-      goldBonus: bonus.goldBonus + gear.goldBonus + companion.goldBonus + curse.goldBonus + talent.goldBonus + buff.goldBonus,
+      goldBonus: bonus.goldBonus + gear.goldBonus + companion.goldBonus + curse.goldBonus + talent.goldBonus + buff.goldBonus + reputation.goldBonus,
       lifesteal: bonus.lifesteal + companion.lifesteal + curse.lifesteal + talent.lifesteal + gear.lifesteal + pvpGear.lifesteal + buff.lifesteal,
       hpRegen: bonus.hpRegen + companion.hpRegen + curse.hpRegen + talent.hpRegen + gear.hpRegen + buff.hpRegen,
       executeBonus: bonus.executeBonus + companion.executeBonus + curse.executeBonus + talent.executeBonus + gear.executeBonus + buff.executeBonus,
@@ -162,7 +171,7 @@ const Game = {
 
   addGold(amount) {
     if (amount <= 0) { this.player.gold = Math.max(0, this.player.gold + amount); return amount; }
-    const bonus = this.effectiveStats().goldBonus;
+    const bonus = this.effectiveStats().goldBonus + groupBonusPct();
     const total = Math.max(0, Math.round(amount * (1 + bonus)));
     this.player.gold += total;
     this.goldEarnedThisRun += total;
@@ -171,15 +180,18 @@ const Game = {
   },
 
   // XP is granted immediately (not deferred to run end) and saved straight to
-  // persistent storage, so it survives permadeath even mid-run.
+  // persistent storage, so it survives permadeath even mid-run. Scaled up
+  // by groupBonusPct (+5% per equipped companion) before it ever reaches the
+  // level-up curve, so a full party of 4 companions is a real +20% boost.
   grantXp(amount) {
     const charRecord = Persistent.getCharacter(this.player.classId);
-    const result = grantXpToCharacter(charRecord, amount);
+    const scaled = Math.round(amount * (1 + groupBonusPct()));
+    const result = grantXpToCharacter(charRecord, scaled);
     // Whichever pet/mount is equipped rides along on the player's own
     // leveling - it gains the same XP amount, on top of anything separately
     // fed to it at the House (see grantCompanionXp/instantiateFoodItem).
-    if (charRecord.equipped.pet) grantCompanionXp('pet', charRecord.equipped.pet, amount);
-    if (charRecord.equipped.mount) grantCompanionXp('mount', charRecord.equipped.mount, amount);
+    if (charRecord.equipped.pet) grantCompanionXp('pet', charRecord.equipped.pet, scaled);
+    if (charRecord.equipped.mount) grantCompanionXp('mount', charRecord.equipped.mount, scaled);
     Persistent.save();
     return result;
   },
