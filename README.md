@@ -8,7 +8,7 @@ directly, or serve the folder with any static file server.
 
 | Game | Folder | Play |
 |---|---|---|
-| **World of Salcraft** — a WoW-inspired 2D roguelike RPG | [`games/world-of-salcraft`](games/world-of-salcraft) | [Play in browser](https://REPLACE_WITH_GITHUB_USERNAME.github.io/REPLACE_WITH_REPO_NAME/games/world-of-salcraft/) |
+| **World of Salcraft** — a WoW-inspired 2D roguelike RPG | [`games/world-of-salcraft`](games/world-of-salcraft) | [Play in browser](https://zergsfirsttry-lgtm.github.io/game-projects/games/world-of-salcraft/) |
 
 ## Repo layout
 
