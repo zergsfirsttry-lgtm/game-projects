@@ -124,26 +124,37 @@ const App = {
     this.root.innerHTML = `
       <div class="center-screen">
         <h2>Choose your path</h2>
-        <div class="class-grid">${cards}</div>
-        <button class="btn-primary" id="btn-confirm-class" disabled>Venture Forth</button>
+        <div class="class-grid" id="class-grid">${cards}</div>
         <button class="btn-secondary" id="btn-back-title">Back</button>
       </div>`;
 
     const cardsEls = this.root.querySelectorAll('.class-card:not(.locked)');
-    const confirmBtn = document.getElementById('btn-confirm-class');
+    // The confirm button doesn't exist until a class is picked - it's then
+    // inserted as a sibling right after the selected card (see the
+    // .venture-forth-btn CSS) so it always sits directly under whichever
+    // card the player just tapped, for easier one-handed mobile reach. This
+    // same principle (put the action control near the point of interaction)
+    // should carry forward into other UI work.
     cardsEls.forEach(el => {
       el.addEventListener('click', () => {
         cardsEls.forEach(c => c.classList.remove('selected'));
         el.classList.add('selected');
         this.selectedClass = el.dataset.class;
-        confirmBtn.disabled = false;
+        let confirmBtn = document.getElementById('btn-confirm-class');
+        if (!confirmBtn) {
+          confirmBtn = document.createElement('button');
+          confirmBtn.id = 'btn-confirm-class';
+          confirmBtn.className = 'btn-primary venture-forth-btn';
+          confirmBtn.textContent = 'Venture Forth';
+          confirmBtn.addEventListener('click', () => {
+            if (!this.selectedClass) return;
+            Persistent.load().lastPlayedClassId = this.selectedClass;
+            Game.newRun(this.selectedClass);
+            this.showMap();
+          });
+        }
+        el.insertAdjacentElement('afterend', confirmBtn);
       });
-    });
-    confirmBtn.addEventListener('click', () => {
-      if (!this.selectedClass) return;
-      Persistent.load().lastPlayedClassId = this.selectedClass;
-      Game.newRun(this.selectedClass);
-      this.showMap();
     });
     document.getElementById('btn-back-title').addEventListener('click', () => this.showTitle());
   },
@@ -1221,7 +1232,7 @@ const App = {
     const questsNeedAttention = getAvailableQuests().length > 0 || getActiveQuests().some(q => isQuestReady(q.id));
 
     let body = '';
-    if (tab === 'character') body = this.renderSanctuaryCharacter(classId);
+    if (tab === 'character') body = this.renderSanctuaryCharacter(classId) + this.renderSanctuaryTalents(classId);
     else if (tab === 'inventory') body = this.renderSanctuaryInventory(classId);
     else if (tab === 'professions') body = this.renderSanctuaryProfessions(classId);
     else if (tab === 'shop') body = this.renderSanctuaryShop();
@@ -1229,9 +1240,7 @@ const App = {
     else if (tab === 'journal') body = this.renderSanctuaryJournal();
     else if (tab === 'raids') body = this.renderSanctuaryRaids(classId);
     else if (tab === 'house') body = this.renderSanctuaryHouse(classId);
-    else if (tab === 'save') body = this.renderSanctuarySave();
     else if (tab === 'cheats') body = this.renderSanctuaryCheats(classId);
-    else if (tab === 'talents') body = this.renderSanctuaryTalents(classId);
     else if (tab === 'pvp') body = this.renderSanctuaryPvp(classId);
 
     this.root.innerHTML = `
@@ -1253,7 +1262,6 @@ const App = {
         ${xpBar}
         <div class="sanctuary-tabs">
           <button type="button" class="tab-btn ${tab === 'character' ? 'active' : ''}" data-tab="character">Character</button>
-          <button type="button" class="tab-btn ${tab === 'talents' ? 'active' : ''}" data-tab="talents">Talents</button>
           <button type="button" class="tab-btn ${tab === 'pvp' ? 'active' : ''}" data-tab="pvp">PvP</button>
           <button type="button" class="tab-btn ${tab === 'inventory' ? 'active' : ''}" data-tab="inventory">Inventory</button>
           <button type="button" class="tab-btn ${tab === 'professions' ? 'active' : ''}" data-tab="professions">Professions</button>
@@ -1262,7 +1270,6 @@ const App = {
           <button type="button" class="tab-btn ${tab === 'journal' ? 'active' : ''}" data-tab="journal">Journal</button>
           <button type="button" class="tab-btn ${tab === 'raids' ? 'active' : ''}" data-tab="raids">Dungeons & Raids</button>
           <button type="button" class="tab-btn ${tab === 'house' ? 'active' : ''}" data-tab="house">🏠 House</button>
-          <button type="button" class="tab-btn ${tab === 'save' ? 'active' : ''}" data-tab="save">Save</button>
           ${pdata.showCheats ? `<button type="button" class="tab-btn tab-btn-cheat ${tab === 'cheats' ? 'active' : ''}" data-tab="cheats">🐞 Cheats</button>` : ''}
         </div>
         <div class="sanctuary-body">${body}</div>
@@ -1309,7 +1316,7 @@ const App = {
         </div>
         <div class="small-text">Main Hand: ${weapon ? weapon.name : 'None'} · Chest: ${armor ? armor.name : 'None'}</div>
         <div class="small-text">Active Spell: ${spell.name} - ${spell.desc}</div>
-        <div class="small-text">Talent Points: ${getTalentPointsAvailable(rec)} available - see the Talents tab</div>
+        <div class="small-text">Talent Points: ${getTalentPointsAvailable(rec)} available - see Talents below</div>
         <button class="btn-secondary" id="btn-toggle-customization">🎨 ${this.customizationOpen ? 'Hide Customization' : 'Customize Appearance'}</button>
       </div>
       ${this.customizationOpen ? this.renderCharCustomize(classId) : ''}
@@ -1512,7 +1519,7 @@ const App = {
       </details>`;
     }).join('');
     return `
-      <h4>Talents <span class="small-text">(${pointsAvailable} points available)</span></h4>
+      <h4 style="margin-top:20px">Talents <span class="small-text">(${pointsAvailable} points available)</span></h4>
       <p class="flavor">Earn a talent point every time ${CLASSES[classId].name} levels up. Each tree's later tiers unlock once you've spent enough points earlier in that same tree.</p>
       ${treeSections}
       <button class="btn-secondary" id="btn-reset-talents" ${ranksSpent > 0 ? '' : 'disabled'}>Reset Talents (50 🪙)</button>
@@ -2313,15 +2320,6 @@ const App = {
   },
 
   // ---------------- Save ----------------
-  renderSanctuarySave() {
-    return `
-      <h4>Save</h4>
-      <p class="flavor">Your progress already autosaves to this browser continuously - this exports a portable copy of your Sanctuary (bank gold, every character, gear, quests, everything) to a file you can back up or move to another device.</p>
-      <button class="btn-primary" id="btn-save-game">💾 Save Game</button>
-      <div class="save-status" id="save-status"></div>
-    `;
-  },
-
   // A tiny reusable Yes/No popup, appended straight to <body> (not this.root)
   // so it survives independently of whatever Sanctuary re-render happens
   // while the user is deciding, and while the (async) save itself runs.
@@ -2417,6 +2415,7 @@ const App = {
         <button class="btn-secondary" id="settings-import-save" style="margin-top:10px;width:100%">📂 Import Save (overwrites your current save)</button>
         <button class="btn-secondary" id="settings-recruit" style="margin-top:10px;width:100%">🤝 Recruit Companion (import another player's save)</button>
         <div class="small-text" id="settings-recruit-status" style="margin-top:6px"></div>
+        <button class="btn-secondary" id="settings-reset-progress" style="margin-top:14px;width:100%;border-color:var(--danger,#a83232);color:var(--danger,#e08080)">🗑️ Reset Progress</button>
         <button class="btn-secondary" id="settings-close" style="margin-top:14px;width:100%">Close</button>
       </div>`;
     document.body.appendChild(overlay);
@@ -2465,6 +2464,26 @@ const App = {
         }
       });
     });
+
+    overlay.querySelector('#settings-reset-progress').addEventListener('click', () => {
+      this.showConfirmModal(
+        'Reset Progress',
+        "This will PERMANENTLY erase your entire Sanctuary - every character, gear, gold, profession, quest, and companion - and start over as if this were a brand-new save. This cannot be undone unless you've exported a save file first. Continue?",
+        'Yes, Reset Everything', 'Cancel',
+        () => { close(); this.resetProgress(); }
+      );
+    });
+  },
+
+  // Wipes both localStorage keys the game ever writes (see Persistent.key/
+  // Meta.key) and drops back to the title screen fresh, as if this were a
+  // brand-new save - the "start over" counterpart to Import Save.
+  resetProgress() {
+    localStorage.removeItem(Persistent.key);
+    localStorage.removeItem(Meta.key);
+    Persistent.data = null;
+    Game.player = null;
+    this.showTitle();
   },
 
   // Exports the whole persistent save as a downloadable JSON file. `useFilePicker`
@@ -2605,6 +2624,24 @@ const App = {
       if (pickerOverlay) pickerOverlay.addEventListener('click', (e) => {
         if (e.target !== pickerOverlay) return;
         this.selectedArmorySlot = null;
+        this.showSanctuary(classId, tab);
+      });
+      // Talents now render as part of this same Character tab (see the
+      // showSanctuary body dispatch) - its click handlers live here too.
+      this.root.querySelectorAll('[data-talent]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (investTalentPoint(rec, classId, btn.dataset.tree, btn.dataset.talent)) {
+            Persistent.save();
+            this.showSanctuary(classId, tab);
+          }
+        });
+      });
+      const resetTalentsBtn = document.getElementById('btn-reset-talents');
+      if (resetTalentsBtn) resetTalentsBtn.addEventListener('click', () => {
+        if (pdata.bankGold < 50) return;
+        pdata.bankGold -= 50;
+        resetTalents(rec);
+        Persistent.save();
         this.showSanctuary(classId, tab);
       });
     } else if (tab === 'inventory') {
@@ -2761,23 +2798,6 @@ const App = {
           this.showSanctuary(classId, tab);
         });
       });
-    } else if (tab === 'talents') {
-      this.root.querySelectorAll('[data-talent]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (investTalentPoint(rec, classId, btn.dataset.tree, btn.dataset.talent)) {
-            Persistent.save();
-            this.showSanctuary(classId, tab);
-          }
-        });
-      });
-      const resetTalentsBtn = document.getElementById('btn-reset-talents');
-      if (resetTalentsBtn) resetTalentsBtn.addEventListener('click', () => {
-        if (pdata.bankGold < 50) return;
-        pdata.bankGold -= 50;
-        resetTalents(rec);
-        Persistent.save();
-        this.showSanctuary(classId, tab);
-      });
     } else if (tab === 'pvp') {
       const findBtn = document.getElementById('btn-find-pvp-match');
       if (findBtn) findBtn.addEventListener('click', () => this.enterPvpMatch(classId));
@@ -2867,17 +2887,6 @@ const App = {
           Persistent.save();
           this.showSanctuary(classId, tab);
         });
-      });
-    } else if (tab === 'save') {
-      const saveBtn = document.getElementById('btn-save-game');
-      if (saveBtn) saveBtn.addEventListener('click', () => {
-        this.showConfirmModal(
-          'Save Game',
-          "Save to the default location (your browser's Downloads folder)? Choose \"No\" to pick a custom file location instead.",
-          'Yes, Default Location', 'No, Choose Location',
-          () => this.performSaveGame(false),
-          () => this.performSaveGame(true)
-        );
       });
     } else if (tab === 'cheats') {
       const cheatActions = {

@@ -1301,35 +1301,70 @@ function previewClassStats(classId) {
 // Renders a class's sprite with whatever it currently has equipped (falling
 // back to its default WoW-flavored look for empty slots) - the single place
 // every screen should call through so equipped gear is always reflected.
-// Only the CHEST slot and the main-hand weapon repaint the sprite (see the
-// note on GEAR_TEMPLATES) - the other 16 equip slots are stats/Armory-only.
+// The chest slot and main-hand weapon get full hand-authored shapes/palettes;
+// the remaining accessory slots (head/shoulders/back/tabard/shirt/wrists/
+// hands/waist/legs) have no unique art of their own, so each one instead
+// tints its own region of the shared body silhouette to that item's rarity
+// color - a helmet, say, recolors the hair region, and a legendary piece
+// reads as visually fancier than a common one. Boots have no dedicated equip
+// slot, so they mirror whatever color the legs slot resolves to.
 function characterSpriteFor(classId, sizePx) {
   const rec = Persistent.getCharacter(classId);
-  const weapon = rec.equipped.mainHand ? Persistent.findItem(rec.equipped.mainHand) : null;
-  const armor = rec.equipped.chest ? Persistent.findItem(rec.equipped.chest) : null;
+  const eq = rec.equipped;
+  const weapon = eq.mainHand ? Persistent.findItem(eq.mainHand) : null;
+  const armor = eq.chest ? Persistent.findItem(eq.chest) : null;
+  const shirt = eq.shirt ? Persistent.findItem(eq.shirt) : null;
+  const shoulders = eq.shoulders ? Persistent.findItem(eq.shoulders) : null;
+  const waist = eq.waist ? Persistent.findItem(eq.waist) : null;
+  const legs = eq.legs ? Persistent.findItem(eq.legs) : null;
+  const head = eq.head ? Persistent.findItem(eq.head) : null;
+  const back = eq.back ? Persistent.findItem(eq.back) : null;
+  const tabard = eq.tabard ? Persistent.findItem(eq.tabard) : null;
+  const wrists = eq.wrists ? Persistent.findItem(eq.wrists) : null;
+  const hands = eq.hands ? Persistent.findItem(eq.hands) : null;
+
   const options = {};
   if (armor && armor.visual) {
     options.armorShape = ARMOR_STYLE_SHAPE[armor.visual];
     options.armorPalette = tintedPalette(ARMOR_STYLE_PALETTES[armor.visual], ['T', 'W'], armor.rarity);
+  } else if (shirt) {
+    // No chest piece equipped - a cosmetic shirt shows as a plain recolor of
+    // the base torso/collar instead of the class's unarmored default.
+    const baseArmor = CLASS_LOOKS[classId].armorPalette;
+    options.armorPalette = { ...baseArmor, A: RARITIES[shirt.rarity].color, T: RARITIES[shirt.rarity].color };
   }
+  const armorPalette = { ...(options.armorPalette || CLASS_LOOKS[classId].armorPalette) };
+  if (shoulders) armorPalette.T = RARITIES[shoulders.rarity].color;
+  if (waist) armorPalette.W = RARITIES[waist.rarity].color;
+  if (legs) armorPalette.L = RARITIES[legs.rarity].color;
+  armorPalette.B = legs ? RARITIES[legs.rarity].color : armorPalette.L;
+  options.armorPalette = armorPalette;
+
   if (weapon && weapon.visual) {
     options.weaponStyle = weapon.visual;
     options.weaponPalette = tintedPalette(WEAPON_STYLE_PALETTES[weapon.visual], WEAPON_ACCENT_KEY[weapon.visual], weapon.rarity);
   }
+
+  const headPalette = { ...CLASS_LOOKS[classId].head };
+  if (head) headPalette.r = RARITIES[head.rarity].color;
+  options.headPalette = headPalette;
+
+  if (back) options.capeColor = RARITIES[back.rarity].color;
+  if (tabard) options.tabardColor = RARITIES[tabard.rarity].color;
+  if (wrists) options.bracerColor = RARITIES[wrists.rarity].color;
+  if (hands) options.gloveColor = RARITIES[hands.rarity].color;
+
   // Player-chosen customization (hair/eye/armor color, from the Sanctuary
   // Character tab) layers on top of gear-driven options - it overrides just
   // the specific palette keys it cares about, so equipped gear's own trim/
   // accent colors are untouched.
   const custom = rec.customization;
   if (custom && (custom.hairColor || custom.eyeColor)) {
-    const baseHead = CLASS_LOOKS[classId].head;
-    options.headPalette = { ...baseHead };
     if (custom.hairColor) options.headPalette.r = custom.hairColor;
     if (custom.eyeColor) options.headPalette.e = custom.eyeColor;
   }
   if (custom && custom.armorColor) {
-    const baseArmor = options.armorPalette || CLASS_LOOKS[classId].armorPalette;
-    options.armorPalette = { ...baseArmor, A: custom.armorColor };
+    options.armorPalette = { ...options.armorPalette, A: custom.armorColor };
   }
   const isLegendaryWeapon = !!(weapon && weapon.rarity === 'legendary');
   options.legendaryWeapon = isLegendaryWeapon;

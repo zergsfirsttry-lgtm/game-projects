@@ -141,6 +141,18 @@ button {
 .class-card.locked { cursor: not-allowed; opacity: 0.55; filter: grayscale(0.6); }
 .class-card.locked:hover { transform: none; border-color: var(--border); }
 
+/* Inserted as a DOM sibling right after whichever card is selected (see
+   showClassSelect) - flex-basis:100% in the wrapping .class-grid forces it
+   onto its own row immediately below that card, rather than fixed at the
+   bottom of the page, so the confirm tap stays right under the thumb on
+   one-handed mobile play. */
+.venture-forth-btn {
+  flex-basis: 100%;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
 /* ---------- Header (persistent during run) ---------- */
 .hud {
   display: flex;
@@ -501,7 +513,11 @@ button {
   box-shadow: inset 0 0 0 1px rgba(212,175,90,0.08);
 }
 .combatant .portrait { display: flex; justify-content: center; align-items: flex-end; height: 97px; position: relative; }
-.combatant .portrait svg { image-rendering: pixelated; }
+/* max-width+height:auto (not just image-rendering) so a narrow mobile
+   combatant column shrinks the sprite proportionally instead of squashing
+   it sideways - a flex item with an explicit width/height SVG child only
+   shrinks the main-axis dimension by default, distorting the aspect ratio. */
+.combatant .portrait svg { image-rendering: pixelated; max-width: 100%; height: auto; }
 
 /* A companion "row": an equipped mount walks just behind/beside the
    character (not ridden - it's its own creature, trotting along), and an
@@ -509,8 +525,8 @@ button {
    simple bottom-aligned flex row so they read as traveling together rather
    than overlapping. Shared between the map traveler and the combat portrait
    via renderCompanionRig() in progression.js. */
-.companion-row { display: flex; align-items: flex-end; gap: 3px; }
-.companion-row svg { display: block; image-rendering: pixelated; }
+.companion-row { display: flex; align-items: flex-end; gap: 3px; min-width: 0; }
+.companion-row svg { display: block; image-rendering: pixelated; max-width: 100%; height: auto; }
 .companion-mount svg, .companion-pet svg { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
 .companion-mount { opacity: 0.92; }
 
@@ -1000,7 +1016,7 @@ button {
   border-radius: 6px;
   padding: 8px;
 }
-.armory-portrait svg { image-rendering: pixelated; }
+.armory-portrait svg { image-rendering: pixelated; max-width: 100%; height: auto; }
 .armory-weapon-row { display: flex; gap: 6px; }
 .armory-weapon-row .armory-slot { width: 90px; }
 .armory-slot {

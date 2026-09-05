@@ -441,20 +441,20 @@ const ARMOR_SHAPES = {
     '................AAAAAAAAAA', // 23
     '................AAAAAAAAAA', // 24 waist taper
     '................AAAAAAAAAA', // 25
-    '..................AAAAAA..', // 26 legs split
-    '..................AAAAAA..', // 27
-    '..................AAAAAA..', // 28
-    '..................AAAAAA..', // 29
-    '..................AAAAAA..', // 30
-    '..................AAAAAA..', // 31
-    '..................AAAAAA..', // 32
-    '..................AAAAAA..', // 33
-    '..................AAAAAA..', // 34
-    '..................AAAAAA..', // 35
-    '..................AAAAAA..', // 36
-    '..................AAAAAA..', // 37
-    '..................AAAAAA..', // 38
-    '..................AAAAAA..', // 39
+    '..................LLLLLL..', // 26 legs split
+    '..................LLLLLL..', // 27
+    '..................LLLLLL..', // 28
+    '..................LLLLLL..', // 29
+    '..................LLLLLL..', // 30
+    '..................LLLLLL..', // 31
+    '..................LLLLLL..', // 32
+    '..................LLLLLL..', // 33
+    '..................LLLLLL..', // 34
+    '..................LLLLLL..', // 35
+    '..................LLLLLL..', // 36
+    '..................LLLLLL..', // 37
+    '..................LLLLLL..', // 38
+    '..................LLLLLL..', // 39
     '..................BBBBBB..', // 40 boots
     '..................BBBBBB..', // 41
     '..................BBBBBB..', // 42
@@ -480,18 +480,18 @@ const ARMOR_SHAPES = {
     '................AAAAAAAAAA', // 23
     '................AAAAAAAAAA', // 24 waist
     '................AAAAAAAAAA', // 25
-    '..............AAAAAAAAAAAA', // 26 robe body (no leg split - full width)
-    '..............AAAAAAAAAAAA', // 27
-    '..............AAAAAAAAAAAA', // 28
-    '..............AAAAAAAAAAAA', // 29
-    '..............AAAAAAAAAAAA', // 30
-    '..............AAAAAAAAAAAA', // 31
-    '..............AAAAAAAAAAAA', // 32
-    '..............AAAAAAAAAAAA', // 33
-    '..............AAAAAAAAAAAA', // 34
-    '..............AAAAAAAAAAAA', // 35
-    '............AAAAAAAAAAAAAA', // 36 hem flare
-    '............AAAAAAAAAAAAAA', // 37
+    '..............LLLLLLLLLLLL', // 26 robe body (no leg split - full width)
+    '..............LLLLLLLLLLLL', // 27
+    '..............LLLLLLLLLLLL', // 28
+    '..............LLLLLLLLLLLL', // 29
+    '..............LLLLLLLLLLLL', // 30
+    '..............LLLLLLLLLLLL', // 31
+    '..............LLLLLLLLLLLL', // 32
+    '..............LLLLLLLLLLLL', // 33
+    '..............LLLLLLLLLLLL', // 34
+    '..............LLLLLLLLLLLL', // 35
+    '............LLLLLLLLLLLLLL', // 36 hem flare
+    '............LLLLLLLLLLLLLL', // 37
     '............BBBBBBBBBBBBBB', // 38 hem trim
     '............BBBBBBBBBBBBBB', // 39
     '............BBBBBBBBBBBBBB', // 40
@@ -563,10 +563,10 @@ const WEAPON_ACCENT_KEY = { sword: 'blade', dagger: 'blade', axe: 'blade', staff
 const ARMOR_STYLE_SHAPE = { cloth: 'robe', leather: 'armor', mail: 'armor', plate: 'armor' };
 
 const ARMOR_STYLE_PALETTES = {
-  cloth: { A: '#c9c4b3', B: '#8a8577', T: '#c9c4b3', W: '#8a5a2e' },
-  leather: { A: '#5c4530', B: '#3d2f1f', T: '#5c4530', W: '#9aa3b2' },
-  mail: { A: '#5a6472', B: '#3a4048', T: '#5a6472', W: '#8a5a2e' },
-  plate: { A: '#9aa3b2', B: '#5a6068', T: '#9aa3b2', W: '#8a5a2e' }
+  cloth: { A: '#c9c4b3', L: '#c9c4b3', B: '#8a8577', T: '#c9c4b3', W: '#8a5a2e' },
+  leather: { A: '#5c4530', L: '#5c4530', B: '#3d2f1f', T: '#5c4530', W: '#9aa3b2' },
+  mail: { A: '#5a6472', L: '#5a6472', B: '#3a4048', T: '#5a6472', W: '#8a5a2e' },
+  plate: { A: '#9aa3b2', L: '#9aa3b2', B: '#5a6068', T: '#9aa3b2', W: '#8a5a2e' }
 };
 const WEAPON_STYLE_PALETTES = {
   sword: { blade: '#c7ccd1', guard: '#5a5f68', hilt: '#6b4a2f' },
@@ -581,15 +581,15 @@ const WEAPON_STYLE_PALETTES = {
 // Per-class default look (used whenever nothing is equipped in that slot) -
 // human, WoW-class-flavored: hair/eye color plus a default armor+weapon style.
 const CLASS_LOOKS = {
-  warrior: { head: { r:'#5c4530', h:'#e8b98a', e:'#20160e', n:'#e0ab7d' }, armorShape:'armor', armorPalette:{ A:'#8a929c', B:'#3d4148', T:'#8a929c', W:'#8a5a2e' }, weaponStyle:'sword', weaponPalette:{ blade:'#c7ccd1', guard:'#5a5f68', hilt:'#6b4a2f' } },
-  rogue: { head: { r:'#1a1a1f', h:'#dba876', e:'#20160e', n:'#d19d6e' }, armorShape:'armor', armorPalette:{ A:'#332538', B:'#1c1520', T:'#332538', W:'#9aa3b2' }, weaponStyle:'dagger', weaponPalette:{ blade:'#c7ccd1', hilt:'#2a1f30' } },
-  mage: { head: { r:'#c9c4d9', h:'#e8b98a', e:'#2a3a6a', n:'#e0ab7d' }, armorShape:'robe', armorPalette:{ A:'#2f4f9c', B:'#1c3162', T:'#2f4f9c', W:'#8a5a2e' }, weaponStyle:'staff', weaponPalette:{ handle:'#6b4a2f', orb:'#9d6fe8' } },
-  paladin: { head: { r:'#d9c060', h:'#e8b98a', e:'#20160e', n:'#e0ab7d' }, armorShape:'armor', armorPalette:{ A:'#d9c88a', B:'#a88f4a', T:'#d9c88a', W:'#6b1f1f' }, weaponStyle:'mace', weaponPalette:{ handle:'#6b4a2f', head:'#e8c94a' } },
-  hunter: { head: { r:'#3a5c2e', h:'#c9a888', e:'#20160e', n:'#bd9b7c' }, armorShape:'armor', armorPalette:{ A:'#4a6b3a', B:'#2e4324', T:'#4a6b3a', W:'#8a5a2e' }, weaponStyle:'bow', weaponPalette:{ wood:'#8a5a2e' } },
-  warlock: { head: { r:'#1a1a1f', h:'#a888a0', e:'#7d2ae8', n:'#9c7c94' }, armorShape:'robe', armorPalette:{ A:'#3a1a4a', B:'#22102c', T:'#3a1a4a', W:'#7d2ae8' }, weaponStyle:'staff', weaponPalette:{ handle:'#3a1a4a', orb:'#c23df5' } },
-  barbarian: { head: { r:'#c9502e', h:'#c9906b', e:'#20160e', n:'#bd8560' }, armorShape:'armor', armorPalette:{ A:'#8a4a2a', B:'#5c3218', T:'#8a4a2a', W:'#e8dcc4' }, weaponStyle:'axe', weaponPalette:{ blade:'#c7ccd1', handle:'#6b4a2f' } },
-  cleric: { head: { r:'#e8e4d8', h:'#e8b98a', e:'#20160e', n:'#e0ab7d' }, armorShape:'robe', armorPalette:{ A:'#d9d4c3', B:'#a8a290', T:'#d9d4c3', W:'#e8c94a' }, weaponStyle:'mace', weaponPalette:{ handle:'#6b4a2f', head:'#e8e4d8' } },
-  bard: { head: { r:'#a83d8a', h:'#e0ab7d', e:'#20160e', n:'#d19d6e' }, armorShape:'armor', armorPalette:{ A:'#8a2a5c', B:'#5c1c3d', T:'#8a2a5c', W:'#e8c94a' }, weaponStyle:'lute', weaponPalette:{ body:'#6b4a2f', neck:'#4a3320' } }
+  warrior: { head: { r:'#5c4530', h:'#e8b98a', e:'#20160e', n:'#e0ab7d' }, armorShape:'armor', armorPalette:{ A:'#8a929c', L:'#8a929c', B:'#3d4148', T:'#8a929c', W:'#8a5a2e' }, weaponStyle:'sword', weaponPalette:{ blade:'#c7ccd1', guard:'#5a5f68', hilt:'#6b4a2f' } },
+  rogue: { head: { r:'#1a1a1f', h:'#dba876', e:'#20160e', n:'#d19d6e' }, armorShape:'armor', armorPalette:{ A:'#332538', L:'#332538', B:'#1c1520', T:'#332538', W:'#9aa3b2' }, weaponStyle:'dagger', weaponPalette:{ blade:'#c7ccd1', hilt:'#2a1f30' } },
+  mage: { head: { r:'#c9c4d9', h:'#e8b98a', e:'#2a3a6a', n:'#e0ab7d' }, armorShape:'robe', armorPalette:{ A:'#2f4f9c', L:'#2f4f9c', B:'#1c3162', T:'#2f4f9c', W:'#8a5a2e' }, weaponStyle:'staff', weaponPalette:{ handle:'#6b4a2f', orb:'#9d6fe8' } },
+  paladin: { head: { r:'#d9c060', h:'#e8b98a', e:'#20160e', n:'#e0ab7d' }, armorShape:'armor', armorPalette:{ A:'#d9c88a', L:'#d9c88a', B:'#a88f4a', T:'#d9c88a', W:'#6b1f1f' }, weaponStyle:'mace', weaponPalette:{ handle:'#6b4a2f', head:'#e8c94a' } },
+  hunter: { head: { r:'#3a5c2e', h:'#c9a888', e:'#20160e', n:'#bd9b7c' }, armorShape:'armor', armorPalette:{ A:'#4a6b3a', L:'#4a6b3a', B:'#2e4324', T:'#4a6b3a', W:'#8a5a2e' }, weaponStyle:'bow', weaponPalette:{ wood:'#8a5a2e' } },
+  warlock: { head: { r:'#1a1a1f', h:'#a888a0', e:'#7d2ae8', n:'#9c7c94' }, armorShape:'robe', armorPalette:{ A:'#3a1a4a', L:'#3a1a4a', B:'#22102c', T:'#3a1a4a', W:'#7d2ae8' }, weaponStyle:'staff', weaponPalette:{ handle:'#3a1a4a', orb:'#c23df5' } },
+  barbarian: { head: { r:'#c9502e', h:'#c9906b', e:'#20160e', n:'#bd8560' }, armorShape:'armor', armorPalette:{ A:'#8a4a2a', L:'#8a4a2a', B:'#5c3218', T:'#8a4a2a', W:'#e8dcc4' }, weaponStyle:'axe', weaponPalette:{ blade:'#c7ccd1', handle:'#6b4a2f' } },
+  cleric: { head: { r:'#e8e4d8', h:'#e8b98a', e:'#20160e', n:'#e0ab7d' }, armorShape:'robe', armorPalette:{ A:'#d9d4c3', L:'#d9d4c3', B:'#a8a290', T:'#d9d4c3', W:'#e8c94a' }, weaponStyle:'mace', weaponPalette:{ handle:'#6b4a2f', head:'#e8e4d8' } },
+  bard: { head: { r:'#a83d8a', h:'#e0ab7d', e:'#20160e', n:'#d19d6e' }, armorShape:'armor', armorPalette:{ A:'#8a2a5c', L:'#8a2a5c', B:'#5c1c3d', T:'#8a2a5c', W:'#e8c94a' }, weaponStyle:'lute', weaponPalette:{ body:'#6b4a2f', neck:'#4a3320' } }
 };
 
 // accentKeys: a single palette key or an array of them - all get swapped to
@@ -611,8 +611,14 @@ function wrapLegendaryWeaponGlow(svgMarkup) {
   return `<span class="legendary-aura">${svgMarkup}<span class="legendary-sparkle w1">✦</span><span class="legendary-sparkle w2">✧</span></span>`;
 }
 
-// options: { armorShape, armorPalette, weaponStyle, weaponPalette,
-// legendaryWeapon } - any omitted field falls back to the class's default look.
+// options: { armorShape, armorPalette, headPalette, weaponStyle, weaponPalette,
+// legendaryWeapon, capeColor, tabardColor, bracerColor, gloveColor } - any
+// omitted field falls back to the class's default look. armorPalette/headPalette
+// are full {key:color} dicts, so callers (see characterSpriteFor) resolve each
+// equip slot (helmet -> headPalette.r, shoulders -> armorPalette.T, waist -> W,
+// legs/boots -> L/B, chest -> A) into those dicts before calling in here.
+// capeColor/tabardColor/bracerColor/gloveColor have no dedicated shape region,
+// so they're painted as small extra rect accents instead.
 // sizePx here means HEIGHT (not width, unlike spriteSvg) - the class canvas is
 // wider than it is tall (to give the weapon room), so sizing by height keeps
 // the character's on-screen height consistent regardless of that extra margin.
@@ -628,10 +634,27 @@ function renderCharacterSprite(classId, sizePx, options) {
 
   const weaponParts = (WEAPON_SHAPES[weaponStyle] || []).map(p => ({ row: p.row, col: p.col, w: p.w, h: p.h, color: weaponPalette[p.key] }));
 
+  const accentParts = [];
+  if (opts.capeColor) {
+    accentParts.push({ row: 12, col: 9, w: 3, h: 14, color: opts.capeColor });
+    accentParts.push({ row: 12, col: 40, w: 3, h: 14, color: opts.capeColor });
+  }
+  if (opts.tabardColor) {
+    accentParts.push({ row: 13, col: 24, w: 4, h: 13, color: opts.tabardColor });
+  }
+  if (opts.bracerColor) {
+    accentParts.push({ row: 18, col: 14, w: 3, h: 4, color: opts.bracerColor });
+    accentParts.push({ row: 18, col: 35, w: 3, h: 4, color: opts.bracerColor });
+  }
+  if (opts.gloveColor) {
+    accentParts.push({ row: 24, col: 16, w: 3, h: 3, color: opts.gloveColor });
+    accentParts.push({ row: 24, col: 33, w: 3, h: 3, color: opts.gloveColor });
+  }
+
   const displayWidth = Math.round(sizePx * SPRITE_W / SPRITE_H);
   return buildCompositeSVG(
     [{ rows: HEAD_SHAPE, palette: headPalette }, { rows: armorShape, palette: armorPalette }],
-    [{ parts: weaponParts, group: 'weapon' }],
+    [{ parts: weaponParts, group: 'weapon' }, { parts: accentParts, group: 'body' }],
     SPRITE_W, SPRITE_H, displayWidth, sizePx, OUTLINE_COLOR,
     opts.legendaryWeapon ? 'legendary-weapon-glow' : ''
   );
