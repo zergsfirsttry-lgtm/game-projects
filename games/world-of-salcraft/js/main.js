@@ -264,7 +264,7 @@ const App = {
     const pdata = Persistent.load();
     const gearRow = (item) => this.renderGearRow(classId, item);
     const weapons = pdata.inventory.filter(i => i.slot === 'weapon');
-    const armorSlotKeys = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'ring', 'trinket'];
+    const armorSlotKeys = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket'];
     const armor = pdata.inventory.filter(i => armorSlotKeys.includes(i.slot));
     const openDetailKeys = Array.from(this.root.querySelectorAll('details[open]')).map(d => d.dataset.key);
     const scrollY = window.scrollY;
@@ -1402,7 +1402,7 @@ const App = {
       </div>`;
     };
     const leftColumn = ['head', 'neck', 'shoulders', 'back', 'chest', 'shirt', 'tabard', 'wrists'].map(k => slotCell(k, SLOT_LABELS[k])).join('');
-    const rightColumn = ['hands', 'waist', 'legs', 'ring1', 'ring2', 'trinket1', 'trinket2'].map(k =>
+    const rightColumn = ['hands', 'waist', 'legs', 'boots', 'ring1', 'ring2', 'trinket1', 'trinket2'].map(k =>
       slotCell(k, k.startsWith('ring') ? 'Ring' : k.startsWith('trinket') ? 'Trinket' : SLOT_LABELS[k])
     ).join('');
     const usesBlessing = CLASS_WEAPON_TYPES[classId].includes('blessing');
@@ -1737,7 +1737,7 @@ const App = {
     const gearRow = (item) => this.renderGearRow(classId, item);
 
     const weapons = pdata.inventory.filter(i => i.slot === 'weapon');
-    const armorSlotKeys = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'ring', 'trinket'];
+    const armorSlotKeys = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket'];
     const armor = pdata.inventory.filter(i => armorSlotKeys.includes(i.slot));
     const containers = pdata.inventory.filter(i => i.slot === 'container');
     const recipeItems = pdata.inventory.filter(i => i.slot === 'recipe');
@@ -2089,7 +2089,7 @@ const App = {
     const weaponTypeSections = Object.keys(WEAPON_TYPE_LABELS).map(type =>
       section(`weapon-${type}`, WEAPON_TYPE_LABELS[type], gearCards(t => t.slot === 'weapon' && t.weaponType === type))
     ).join('');
-    const armorSlots = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'ring', 'trinket'];
+    const armorSlots = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket'];
     const armorSections = armorSlots.map(slot => section(`armor-${slot}`, SLOT_LABELS[slot], gearCards(t => t.slot === slot))).join('');
 
     const reputationRows = ACT_THEMES.map(theme => {

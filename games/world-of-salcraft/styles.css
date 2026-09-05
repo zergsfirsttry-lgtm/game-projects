@@ -996,17 +996,24 @@ button {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 /* ---------- Armory (WoW-style paperdoll) ---------- */
+/* Column/portrait widths scale fluidly with the viewport (clamp, not a fixed
+   breakpoint) so the three columns always shrink together and stay on one
+   row - flex-wrap previously let the left column + portrait fit one line
+   while the right column alone wrapped onto its own centered row below,
+   which read as broken rather than "responsive" on real phones. nowrap
+   backs that up: even the clamp() floors (218px total) fit comfortably
+   inside the narrowest real phone viewport. */
 .armory-layout {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: clamp(6px, 2vw, 10px);
+  flex-wrap: nowrap;
 }
-.armory-column { display: flex; flex-direction: column; gap: 6px; width: 96px; }
-.armory-center { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.armory-column { display: flex; flex-direction: column; gap: 6px; width: clamp(62px, 21vw, 96px); flex-shrink: 0; }
+.armory-center { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
 .armory-portrait {
-  width: 140px;
+  width: clamp(86px, 28vw, 140px);
   min-height: 150px;
   display: flex;
   align-items: flex-end;
@@ -1017,8 +1024,11 @@ button {
   padding: 8px;
 }
 .armory-portrait svg { image-rendering: pixelated; max-width: 100%; height: auto; }
-.armory-weapon-row { display: flex; gap: 6px; }
-.armory-weapon-row .armory-slot { width: 90px; }
+/* Wraps independently of the outer .armory-layout (which is nowrap) - on a
+   very narrow screen the 3 weapon slots fold to 2-then-1 under the
+   portrait instead of forcing the whole paperdoll to overflow or reflow. */
+.armory-weapon-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 100%; }
+.armory-weapon-row .armory-slot { width: clamp(64px, 20vw, 90px); }
 .armory-slot {
   background: var(--bg-panel-2);
   border: 2px solid var(--border);
@@ -1075,10 +1085,7 @@ button {
 .stat-compare .stat-equal { color: var(--text-dim); }
 
 @media (max-width: 480px) {
-  .armory-layout { gap: 6px; }
-  .armory-column { width: 78px; }
-  .armory-portrait { width: 100px; min-height: 110px; }
-  .armory-weapon-row .armory-slot { width: 74px; }
+  .armory-portrait { min-height: 110px; }
 }
 
 /* ---------- Mobile ---------- */

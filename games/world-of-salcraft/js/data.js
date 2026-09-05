@@ -645,7 +645,7 @@ const WEAPON_TYPE_LABELS = {
 // item's slot needs to show as text (Inventory, Armory, Journal).
 const SLOT_LABELS = {
   weapon: 'Weapon', chest: 'Chest', head: 'Helmet', neck: 'Necklace', shoulders: 'Shoulders', back: 'Cape',
-  shirt: 'Shirt', tabard: 'Tabard', wrists: 'Bracers', hands: 'Gloves', waist: 'Belt', legs: 'Legs',
+  shirt: 'Shirt', tabard: 'Tabard', wrists: 'Bracers', hands: 'Gloves', waist: 'Belt', legs: 'Legs', boots: 'Boots',
   ring: 'Ring', trinket: 'Trinket'
 };
 

@@ -111,7 +111,7 @@ const EXTRA_WEAPON_TEMPLATES = {
 };
 Object.assign(GEAR_TEMPLATES, EXTRA_WEAPON_TEMPLATES);
 
-const ACCESSORY_SLOT_ICON = { head: '⛑️', neck: '📿', shoulders: '🎽', back: '🧣', wrists: '⌚', hands: '🧤', waist: '🎗️', legs: '👖', ring: '💍', trinket: '🔯' };
+const ACCESSORY_SLOT_ICON = { head: '⛑️', neck: '📿', shoulders: '🎽', back: '🧣', wrists: '⌚', hands: '🧤', waist: '🎗️', legs: '👖', boots: '👢', ring: '💍', trinket: '🔯' };
 const ACCESSORY_SLOT_NOUNS = {
   head: ['Helm', 'Hood', 'Circlet', 'Cowl', 'Crown'],
   neck: ['Necklace', 'Amulet', 'Pendant', 'Choker', 'Torc'],
@@ -121,6 +121,7 @@ const ACCESSORY_SLOT_NOUNS = {
   hands: ['Gloves', 'Gauntlets', 'Handwraps', 'Grips', 'Mitts'],
   waist: ['Belt', 'Sash', 'Girdle', 'Cord', 'Waistguard'],
   legs: ['Leggings', 'Greaves', 'Legguards', 'Trousers', 'Kilt'],
+  boots: ['Boots', 'Sabatons', 'Treads', 'Footguards', 'Walkers'],
   ring: ['Ring', 'Band', 'Loop', 'Signet', 'Circle'],
   trinket: ['Charm', 'Idol', 'Talisman', 'Relic', 'Trinket']
 };
@@ -140,6 +141,7 @@ Object.assign(GEAR_TEMPLATES,
   generateAccessoryPool(15, 'head', (i) => ({ baseDef: 2 + (i % 4), baseHp: 4 + (i % 8) })),
   generateAccessoryPool(15, 'shoulders', (i) => ({ baseDef: 2 + (i % 4), baseHp: 3 + (i % 6) })),
   generateAccessoryPool(15, 'legs', (i) => ({ baseDef: 2 + (i % 4), baseHp: 4 + (i % 8) })),
+  generateAccessoryPool(15, 'boots', (i) => ({ baseDef: 2 + (i % 4), baseHp: 3 + (i % 6) })),
   generateAccessoryPool(15, 'back', (i) => ({ baseDef: 1 + (i % 2) })),
   generateAccessoryPool(15, 'waist', (i) => ({ baseDef: 1 + (i % 2) })),
   generateAccessoryPool(15, 'wrists', (i) => ({ baseDef: 1 + (i % 2) })),
@@ -221,7 +223,7 @@ function canClassUseWeaponType(classId, weaponType) {
 // The full list of equippable non-cosmetic-slot-agnostic keys on a
 // character record (excludes spell/pet/mount, which have their own equip
 // logic already).
-const EQUIP_GEAR_KEYS = ['mainHand', 'offHand', 'ranged', 'head', 'neck', 'shoulders', 'back', 'chest', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'ring1', 'ring2', 'trinket1', 'trinket2'];
+const EQUIP_GEAR_KEYS = ['mainHand', 'offHand', 'ranged', 'head', 'neck', 'shoulders', 'back', 'chest', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring1', 'ring2', 'trinket1', 'trinket2'];
 
 // Which equip-slot KEY(S) a given item could go into for this class - a
 // weapon may resolve to zero keys (class can't use that weaponType), one
@@ -498,6 +500,7 @@ const RECIPES = [
   { id: 'craftHands', defId: 'genHands1', rarity: 'uncommon', cost: { gold: 30, leather: 2 } },
   { id: 'craftWaist', defId: 'genWaist1', rarity: 'uncommon', cost: { gold: 30, leather: 2 } },
   { id: 'craftLegs', defId: 'genLegs1', rarity: 'uncommon', cost: { gold: 45, leather: 2, ore: 2 } },
+  { id: 'craftBoots', defId: 'genBoots1', rarity: 'uncommon', cost: { gold: 35, leather: 2, ore: 1 } },
   { id: 'craftRing', defId: 'genRing1', rarity: 'uncommon', cost: { gold: 50, essence: 2 } },
   { id: 'craftTrinket', defId: 'genTrinket1', rarity: 'uncommon', cost: { gold: 55, essence: 2, ore: 1 } },
   { id: 'craftShirt', defId: 'genShirt1', rarity: 'uncommon', cost: { gold: 15 } },
@@ -1303,11 +1306,10 @@ function previewClassStats(classId) {
 // every screen should call through so equipped gear is always reflected.
 // The chest slot and main-hand weapon get full hand-authored shapes/palettes;
 // the remaining accessory slots (head/shoulders/back/tabard/shirt/wrists/
-// hands/waist/legs) have no unique art of their own, so each one instead
-// tints its own region of the shared body silhouette to that item's rarity
-// color - a helmet, say, recolors the hair region, and a legendary piece
-// reads as visually fancier than a common one. Boots have no dedicated equip
-// slot, so they mirror whatever color the legs slot resolves to.
+// hands/waist/legs/boots) have no unique art of their own, so each one
+// instead tints its own region of the shared body silhouette to that item's
+// rarity color - a helmet, say, recolors the hair region, and a legendary
+// piece reads as visually fancier than a common one.
 function characterSpriteFor(classId, sizePx) {
   const rec = Persistent.getCharacter(classId);
   const eq = rec.equipped;
@@ -1317,6 +1319,7 @@ function characterSpriteFor(classId, sizePx) {
   const shoulders = eq.shoulders ? Persistent.findItem(eq.shoulders) : null;
   const waist = eq.waist ? Persistent.findItem(eq.waist) : null;
   const legs = eq.legs ? Persistent.findItem(eq.legs) : null;
+  const boots = eq.boots ? Persistent.findItem(eq.boots) : null;
   const head = eq.head ? Persistent.findItem(eq.head) : null;
   const back = eq.back ? Persistent.findItem(eq.back) : null;
   const tabard = eq.tabard ? Persistent.findItem(eq.tabard) : null;
@@ -1337,7 +1340,7 @@ function characterSpriteFor(classId, sizePx) {
   if (shoulders) armorPalette.T = RARITIES[shoulders.rarity].color;
   if (waist) armorPalette.W = RARITIES[waist.rarity].color;
   if (legs) armorPalette.L = RARITIES[legs.rarity].color;
-  armorPalette.B = legs ? RARITIES[legs.rarity].color : armorPalette.L;
+  if (boots) armorPalette.B = RARITIES[boots.rarity].color;
   options.armorPalette = armorPalette;
 
   if (weapon && weapon.visual) {
