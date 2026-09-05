@@ -141,16 +141,23 @@ button {
 .class-card.locked { cursor: not-allowed; opacity: 0.55; filter: grayscale(0.6); }
 .class-card.locked:hover { transform: none; border-color: var(--border); }
 
-/* Inserted as a DOM sibling right after whichever card is selected (see
-   showClassSelect) - flex-basis:100% in the wrapping .class-grid forces it
-   onto its own row immediately below that card, rather than fixed at the
-   bottom of the page, so the confirm tap stays right under the thumb on
-   one-handed mobile play. */
-.venture-forth-btn {
-  flex-basis: 100%;
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
+/* Two confirm buttons, shown one at a time by breakpoint (see showClassSelect):
+   .venture-forth-btn is inserted as a DOM sibling right after whichever card
+   is selected - flex-basis:100% in the wrapping .class-grid forces it onto
+   its own row immediately below that card, so the confirm tap stays right
+   under the thumb on one-handed mobile play, where a single column of cards
+   makes a full-width break read as natural. .venture-forth-fixed is the
+   plain static button below the whole grid, for desktop - the one-handed
+   reach problem doesn't exist there, and breaking a wide multi-column grid
+   with a full-width bar mid-scroll reads as a layout glitch, not an
+   affordance. Hidden by default; the mobile breakpoint below flips which
+   one shows. */
+.venture-forth-btn { display: none; flex-basis: 100%; width: 100%; max-width: 420px; margin: 0 auto; }
+.venture-forth-fixed { max-width: 420px; margin: 4px auto 0; }
+
+@media (max-width: 480px) {
+  .venture-forth-btn { display: block; }
+  .venture-forth-fixed { display: none; }
 }
 
 /* ---------- Header (persistent during run) ---------- */
@@ -371,6 +378,30 @@ button {
 .shop-category > .gear-row { margin: 8px 12px; }
 .shop-category > .gear-row:last-child { margin-bottom: 12px; }
 .shop-category > p.small-text { margin: 0 14px 12px; }
+
+/* A tab-level category list entry (Inventory/Professions/Shop) - opens
+   showListModal instead of expanding an inline <details> section. */
+.category-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, transform 0.08s ease;
+}
+.category-btn:hover { border-color: var(--accent-2); }
+.category-btn:active { transform: translateY(1px); }
+.category-btn-icon { font-size: 1.2rem; flex-shrink: 0; }
+.category-btn-label { flex: 1; font-weight: 600; color: var(--accent); }
 
 /* ---------- Panels (event / rest / shop / treasure / gameover) ---------- */
 .panel {
@@ -690,6 +721,47 @@ button {
   100% { left: 84%; opacity: 0; transform: translateY(-4px) scale(3); }
 }
 
+/* Fireball's own projectile - warm flame gradient, a flicker layered on top
+   of its travel arc, and a soft trailing glow (::after) - visually distinct
+   from the plain solid-color .magic-ball every other skill/attack uses.
+   Keyed to the spell being cast (see isFireballCast in renderCombatScreen),
+   not the caster's class, since Fireball is equippable by any class. */
+.fireball-projectile {
+  position: absolute;
+  top: 45%;
+  left: 8%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6c2 0%, #ffb347 35%, #ff5a1f 65%, #c2260c 85%, transparent 100%);
+  box-shadow: 0 0 10px #ff7a1f, 0 0 22px #ff4400, 0 0 34px #ff2200;
+  animation: fireballTravel 0.6s ease-in forwards, fireballFlicker 0.12s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 5;
+}
+.fireball-projectile::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,150,40,0.55) 0%, transparent 70%);
+  animation: fireballTrail 0.6s ease-in forwards;
+}
+@keyframes fireballTravel {
+  0% { left: 8%; opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+  60% { left: 78%; opacity: 1; transform: translateY(-6px) scale(1.1) rotate(180deg); }
+  80% { left: 84%; opacity: 1; transform: translateY(-4px) scale(2.6) rotate(220deg); }
+  100% { left: 84%; opacity: 0; transform: translateY(-4px) scale(3.4) rotate(260deg); }
+}
+@keyframes fireballFlicker {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.35) saturate(1.3); }
+}
+@keyframes fireballTrail {
+  0% { opacity: 0.8; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+
 /* Critical-hit floating combat text - WoW-style "Critical!" callout that
    pops up over the enemy's portrait and fades as it rises. */
 .floating-crit {
@@ -873,30 +945,28 @@ button {
 }
 .sanctuary-xp-bar .xp-bar-wrap { flex: 1; min-width: 120px; }
 
-.class-picker { display: flex; align-items: center; gap: 10px; }
-.class-select {
-  flex: 1;
+.class-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
   background: var(--bg-panel-2);
   border: 2px solid var(--border);
   color: var(--text);
   border-radius: 4px;
-  padding: 9px 10px;
-  font-size: 0.9rem;
+  padding: 8px 10px;
   min-height: 40px;
   font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease;
 }
-.class-select:focus { outline: none; border-color: var(--accent); }
+.class-picker:hover { border-color: var(--accent); }
+.class-picker-label { flex: 1; }
+.class-picker-caret { color: var(--text-dim); }
 
 .house-feed { display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 160px; }
-.house-food-select {
-  background: var(--bg-panel-2);
-  border: 2px solid var(--border);
-  color: var(--text);
-  border-radius: 4px;
-  padding: 6px 8px;
-  font-size: 0.8rem;
-}
-.house-food-select:focus { outline: none; border-color: var(--accent); }
 .house-row { flex-wrap: wrap; }
 
 .sanctuary-body {
@@ -1011,7 +1081,14 @@ button {
   flex-wrap: nowrap;
 }
 .armory-column { display: flex; flex-direction: column; gap: 6px; width: clamp(62px, 21vw, 96px); flex-shrink: 0; }
-.armory-center { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+/* flex:1 (not shrink-to-fit) so the character info block (see
+   renderCharInfoBlock/centerExtraHtml) has real width to lay out text in,
+   rather than being squeezed to the portrait's own narrow clamp width - the
+   portrait and weapon row stay centered within it via align-items. */
+.armory-center { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.armory-center .char-info-bar,
+.armory-center .char-customize,
+.armory-center .customize-row { width: 100%; max-width: 340px; }
 .armory-portrait {
   width: clamp(86px, 28vw, 140px);
   min-height: 150px;

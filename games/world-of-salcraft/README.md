@@ -36,8 +36,13 @@ Close the tab entirely and time still passes - come back later to a
   points and raw power along the way.
 - **Talents** - three specialization trees per class, WoW-style, each with
   its own build identity.
-- **Gear** - eighteen equip slots (weapons, armor, and accessories), rarity
+- **Gear** - nineteen equip slots (weapons, armor, and accessories), rarity
   from Common up to Legendary, found on adventures, crafted, or bought.
+  Filling more slots with better rarity grows a Gear Set Bonus, a global %
+  multiplier (up to +100%) on top of everything your items, relics, food,
+  and pets/mounts already grant. Enchanting turns unwanted gear into
+  materials (Disenchant) and spends them adding a passive ability to
+  whatever you've got equipped (Enchant).
 - **Professions** - eight gathering/crafting trades (mining, herbalism,
   fishing, cooking, and more) that level independently and interconnect with
   each other.
@@ -58,10 +63,12 @@ Close the tab entirely and time still passes - come back later to a
 Nine classes, each with a unique class-defining skill and full weapon-type
 authenticity (a Rogue can't pick up a two-handed maul; a Warlock isn't
 swinging a sword). Relics and curses shape a single run's build on the fly.
-A full crafting/cooking economy turns gathered materials into gear and
-temporary buffs. Every sprite - every class, every monster, every pet and
-mount - is procedurally-generated pixel art, no external image assets
-required.
+Speed does double duty in combat - it still sets turn order, but it also
+rolls the chance a basic Attack chains into a combo, swinging again before
+the enemy replies. A full crafting/cooking economy turns gathered materials
+into gear and temporary buffs. Every sprite - every class, every monster,
+every pet and mount - is procedurally-generated pixel art, no external image
+assets required.
 
 Jump in, pick a class, and the game will walk you through your first few
 steps itself.

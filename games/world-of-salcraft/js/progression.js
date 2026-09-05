@@ -285,8 +285,37 @@ function gearStatBonus(rec) {
     base.maxHp += item.hp || 0;
     base.goldBonus += item.goldBonus || 0;
     if (item.effect) Object.keys(item.effect).forEach(k => { base[k] = (base[k] || 0) + item.effect[k]; });
+    if (item.enchantId && ENCHANTS[item.enchantId]) {
+      const enchantEffect = ENCHANTS[item.enchantId].effect;
+      Object.keys(enchantEffect).forEach(k => { base[k] = (base[k] || 0) + enchantEffect[k]; });
+    }
   });
   return base;
+}
+
+// The Gear Set Bonus - a global % multiplier (0-100%) applied to every stat
+// contribution from items/relics/food/pets/mounts (see effectiveStats in
+// state.js and previewClassStats above) that rewards actually filling out
+// the paperdoll, not just chasing a couple of strong items. Score is the sum
+// of each filled slot's rarity multiplier (RARITIES[rarity].mult - the same
+// weighting the loot/economy systems already use), against the max possible
+// (every one of the 19 equip-gear slots at legendary) - so 100% requires a
+// fully legendary loadout, and the ratio scales smoothly with both how many
+// slots are filled AND how good they are. Needs at least 2 filled slots to
+// grant anything at all - a single item (however rare) is not a "set".
+function gearSetBonusPct(rec) {
+  let filled = 0;
+  let score = 0;
+  EQUIP_GEAR_KEYS.forEach(key => {
+    const uid = rec.equipped[key];
+    if (!uid) return;
+    filled++;
+    const item = Persistent.findItem(uid);
+    if (item) score += RARITIES[item.rarity].mult;
+  });
+  if (filled < 2) return 0;
+  const maxScore = EQUIP_GEAR_KEYS.length * RARITIES.legendary.mult;
+  return clamp(score / maxScore, 0, 1);
 }
 
 // Honor-shop/Bloody-Bag gear (see PVP_GEAR_TEMPLATES/PVP_UNIQUE_ITEMS in
@@ -507,6 +536,91 @@ const RECIPES = [
   { id: 'craftTabard', defId: 'genTabard1', rarity: 'uncommon', cost: { gold: 15 } }
 ];
 
+// ============================================================================
+// Disenchanting - breaks a weapon/armor/accessory item down into arcane
+// materials instead of selling it for gold. Three tiers, scaling with the
+// disenchanted item's OWN rarity (mirrors how rarer gear is worth more):
+// dust (common component), shard (mid-tier, rare+ only), crystal (top-tier,
+// epic+ only). Disenchanting has its own independent level/xp track
+// (rec.disenchanting, see Persistent.getCharacter) rather than plugging into
+// the shared "one active gathering profession" system in PROFESSIONS/
+// PROFESSION_PASSIVES - it's a deliberate, per-use action (open the popup,
+// pick an item), not a passive trickle from adventuring, so it levels up
+// only when actually used.
+// ============================================================================
+const DISENCHANT_MAX_LEVEL = 99;
+const DISENCHANT_YIELD_BASE = {
+  common: { dust: 2 },
+  uncommon: { dust: 4 },
+  rare: { dust: 4, shard: 2 },
+  epic: { dust: 4, shard: 4, crystal: 2 },
+  legendary: { dust: 4, shard: 6, crystal: 5 }
+};
+// XP granted per disenchant, scaled the same way loot rarity itself scales.
+const DISENCHANT_XP_BY_RARITY = { common: 5, uncommon: 10, rare: 20, epic: 40, legendary: 80 };
+
+// +2% yield per Disenchanting level, same curve every other profession's
+// passive uses - level 1 grants none, consistent with professionXpForLevel.
+function disenchantYieldFor(rarity, disenchantingLevel) {
+  const base = DISENCHANT_YIELD_BASE[rarity] || DISENCHANT_YIELD_BASE.common;
+  const mult = 1 + 0.02 * (disenchantingLevel - 1);
+  const yield_ = {};
+  Object.keys(base).forEach(k => { yield_[k] = Math.max(1, Math.round(base[k] * mult)); });
+  return yield_;
+}
+
+function grantDisenchantingXp(rec, amount) {
+  const d = rec.disenchanting;
+  if (d.level >= DISENCHANT_MAX_LEVEL) return { levelsGained: 0 };
+  d.xp += amount;
+  let levelsGained = 0;
+  while (d.level < DISENCHANT_MAX_LEVEL) {
+    const need = professionXpForLevel(d.level);
+    if (d.xp < need) break;
+    d.xp -= need;
+    d.level += 1;
+    levelsGained += 1;
+  }
+  return { levelsGained };
+}
+
+// Destroys `item` (caller removes it from pdata.inventory) and returns the
+// materials it yields, already added to pdata.materials, plus the XP grant.
+function disenchantItem(rec, pdata, item) {
+  const yieldAmounts = disenchantYieldFor(item.rarity, rec.disenchanting.level);
+  Object.keys(yieldAmounts).forEach(k => { pdata.materials[k] = (pdata.materials[k] || 0) + yieldAmounts[k]; });
+  const xpResult = grantDisenchantingXp(rec, DISENCHANT_XP_BY_RARITY[item.rarity] || 5);
+  return { yieldAmounts, ...xpResult };
+}
+
+// ============================================================================
+// Enchanting - applies a passive-ability enchant (one at a time - a new one
+// replaces the old) to an already-equipped item, paid for with Disenchanting's
+// materials. Nine of the ten are class-flavored (classId set - only shown
+// when enchanting gear equipped by that class); the tenth (classId: null) is
+// universal. Effects reuse the same effect{} levers relics/talents/jewelry
+// already use (see EFFECT_LEVER_LABELS in data.js) so describeEffectLever
+// and gearStatBonus need no special-casing beyond reading item.enchantId.
+// ============================================================================
+const ENCHANTS = {
+  berserkersEdge: { id: 'berserkersEdge', name: "Berserker's Edge", icon: '🪓', classId: 'warrior', desc: 'A reckless, aggressive edge.', cost: { shard: 3 }, effect: { critBonus: 0.03 } },
+  shadowstep: { id: 'shadowstep', name: 'Shadowstep', icon: '🥷', classId: 'rogue', desc: 'Steps too quick for the eye.', cost: { dust: 4, shard: 2 }, effect: { speed: 2 } },
+  arcaneFocus: { id: 'arcaneFocus', name: 'Arcane Focus', icon: '🔷', classId: 'mage', desc: 'Sharpens the mind for spellcraft.', cost: { shard: 3 }, effect: { spellPower: 0.05 } },
+  blessedAegis: { id: 'blessedAegis', name: 'Blessed Aegis', icon: '🛡️', classId: 'paladin', desc: 'A slow, steady holy mending.', cost: { dust: 5 }, effect: { hpRegen: 2 } },
+  predatorsMark: { id: 'predatorsMark', name: "Predator's Mark", icon: '🏹', classId: 'hunter', desc: 'Marks the strong for the kill.', cost: { shard: 3 }, effect: { eliteSlayerAtk: 3 } },
+  soulSiphon: { id: 'soulSiphon', name: 'Soul Siphon', icon: '💀', classId: 'warlock', desc: 'Drains life with every strike.', cost: { shard: 2, crystal: 1 }, effect: { lifesteal: 2 } },
+  savageMomentum: { id: 'savageMomentum', name: 'Savage Momentum', icon: '💢', classId: 'barbarian', desc: 'Feeds a building fury into faster strikes.', cost: { crystal: 2 }, effect: { comboChance: 0.05 } },
+  sanctifiedLight: { id: 'sanctifiedLight', name: 'Sanctified Light', icon: '✨', classId: 'cleric', desc: 'Makes every remedy go further.', cost: { dust: 5 }, effect: { potionHealBonus: 0.05 } },
+  encore: { id: 'encore', name: 'Encore', icon: '🎼', classId: 'bard', desc: 'The crowd tips generously.', cost: { dust: 4, shard: 1 }, effect: { goldBonus: 0.03 } },
+  radiantVigor: { id: 'radiantVigor', name: 'Radiant Vigor', icon: '💎', classId: null, desc: 'A universal enchant - fits any class.', cost: { dust: 6 }, effect: { maxHp: 8 } }
+};
+
+// Which enchants a given class is allowed to pick (its own class-flavored
+// one plus the universal one) - see showEnchantModal in main.js.
+function enchantsFor(classId) {
+  return Object.values(ENCHANTS).filter(e => e.classId === null || e.classId === classId);
+}
+
 // A recipe's craftable rarity ceiling, one tier per Upgrade consumed (see
 // RECIPE_ITEMS/instantiateRecipeItem below and the Crafting "Upgrade" button
 // in main.js) - persists in pdata.recipeRarityBoost, capped at legendary.
@@ -516,6 +630,20 @@ function getRecipeRarity(recipeId) {
   const boost = Persistent.load().recipeRarityBoost[recipeId] || 0;
   const idx = Math.min(RARITY_ORDER.length - 1, RARITY_ORDER.indexOf(recipe.rarity) + boost);
   return RARITY_ORDER[idx];
+}
+
+// Each Upgrade raises a recipe's craftable rarity ceiling permanently, so its
+// ongoing gold/material cost rises to match - tenfold per rarity tier
+// upgraded, so a recipe pushed to its legendary ceiling is a real gold/
+// material sink rather than a one-time-cheap way to keep churning out
+// top-rarity gear. Shared by gear recipes (RECIPES) and food recipes
+// (COOKING_RECIPES) - both key into the same pdata.recipeRarityBoost.
+function scaledRecipeCost(recipeId, baseCost) {
+  const boost = Persistent.load().recipeRarityBoost[recipeId] || 0;
+  const mult = Math.pow(10, boost);
+  const scaled = {};
+  Object.keys(baseCost).forEach(k => { scaled[k] = baseCost[k] * mult; });
+  return scaled;
 }
 
 // A Recipe item - drops rarely from encounters (see rollRecipeDrop) and is
@@ -1201,11 +1329,11 @@ const Persistent = {
 
   blank() {
     return {
-      bankGold: 0, materials: { ore: 0, leather: 0, essence: 0, herbs: 0, wood: 0, fish: 0 }, inventory: [], permanentRelics: [], unlockedSpells: [], unlockedClasses: [], ownedLegendaries: [], characters: {},
+      bankGold: 0, materials: { ore: 0, leather: 0, essence: 0, herbs: 0, wood: 0, fish: 0, dust: 0, shard: 0, crystal: 0 }, inventory: [], permanentRelics: [], unlockedSpells: [], unlockedClasses: [], ownedLegendaries: [], characters: {},
       ownedPets: [], ownedMounts: [], activeQuestIds: [], questProgress: {}, questTiers: {}, completedQuestIds: [],
       honor: 0, honorInventory: [], honorPotionCount: 0, pvpInventory: [], randomPvpEnabled: false, recipeRarityBoost: {},
       companionLevels: { pet: {}, mount: {} }, activeBuffs: [], lastSeenAt: Date.now(), reputation: {},
-      recruitedCompanions: [], equippedCompanionIds: [], showCheats: true, tutorialSeen: false
+      recruitedCompanions: [], equippedCompanionIds: [], showCheats: false, tutorialSeen: false
     };
   },
 
@@ -1255,6 +1383,8 @@ const Persistent = {
       if (rec.profession.levels[id] === undefined) rec.profession.levels[id] = 1;
       if (rec.profession.xp[id] === undefined) rec.profession.xp[id] = 0;
     });
+    if (!rec.disenchanting) rec.disenchanting = { level: 1, xp: 0 };
+    if (rec.autoEquip === undefined) rec.autoEquip = false;
     if (!rec.talents) rec.talents = { ranks: {} };
     if (!rec.pvpEquipped) rec.pvpEquipped = { weapon: null, armor: null, trinket: null };
     // Migrate pre-rarity Honor Shop saves: pvpEquipped used to hold the fixed
@@ -1292,12 +1422,17 @@ function previewClassStats(classId) {
   const buff = activeBuffStatBonus();
   const reputation = reputationStatBonus();
   const lvlMult = levelStatMultiplier(rec.level);
+  // Mirrors effectiveStats() in state.js (see gearSetBonusPct) so the
+  // Sanctuary preview matches what combat will actually show.
+  const setBonusPct = gearSetBonusPct(rec);
+  const boost = (v) => v * (1 + setBonusPct);
   return {
-    atk: Math.round((cls.atk + gear.atk) * lvlMult) + bonus.atk + companion.atk + talent.atk + buff.atk,
-    def: cls.def + gear.def + bonus.def + companion.def + talent.def + buff.def,
-    maxHp: Math.round((cls.maxHp + gear.maxHp) * lvlMult) + bonus.maxHp + companion.maxHp + talent.maxHp + buff.maxHp,
-    speed: cls.speed + bonus.speed + companion.speed + talent.speed + buff.speed,
-    goldBonus: bonus.goldBonus + gear.goldBonus + companion.goldBonus + talent.goldBonus + buff.goldBonus + reputation.goldBonus
+    atk: Math.round((cls.atk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + talent.atk,
+    def: cls.def + boost(gear.def + bonus.def + companion.def + buff.def) + talent.def,
+    maxHp: Math.round((cls.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + talent.maxHp,
+    speed: cls.speed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + talent.speed,
+    goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + talent.goldBonus + reputation.goldBonus,
+    setBonusPct
   };
 }
 

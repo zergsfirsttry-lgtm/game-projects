@@ -28,7 +28,11 @@ const Game = {
   log: [],
   runSnapshot: null,
 
-  newRun(classId) {
+  // startingAct: normally 1 - "Pick up from your highest act" (class-select
+  // screen) passes the account's Meta.bestAct instead, so a returning player
+  // (or a fresh alt) can skip straight back to the frontier act instead of
+  // re-walking every earlier one.
+  newRun(classId, startingAct) {
     const cls = CLASSES[classId];
     const charRecord = Persistent.getCharacter(classId);
     const spellId = charRecord.equipped.spell || cls.defaultSpell;
@@ -48,7 +52,7 @@ const Game = {
       curses: []
     };
     this.goldEarnedThisRun = 0;
-    this.act = 1;
+    this.act = startingAct || 1;
     this.log = [];
     this.player.hp = this.effectiveStats().maxHp;
     // Persistent side-effects (XP/levels, loot, materials, tamed pets/mounts,
@@ -116,7 +120,7 @@ const Game = {
     const charRecord = Persistent.getCharacter(p.classId);
     // Sums every equipped slot (3 weapon + 15 armor/accessory) - see
     // gearStatBonus in progression.js. Replaces the old single weapon+armor
-    // lookup now that there are 18 equippable gear slots.
+    // lookup now that there are 19 equippable gear slots.
     const gear = gearStatBonus(charRecord);
 
     const relicIds = [...p.relics, ...Persistent.load().permanentRelics];
@@ -147,20 +151,30 @@ const Game = {
     // character's own equipped PET/MOUNT.
     const party = companionGroupStatBonus();
     const lvlMult = levelStatMultiplier(charRecord.level);
+    // The Gear Set Bonus (see gearSetBonusPct in progression.js) multiplies
+    // every stat contribution from items/relics/food/pets-mounts together -
+    // curses, talents, raid Ghosts, PvP-only gear, and the recruited-
+    // companion party bonus are deliberately untouched by it.
+    const setBonusPct = gearSetBonusPct(charRecord);
+    const boost = (v) => v * (1 + setBonusPct);
 
     return {
-      atk: Math.max(0, Math.round((p.baseAtk + gear.atk) * lvlMult) + bonus.atk + companion.atk + curse.atk + ghost.atk + talent.atk + pvpGear.atk + buff.atk + party.atk),
-      def: Math.max(0, p.baseDef + gear.def + bonus.def + companion.def + curse.def + ghost.def + talent.def + pvpGear.def + buff.def + party.def),
-      maxHp: Math.max(1, Math.round((p.maxHp + gear.maxHp) * lvlMult) + bonus.maxHp + companion.maxHp + curse.maxHp + ghost.maxHp + talent.maxHp + pvpGear.maxHp + buff.maxHp + party.maxHp),
-      speed: Math.max(1, p.baseSpeed + bonus.speed + companion.speed + curse.speed + talent.speed + buff.speed),
-      critBonus: bonus.critBonus + companion.critBonus + curse.critBonus + talent.critBonus + gear.critBonus + pvpGear.critBonus + buff.critBonus,
-      goldBonus: bonus.goldBonus + gear.goldBonus + companion.goldBonus + curse.goldBonus + talent.goldBonus + buff.goldBonus + reputation.goldBonus,
-      lifesteal: bonus.lifesteal + companion.lifesteal + curse.lifesteal + talent.lifesteal + gear.lifesteal + pvpGear.lifesteal + buff.lifesteal,
-      hpRegen: bonus.hpRegen + companion.hpRegen + curse.hpRegen + talent.hpRegen + gear.hpRegen + buff.hpRegen,
-      executeBonus: bonus.executeBonus + companion.executeBonus + curse.executeBonus + talent.executeBonus + gear.executeBonus + buff.executeBonus,
-      eliteSlayerAtk: bonus.eliteSlayerAtk + companion.eliteSlayerAtk + curse.eliteSlayerAtk + talent.eliteSlayerAtk + gear.eliteSlayerAtk + buff.eliteSlayerAtk,
-      potionHealBonus: bonus.potionHealBonus + companion.potionHealBonus + curse.potionHealBonus + talent.potionHealBonus + gear.potionHealBonus + profession.potionHealBonus + buff.potionHealBonus,
-      spellPower: bonus.spellPower + companion.spellPower + curse.spellPower + talent.spellPower + gear.spellPower + buff.spellPower,
+      atk: Math.max(0, Math.round((p.baseAtk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + curse.atk + ghost.atk + talent.atk + pvpGear.atk + party.atk),
+      def: Math.max(0, p.baseDef + boost(gear.def + bonus.def + companion.def + buff.def) + curse.def + ghost.def + talent.def + pvpGear.def + party.def),
+      maxHp: Math.max(1, Math.round((p.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + curse.maxHp + ghost.maxHp + talent.maxHp + pvpGear.maxHp + party.maxHp),
+      speed: Math.max(1, p.baseSpeed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + curse.speed + talent.speed),
+      critBonus: boost(gear.critBonus + bonus.critBonus + companion.critBonus + buff.critBonus) + curse.critBonus + talent.critBonus + pvpGear.critBonus,
+      goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + curse.goldBonus + talent.goldBonus + reputation.goldBonus,
+      lifesteal: boost(gear.lifesteal + bonus.lifesteal + companion.lifesteal + buff.lifesteal) + curse.lifesteal + talent.lifesteal + pvpGear.lifesteal,
+      hpRegen: boost(gear.hpRegen + bonus.hpRegen + companion.hpRegen + buff.hpRegen) + curse.hpRegen + talent.hpRegen,
+      executeBonus: boost(gear.executeBonus + bonus.executeBonus + companion.executeBonus + buff.executeBonus) + curse.executeBonus + talent.executeBonus,
+      eliteSlayerAtk: boost(gear.eliteSlayerAtk + bonus.eliteSlayerAtk + companion.eliteSlayerAtk + buff.eliteSlayerAtk) + curse.eliteSlayerAtk + talent.eliteSlayerAtk,
+      potionHealBonus: boost(gear.potionHealBonus + bonus.potionHealBonus + companion.potionHealBonus + buff.potionHealBonus) + curse.potionHealBonus + talent.potionHealBonus + profession.potionHealBonus,
+      spellPower: boost(gear.spellPower + bonus.spellPower + companion.spellPower + buff.spellPower) + curse.spellPower + talent.spellPower,
+      // Gear-enchant only for now (see Combat.comboChanceFor, ENCHANTS.savageMomentum) -
+      // stacks on top of the speed-derived combo chance every class already has.
+      comboChance: boost(gear.comboChance || 0),
+      setBonusPct,
       enemyAtkMult: curse.enemyAtkMult,
       enemyHpMult: curse.enemyHpMult,
       fleeDisabled: curse.fleeDisabled,

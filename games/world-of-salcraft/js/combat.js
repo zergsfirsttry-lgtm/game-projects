@@ -3,6 +3,12 @@
 // resolves immediately (locking input), then the enemy's reply resolves after
 // a short delay driven by main.js.
 
+// Hard ceiling on how many extra swings a single Attack's combo chain can
+// rack up (see Combat.comboChanceFor/playerAttack) - without this, a very
+// high-speed late-game build could roll an absurdly long (if increasingly
+// unlikely) chain.
+const COMBO_MAX_EXTRA_HITS = 5;
+
 const Combat = {
   state: null,
 
@@ -68,17 +74,37 @@ const Combat = {
     if (lifesteal) { Game.heal(lifesteal); this.addLog(`You drain ${lifesteal} HP.`); }
   },
 
+  // Speed's second job besides turn order: it also raises the chance a basic
+  // Attack chains into another swing before the enemy replies - a "combo".
+  // Each successful roll re-rolls at the same chance for the next swing, so
+  // expected chain length (p/(1-p)) grows with speed rather than being a
+  // flat "sometimes get 2 hits" - a very fast build can occasionally rattle
+  // off a long chain, capped at COMBO_MAX_EXTRA_HITS so it can't run away.
+  comboChanceFor(stats) {
+    return clamp(stats.speed * 0.03 + (stats.comboChance || 0), 0, 0.75);
+  },
+
   playerAttack() {
     const s = this.state;
     if (s.over || s.locked) return;
     const stats = Game.effectiveStats();
-    const crit = this.rollCrit(stats.critBonus);
-    let dmg = Math.max(1, stats.atk - s.enemy.def) + this.bonusDamageAgainst(s.enemy, stats);
-    if (crit) dmg = Math.round(dmg * 1.5);
-    s.enemy.hp = Math.max(0, s.enemy.hp - dmg);
+    const comboChance = this.comboChanceFor(stats);
+    let totalDmg = 0, hits = 0, lastCrit = false;
+    do {
+      const crit = this.rollCrit(stats.critBonus);
+      let dmg = Math.max(1, stats.atk - s.enemy.def) + this.bonusDamageAgainst(s.enemy, stats);
+      if (crit) dmg = Math.round(dmg * 1.5);
+      s.enemy.hp = Math.max(0, s.enemy.hp - dmg);
+      totalDmg += dmg;
+      hits += 1;
+      lastCrit = crit;
+      if (s.enemy.hp <= 0) break;
+    } while (hits <= COMBO_MAX_EXTRA_HITS && Math.random() < comboChance);
     s.anim.player = 'attack';
-    this.addLog(`You attack for ${dmg} damage${crit ? ' (critical!)' : ''}.`);
-    this.resolveAfterPlayerHit(stats.lifesteal, crit, dmg);
+    s.comboHits = hits > 1 ? hits : null;
+    const comboText = hits > 1 ? ` - a ${hits}-hit combo!` : '';
+    this.addLog(`You attack for ${totalDmg} damage${lastCrit ? ' (critical!)' : ''}${comboText}.`);
+    this.resolveAfterPlayerHit(stats.lifesteal ? stats.lifesteal * hits : stats.lifesteal, lastCrit, totalDmg);
   },
 
   // Generic spell resolution - see the SPELLS catalog in data.js for what each

@@ -43,8 +43,13 @@ const App = {
       }
     });
     const afkResult = computeAfkProgress();
-    if (afkResult) this.showWelcomeBack(afkResult);
-    else this.showTitle();
+    if (afkResult) {
+      if (afkResult.itemsGained.length && Persistent.getCharacter(afkResult.classId).autoEquip) {
+        this.autoEquipBestGear(afkResult.classId);
+        Persistent.save();
+      }
+      this.showWelcomeBack(afkResult);
+    } else this.showTitle();
   },
 
   // Shown once, at launch, only when computeAfkProgress (progression.js)
@@ -102,6 +107,7 @@ const App = {
 
   showClassSelect() {
     this.selectedClass = null;
+    const bestAct = Meta.load().bestAct;
     const cards = Object.values(CLASSES).map(c => {
       const unlocked = isClassUnlocked(c.id);
       const rec = Persistent.getCharacter(c.id);
@@ -121,39 +127,67 @@ const App = {
       </button>`;
     }).join('');
 
+    // "Pick up from your highest act" only makes sense for a returning
+    // player who's actually cleared at least Act 1 - omitted entirely for a
+    // brand-new account rather than shown disabled.
+    const showPickup = bestAct >= 2;
     this.root.innerHTML = `
       <div class="center-screen">
         <h2>Choose your path</h2>
         <div class="class-grid" id="class-grid">${cards}</div>
+        <button class="btn-primary venture-forth-fixed" id="btn-confirm-class-fixed" disabled>Venture Forth</button>
+        ${showPickup ? `<button class="btn-secondary venture-forth-fixed" id="btn-pickup-act-fixed" disabled>Pick up from your highest act (Act ${bestAct})</button>` : ''}
         <button class="btn-secondary" id="btn-back-title">Back</button>
       </div>`;
 
+    // Two confirm buttons, complementary via CSS (see .venture-forth-fixed/
+    // .venture-forth-btn) rather than one button whose behavior is detected
+    // in JS: a fixed one below the grid for desktop (where the one-handed-
+    // reach problem doesn't exist and a full-width bar breaking a wide
+    // multi-column grid read as a glitch), and one inserted right under
+    // the selected card - on its own full-width row - for mobile. Both
+    // share the same confirm logic and stay in sync on every card click.
+    // The "pick up" button follows the exact same fixed/dynamic pairing,
+    // always placed directly after its matching Venture Forth button.
+    const confirmSelection = (startingAct) => {
+      if (!this.selectedClass) return;
+      Persistent.load().lastPlayedClassId = this.selectedClass;
+      Game.newRun(this.selectedClass, startingAct);
+      this.showMap();
+    };
+    const fixedBtn = document.getElementById('btn-confirm-class-fixed');
+    fixedBtn.addEventListener('click', () => confirmSelection());
+    const pickupFixedBtn = document.getElementById('btn-pickup-act-fixed');
+    if (pickupFixedBtn) pickupFixedBtn.addEventListener('click', () => confirmSelection(bestAct));
+
     const cardsEls = this.root.querySelectorAll('.class-card:not(.locked)');
-    // The confirm button doesn't exist until a class is picked - it's then
-    // inserted as a sibling right after the selected card (see the
-    // .venture-forth-btn CSS) so it always sits directly under whichever
-    // card the player just tapped, for easier one-handed mobile reach. This
-    // same principle (put the action control near the point of interaction)
-    // should carry forward into other UI work.
     cardsEls.forEach(el => {
       el.addEventListener('click', () => {
         cardsEls.forEach(c => c.classList.remove('selected'));
         el.classList.add('selected');
         this.selectedClass = el.dataset.class;
+        fixedBtn.disabled = false;
+        if (pickupFixedBtn) pickupFixedBtn.disabled = false;
         let confirmBtn = document.getElementById('btn-confirm-class');
         if (!confirmBtn) {
           confirmBtn = document.createElement('button');
           confirmBtn.id = 'btn-confirm-class';
           confirmBtn.className = 'btn-primary venture-forth-btn';
           confirmBtn.textContent = 'Venture Forth';
-          confirmBtn.addEventListener('click', () => {
-            if (!this.selectedClass) return;
-            Persistent.load().lastPlayedClassId = this.selectedClass;
-            Game.newRun(this.selectedClass);
-            this.showMap();
-          });
+          confirmBtn.addEventListener('click', () => confirmSelection());
         }
         el.insertAdjacentElement('afterend', confirmBtn);
+        if (showPickup) {
+          let pickupBtn = document.getElementById('btn-pickup-act');
+          if (!pickupBtn) {
+            pickupBtn = document.createElement('button');
+            pickupBtn.id = 'btn-pickup-act';
+            pickupBtn.className = 'btn-secondary venture-forth-btn';
+            pickupBtn.textContent = `Pick up from your highest act (Act ${bestAct})`;
+            pickupBtn.addEventListener('click', () => confirmSelection(bestAct));
+          }
+          confirmBtn.insertAdjacentElement('afterend', pickupBtn);
+        }
       });
     });
     document.getElementById('btn-back-title').addEventListener('click', () => this.showTitle());
@@ -272,7 +306,6 @@ const App = {
       ${this.renderHud()}
       <div class="panel">
         <h2>Inventory</h2>
-        <p class="flavor">Re-gear (and switch your gathering profession) between fights - the rest of the Sanctuary stays closed until this adventure ends.</p>
         <details class="shop-category" data-key="weapons" open>
           <summary>Weapons <span class="small-text">(${weapons.length} owned)</span></summary>
           ${weapons.length ? weapons.map(gearRow).join('') : '<p class="small-text">No weapons owned.</p>'}
@@ -292,8 +325,8 @@ const App = {
       if (el) el.open = true;
     });
     window.scrollTo(0, scrollY);
-    this.wireGearEquipClicks(classId, () => this.showInRunInventory());
-    this.wireProfessionClicks(classId, () => this.showInRunInventory());
+    this.wireGearEquipClicks(classId, this.root, () => this.showInRunInventory());
+    this.wireProfessionClicks(classId, this.root, () => this.showInRunInventory());
     document.getElementById('btn-inrun-inventory-back').addEventListener('click', () => this.showMap());
   },
 
@@ -781,6 +814,11 @@ const App = {
     const critText = s.critText;
     s.critText = null;
     const ballColor = s.anim.player === 'attack' ? this.magicBallColor[p.classId] : null;
+    // Fireball gets its own fire-colored, flickering projectile (see
+    // .fireball-projectile in styles.css) instead of the plain glow every
+    // other skill gets - keyed to the SPELL being cast, not the class, since
+    // Fireball can be bought and equipped by any class via the Bank Shop.
+    const isFireballCast = s.anim.player === 'skill' && Game.player.skill && Game.player.skill.id === 'fireball';
 
     const theme = getActTheme(Game.act || 1);
     this.root.innerHTML = `
@@ -823,6 +861,7 @@ const App = {
             <div class="hp-label">${s.enemy.hp} / ${s.enemy.maxHp}</div>
           </div>
           ${ballColor ? `<div class="magic-ball" style="--ball-color:${ballColor}"></div>` : ''}
+          ${isFireballCast ? `<div class="fireball-projectile"></div>` : ''}
         </div>
 
         <div class="combat-log" id="combat-log">${s.log.map(l => `<div>${l}</div>`).join('')}</div>
@@ -1017,6 +1056,7 @@ const App = {
         if (loot) pdata.inventory.push(loot);
         if (material) pdata.materials[material.kind] += material.amount;
         if (recipeItem) pdata.inventory.push(recipeItem);
+        if (loot && Persistent.getCharacter(Game.player.classId).autoEquip) this.autoEquipBestGear(Game.player.classId);
         Persistent.save();
       }
       const reward = { goldReward, xpReward, levelResult, loot, material, recipeItem };
@@ -1202,18 +1242,15 @@ const App = {
     const pdata = Persistent.load();
     const rec = Persistent.getCharacter(classId);
 
-    // A dropdown instead of one tab per class - scales to any number of
-    // unlocked classes without the row of buttons growing (and wrapping)
-    // on narrow/mobile screens.
-    const classOptions = unlockedClasses.map(c => {
-      const r = Persistent.getCharacter(c.id);
-      return `<option value="${c.id}" ${c.id === classId ? 'selected' : ''}>${c.name} (Lv.${r.level})</option>`;
-    }).join('');
+    // A button opening a popup list instead of one tab per class - scales to
+    // any number of unlocked classes without the row of buttons growing (and
+    // wrapping) on narrow/mobile screens.
     const classPicker = `
-      <div class="class-picker">
+      <button type="button" class="class-picker" id="btn-open-class-picker">
         <span class="sprite-mini">${characterSpriteFor(classId, 30)}</span>
-        <select id="class-select" class="class-select">${classOptions}</select>
-      </div>`;
+        <span class="class-picker-label">${CLASSES[classId].name} (Lv.${rec.level})</span>
+        <span class="class-picker-caret">▾</span>
+      </button>`;
 
     // The XP bar is for the CURRENTLY SELECTED character specifically (not a
     // sum across characters) - shown once here so every tab has it, instead
@@ -1248,14 +1285,7 @@ const App = {
         <div class="sanctuary-header">
           <h2>Sanctuary</h2>
           <div class="bank-summary">
-            <span>🪙 ${pdata.bankGold} Gold</span>
             <span>🎖️ ${pdata.honor} Honor</span>
-            <span>⛏️ ${pdata.materials.ore} Ore</span>
-            <span>🧵 ${pdata.materials.leather} Leather</span>
-            <span>🔮 ${pdata.materials.essence} Essence</span>
-            <span>🌿 ${pdata.materials.herbs} Herbs</span>
-            <span>🪵 ${pdata.materials.wood} Wood</span>
-            <span>🐟 ${pdata.materials.fish} Fish</span>
           </div>
         </div>
         ${classPicker}
@@ -1286,11 +1316,123 @@ const App = {
     const newBodyEl = this.root.querySelector('.sanctuary-body');
     if (newBodyEl) newBodyEl.scrollTop = bodyScrollTop;
 
-    const classSelectEl = document.getElementById('class-select');
-    if (classSelectEl) classSelectEl.addEventListener('change', () => this.showSanctuary(classSelectEl.value, tab));
+    const classPickerBtn = document.getElementById('btn-open-class-picker');
+    if (classPickerBtn) classPickerBtn.addEventListener('click', () => this.showClassSwitcherModal(classId, tab, unlockedClasses));
     this.root.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => this.showSanctuary(classId, btn.dataset.tab)));
     document.getElementById('btn-sanctuary-back').addEventListener('click', () => this.showTitle());
     this.wireSanctuaryBodyEvents(classId, tab);
+  },
+
+  // One row in a tab's category list - a button opening showListModal for
+  // that category, replacing the old inline <details>/<summary> pattern.
+  categoryButtonRow(key, icon, label, countText) {
+    return `<button type="button" class="category-btn" data-open-category="${key}">
+      <span class="category-btn-icon">${icon}</span>
+      <span class="category-btn-label">${label}</span>
+      <span class="small-text">${countText}</span>
+    </button>`;
+  },
+
+  // Generic "category" popup - the shared replacement for every inline
+  // <details> list the Inventory/Professions/Shop tabs used to expand in
+  // place. `renderBody()` returns the modal's inner list HTML; `wireBody`
+  // attaches that category's own action handlers scoped to the modal (not
+  // this.root) - each one mutates state, saves, then calls the `refresh`
+  // it's given to redraw just the popup, so it stays open across multiple
+  // actions instead of closing after each one. `onClose` (optional) runs
+  // once, when the popup actually closes, to catch up the Sanctuary tab
+  // underneath (updated gold/material counts, owned-item counts, etc).
+  showListModal(title, renderBody, wireBody, onClose) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const close = () => { overlay.remove(); if (onClose) onClose(); };
+    const refresh = () => {
+      overlay.innerHTML = `
+        <div class="panel modal-panel">
+          <h4>${title}</h4>
+          ${renderBody()}
+          <button class="btn-secondary" id="btn-close-list-modal" style="margin-top:14px">Close</button>
+        </div>`;
+      overlay.querySelector('#btn-close-list-modal').addEventListener('click', close);
+      wireBody(overlay, refresh);
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.body.appendChild(overlay);
+    refresh();
+  },
+
+  // The class-picker button's popup - every unlocked class as a clickable
+  // row, replacing the old <select> dropdown. Picking one closes the popup
+  // and re-renders the Sanctuary on that character, same tab as before.
+  showClassSwitcherModal(currentClassId, tab, unlockedClasses) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const close = () => overlay.remove();
+    const rows = unlockedClasses.map(c => {
+      const r = Persistent.getCharacter(c.id);
+      const active = c.id === currentClassId;
+      return `<div class="gear-row ${active ? 'profession-active' : ''}">
+        <div class="desc"><span class="sprite-mini">${characterSpriteFor(c.id, 30)}</span><div>
+          <strong>${c.name}</strong> <span class="small-text">Lv.${r.level}${active ? ' - Viewing' : ''}</span>
+        </div></div>
+        <button class="btn-secondary" data-switch-class="${c.id}" ${active ? 'disabled' : ''}>${active ? 'Current' : 'Switch'}</button>
+      </div>`;
+    }).join('');
+    overlay.innerHTML = `
+      <div class="panel modal-panel">
+        <h4>Choose a Character</h4>
+        ${rows}
+        <button class="btn-secondary" id="btn-close-class-picker" style="margin-top:14px">Close</button>
+      </div>`;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelectorAll('[data-switch-class]').forEach(btn => {
+      btn.addEventListener('click', () => { close(); this.showSanctuary(btn.dataset.switchClass, tab); });
+    });
+    overlay.querySelector('#btn-close-class-picker').addEventListener('click', close);
+    document.body.appendChild(overlay);
+  },
+
+  // The House Feed button's popup - every owned food item as a clickable
+  // row, replacing the old <select> + Feed button pair. Picking one feeds it
+  // immediately and closes the popup.
+  showFoodPickerModal(classId, kind, id) {
+    const pdata = Persistent.load();
+    const def = (kind === 'pet' ? PETS : MOUNTS)[id];
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const close = () => overlay.remove();
+    const render = () => {
+      const foodItems = pdata.inventory.filter(i => i.slot === 'food');
+      const rows = foodItems.map(food => `
+        <div class="gear-row" style="border-left:3px solid ${RARITIES[food.rarity].color}">
+          <div class="desc"><span>${food.icon}</span><div><strong style="color:${RARITIES[food.rarity].color}">${food.name}</strong>
+          <div class="small-text">${RARITIES[food.rarity].label}</div></div></div>
+          <button class="btn-secondary" data-feed-food-uid="${food.uid}">Feed</button>
+        </div>`).join('') || '<p class="small-text">No food owned - cook some in Professions first.</p>';
+      overlay.innerHTML = `
+        <div class="panel modal-panel">
+          <h4>Feed ${def.icon} ${def.name}</h4>
+          ${rows}
+          <button class="btn-secondary" id="btn-close-food-picker" style="margin-top:14px">Close</button>
+        </div>`;
+      overlay.querySelectorAll('[data-feed-food-uid]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = pdata.inventory.findIndex(i => i.uid === btn.dataset.feedFoodUid && i.slot === 'food');
+          if (idx === -1) return;
+          const food = pdata.inventory[idx];
+          pdata.inventory.splice(idx, 1);
+          grantCompanionXp(kind, id, Math.round(20 * RARITIES[food.rarity].mult));
+          grantTempBuff(`Fed: ${def.name}`, def.icon, def.effect);
+          Persistent.save();
+          close();
+          this.showSanctuary(classId, 'house');
+        });
+      });
+      overlay.querySelector('#btn-close-food-picker').addEventListener('click', close);
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.body.appendChild(overlay);
+    render();
   },
 
   // Character + Armory combined: character summary/customization on top, the
@@ -1298,29 +1440,43 @@ const App = {
   // filled) opens an inline picker of everything in your inventory that
   // could go there; if the slot's already filled, each candidate also shows
   // a stat-by-stat comparison against what's currently equipped.
-  renderSanctuaryCharacter(classId) {
+  // The character info block - name/level, class blurb, live stats, active
+  // spell, talent points, the Gear Set Bonus tracker, Customize Appearance,
+  // and Auto Equip - sits inside the paperdoll's center column, under the
+  // character model but above the weapon row (see renderArmoryPaperdoll),
+  // so it reads as "about this character" before the gear slots themselves.
+  renderCharInfoBlock(classId) {
     const cls = CLASSES[classId];
     const rec = Persistent.getCharacter(classId);
     const stats = previewClassStats(classId);
     const spell = SPELLS[rec.equipped.spell || cls.defaultSpell];
-    const weapon = rec.equipped.mainHand ? Persistent.findItem(rec.equipped.mainHand) : null;
-    const armor = rec.equipped.chest ? Persistent.findItem(rec.equipped.chest) : null;
     const custom = rec.customization;
+    const setBonusPct = Math.round(stats.setBonusPct * 100);
     return `
       <div class="char-info-bar">
         <h3>${custom.name ? escapeHtml(custom.name) : cls.name} <span class="small-text">Level ${rec.level}</span></h3>
         ${custom.name ? `<div class="small-text">${cls.name}</div>` : ''}
+        <p class="small-text">${cls.blurb}</p>
         <div class="stat-grid">
           <span>ATK ${stats.atk}</span><span>DEF ${stats.def}</span>
           <span>HP ${stats.maxHp}</span><span>SPD ${stats.speed}</span>
         </div>
-        <div class="small-text">Main Hand: ${weapon ? weapon.name : 'None'} · Chest: ${armor ? armor.name : 'None'}</div>
         <div class="small-text">Active Spell: ${spell.name} - ${spell.desc}</div>
         <div class="small-text">Talent Points: ${getTalentPointsAvailable(rec)} available - see Talents below</div>
+        <div class="small-text" title="Scales with how many equip slots are filled and their rarity - multiplies every stat bonus from items, relics, food, pets, and mounts together. Needs at least 2 equipped items; caps at +100% with every slot filled by a legendary.">⭐ Gear Set Bonus: +${setBonusPct}%</div>
         <button class="btn-secondary" id="btn-toggle-customization">🎨 ${this.customizationOpen ? 'Hide Customization' : 'Customize Appearance'}</button>
       </div>
       ${this.customizationOpen ? this.renderCharCustomize(classId) : ''}
-      ${this.renderArmoryPaperdoll(classId)}
+      <label class="customize-row" style="max-width:360px;margin-top:12px" title="Automatically equips the strongest available item (from your inventory) into every slot, and re-checks after any new loot arrives.">
+        <span>⚡ Auto Equip Best Gear</span>
+        <input type="checkbox" id="chk-auto-equip" ${rec.autoEquip ? 'checked' : ''}>
+      </label>
+    `;
+  },
+
+  renderSanctuaryCharacter(classId) {
+    return `
+      ${this.renderArmoryPaperdoll(classId, this.renderCharInfoBlock(classId))}
       ${this.selectedArmorySlot ? this.renderSlotPicker(classId, this.selectedArmorySlot) : ''}
     `;
   },
@@ -1384,10 +1540,50 @@ const App = {
     });
   },
 
+  // Greedily fills every equip slot with the strongest available candidate
+  // (same gearPower heuristic the upgrade-glow already uses) - never touches
+  // gear equipped by another character, and won't double-assign one physical
+  // item to two slots in the same pass (e.g. the same ring into both ring1
+  // and ring2). Driven by the Character tab's Auto Equip checkbox, and
+  // re-run automatically after any loot-granting moment while it's on
+  // (combat victory, AFK/idle catch-up) so a returning player's best-in-bag
+  // loadout stays current without manual upkeep.
+  autoEquipBestGear(classId) {
+    const pdata = Persistent.load();
+    const rec = Persistent.getCharacter(classId);
+    const equippedByOthers = new Set();
+    Object.entries(pdata.characters).forEach(([cid, c]) => {
+      if (cid !== classId) Object.values(c.equipped).forEach(uid => { if (uid) equippedByOthers.add(uid); });
+    });
+    const usableItems = pdata.inventory.filter(item => !equippedByOthers.has(item.uid) && equipSlotKeysFor(classId, item).length);
+    const claimed = new Set();
+    EQUIP_GEAR_KEYS.forEach(key => {
+      const currentUid = rec.equipped[key];
+      let best = null;
+      let bestPower = currentUid ? this.gearPower(Persistent.findItem(currentUid)) : 0;
+      usableItems.forEach(item => {
+        if (claimed.has(item.uid) || item.uid === currentUid) return;
+        if (!equipSlotKeysFor(classId, item).includes(key)) return;
+        const power = this.gearPower(item);
+        if (power > bestPower) { bestPower = power; best = item; }
+      });
+      if (best) {
+        Persistent.unequipEverywhere(best.uid);
+        equipItemToSlot(rec, best, key);
+        claimed.add(best.uid);
+      } else if (currentUid) {
+        claimed.add(currentUid);
+      }
+    });
+  },
+
   // The WoW-style paperdoll itself - a 2-column layout flanking a central
   // portrait, with the 3 weapon slots in a row underneath. Every slot is
   // clickable (empty or filled) to open renderSlotPicker for it.
-  renderArmoryPaperdoll(classId) {
+  // `centerExtraHtml` (only passed by the Character tab, not the Enchant
+  // modal's reuse of this same layout) renders between the portrait and the
+  // weapon row - the character info block (stats/description/customize).
+  renderArmoryPaperdoll(classId, centerExtraHtml) {
     const rec = Persistent.getCharacter(classId);
     const cls = CLASSES[classId];
     const slotCell = (key, label) => {
@@ -1417,6 +1613,7 @@ const App = {
         <div class="armory-column">${leftColumn}</div>
         <div class="armory-center">
           <div class="armory-portrait">${characterSpriteFor(classId, 140)}</div>
+          ${centerExtraHtml || ''}
           <div class="armory-weapon-row">${weaponRow}</div>
         </div>
         <div class="armory-column">${rightColumn}</div>
@@ -1438,7 +1635,12 @@ const App = {
       : key === 'mainHand' ? 'Main Hand' : key === 'offHand' ? 'Off Hand'
       : key === 'ranged' ? (usesBlessing ? 'Blessing' : 'Ranged')
       : (SLOT_LABELS[key] || key);
-    const candidates = pdata.inventory.filter(item => item.uid !== currentUid && equipSlotKeysFor(classId, item).includes(key));
+    // Never list something already doing a job elsewhere - equipped by
+    // another character, or by this same character in a different slot
+    // (e.g. a ring already worn in ring1 while picking ring2).
+    const equippedElsewhereUids = new Set();
+    Object.values(pdata.characters).forEach(c => Object.values(c.equipped).forEach(uid => { if (uid && uid !== currentUid) equippedElsewhereUids.add(uid); }));
+    const candidates = pdata.inventory.filter(item => item.uid !== currentUid && !equippedElsewhereUids.has(item.uid) && equipSlotKeysFor(classId, item).includes(key));
 
     const rows = candidates.map(item => `
       <div class="gear-row" style="border-left:3px solid ${RARITIES[item.rarity].color}">
@@ -1568,7 +1770,6 @@ const App = {
 
     return `
       <h4>PvP <span class="small-text">(${pdata.honor} Honor)</span></h4>
-      <p class="flavor">Fight a Ghost built from your own stats - an exact mirror of your level, gear, relics, and talents. Winning grants gold, XP, and Honor; losing grants nothing.</p>
       <button class="btn-primary" id="btn-find-pvp-match">Find PvP Match</button>
       <label class="customize-row" style="max-width:460px;margin-top:14px">
         <span>Enable random Rival Ghost encounters while adventuring</span>
@@ -1672,6 +1873,10 @@ const App = {
     if (item.hp) parts.push(`+${item.hp} Max HP`);
     if (item.goldBonus) parts.push(`+${Math.round(item.goldBonus * 100)}% Gold`);
     if (item.effect) Object.keys(item.effect).forEach(k => parts.push(describeEffectLever(k, item.effect[k])));
+    if (item.enchantId && ENCHANTS[item.enchantId]) {
+      const enchant = ENCHANTS[item.enchantId];
+      Object.keys(enchant.effect).forEach(k => parts.push(`${describeEffectLever(k, enchant.effect[k])} (${enchant.name})`));
+    }
     return parts.length ? parts.join(', ') : 'Cosmetic - no combat stats';
   },
 
@@ -1705,10 +1910,11 @@ const App = {
   },
 
   // Wires every [data-uid] equip/unequip button rendered by renderGearRow -
-  // shared by the Sanctuary Inventory tab and the in-run Inventory panel.
-  wireGearEquipClicks(classId, onChange) {
+  // shared by the Sanctuary Inventory tab's category modals and the in-run
+  // Inventory panel (which passes this.root directly, not a modal).
+  wireGearEquipClicks(classId, root, onChange) {
     const rec = Persistent.getCharacter(classId);
-    this.root.querySelectorAll('[data-uid]').forEach(btn => {
+    root.querySelectorAll('[data-uid]').forEach(btn => {
       btn.addEventListener('click', () => {
         const uid = btn.dataset.uid;
         const item = Persistent.findItem(uid);
@@ -1730,34 +1936,153 @@ const App = {
     });
   },
 
+  armorSlotKeys() {
+    return ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket'];
+  },
+
   renderSanctuaryInventory(classId) {
     const pdata = Persistent.load();
-    const rec = Persistent.getCharacter(classId);
     const cls = CLASSES[classId];
-    const gearRow = (item) => this.renderGearRow(classId, item);
-
     const weapons = pdata.inventory.filter(i => i.slot === 'weapon');
-    const armorSlotKeys = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket'];
-    const armor = pdata.inventory.filter(i => armorSlotKeys.includes(i.slot));
+    const armor = pdata.inventory.filter(i => this.armorSlotKeys().includes(i.slot));
     const containers = pdata.inventory.filter(i => i.slot === 'container');
     const recipeItems = pdata.inventory.filter(i => i.slot === 'recipe');
     const foodItems = pdata.inventory.filter(i => i.slot === 'food');
-    const containerMsg = this.lastContainerResult;
-    this.lastContainerResult = null;
+    return `
+      ${this.categoryButtonRow('inv-bank', '🏦', 'Resource Bank', `${pdata.bankGold} gold and every material you've gathered`)}
+      ${this.categoryButtonRow('inv-weapons', '⚔️', 'Weapons', `${weapons.length} owned - main hand/off hand/ranged`)}
+      ${this.categoryButtonRow('inv-armor', '🛡️', 'Armor & Accessories', `${armor.length} owned - chest, helm, shoulders, cloak, rings, trinkets, and more`)}
+      ${this.categoryButtonRow('inv-containers', '🎁', 'Containers', `${containers.length} owned`)}
+      ${this.categoryButtonRow('inv-recipes', '📜', 'Recipes', `${recipeItems.length} owned - consumed to permanently upgrade a Crafting recipe`)}
+      ${this.categoryButtonRow('inv-food', '🍗', 'Food', `${foodItems.length} owned - eat for a 1-hour buff, or feed to a pet/mount at the House`)}
+      ${this.categoryButtonRow('inv-spells', '🔮', 'Spells', `for ${cls.name}`)}
+      ${this.categoryButtonRow('inv-relics', '💠', 'Permanent Relics', `${pdata.permanentRelics.length} owned - always active, every run, every class`)}
+      ${this.categoryButtonRow('inv-pets', '🐾', 'Pets', `${pdata.ownedPets.length} tamed - persistent, equip one per character`)}
+      ${this.categoryButtonRow('inv-mounts', '🐎', 'Mounts', `${pdata.ownedMounts.length} tamed - persistent, equip one per character`)}
+    `;
+  },
 
-    const spellOptions = [cls.defaultSpell, ...pdata.unlockedSpells].filter((v, i, a) => a.indexOf(v) === i);
-    const spellRows = spellOptions.map(id => {
-      const sp = SPELLS[id];
-      const active = (rec.equipped.spell || cls.defaultSpell) === id;
-      return `<div class="gear-row"><div class="desc"><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
-        <button class="btn-secondary" data-spell="${id}" ${active ? 'disabled' : ''}>${active ? 'Active' : 'Equip'}</button></div>`;
-    }).join('');
+  showInvBankModal(classId, tab) {
+    this.showListModal('🏦 Resource Bank', () => {
+      const pdata = Persistent.load();
+      const rows = [
+        ['🪙', 'Gold', pdata.bankGold], ['⛏️', 'Ore', pdata.materials.ore], ['🧵', 'Leather', pdata.materials.leather],
+        ['🔮', 'Essence', pdata.materials.essence], ['🌿', 'Herbs', pdata.materials.herbs], ['🪵', 'Wood', pdata.materials.wood],
+        ['🐟', 'Fish', pdata.materials.fish], ['✨', 'Dust', pdata.materials.dust], ['🔹', 'Shard', pdata.materials.shard], ['💠', 'Crystal', pdata.materials.crystal]
+      ];
+      return rows.map(([icon, label, amount]) => `<div class="gear-row"><div class="desc"><span>${icon}</span><div><strong>${label}</strong></div></div><div class="small-text">${amount}</div></div>`).join('');
+    }, () => {}, () => this.showSanctuary(classId, tab));
+  },
 
-    const relicRows = pdata.permanentRelics.length
-      ? pdata.permanentRelics.map(id => `<div class="gear-row"><div class="desc"><span>${RELICS[id].icon}</span><div><strong>${RELICS[id].name}</strong><div class="small-text">${RELICS[id].desc}</div></div></div></div>`).join('')
-      : '<p class="small-text">None yet - buy some from the Shop.</p>';
+  showInvWeaponsModal(classId, tab) {
+    this.showListModal('⚔️ Weapons', () => {
+      const weapons = Persistent.load().inventory.filter(i => i.slot === 'weapon');
+      return weapons.length ? weapons.map(item => this.renderGearRow(classId, item)).join('') : '<p class="small-text">No weapons owned. Craft or buy one.</p>';
+    }, (container, refresh) => this.wireGearEquipClicks(classId, container, refresh), () => this.showSanctuary(classId, tab));
+  },
 
-    const companionRow = (kind, pool, ownedIds) => {
+  showInvArmorModal(classId, tab) {
+    this.showListModal('🛡️ Armor & Accessories', () => {
+      const armor = Persistent.load().inventory.filter(i => this.armorSlotKeys().includes(i.slot));
+      return armor.length ? armor.map(item => this.renderGearRow(classId, item)).join('') : '<p class="small-text">None owned yet - find them on your adventures.</p>';
+    }, (container, refresh) => this.wireGearEquipClicks(classId, container, refresh), () => this.showSanctuary(classId, tab));
+  },
+
+  showInvContainersModal(classId, tab) {
+    this.showListModal('🎁 Containers', () => {
+      const pdata = Persistent.load();
+      const containers = pdata.inventory.filter(i => i.slot === 'container');
+      const containerMsg = this.lastContainerResult;
+      this.lastContainerResult = null;
+      const msgHtml = containerMsg ? `<p class="small-text" style="color:var(--accent)">${containerMsg}</p>` : '';
+      return msgHtml + (containers.length ? containers.map(c => `<div class="gear-row"><div class="desc"><span>${c.icon}</span><div><strong>${c.name}</strong><div class="small-text">${CONTAINERS[c.containerId].desc}</div></div></div>
+        <button class="btn-secondary" data-open-container="${c.uid}">Open</button></div>`).join('') : '<p class="small-text">None owned yet - defeat a Rival Ghost in PvP to earn one.</p>');
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-open-container]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const pdata = Persistent.load();
+          const uid = btn.dataset.openContainer;
+          const idx = pdata.inventory.findIndex(i => i.uid === uid);
+          if (idx === -1) return;
+          const c = pdata.inventory[idx];
+          pdata.inventory.splice(idx, 1);
+          const result = openContainer(c.containerId);
+          if (result.pvpOnly) pdata.pvpInventory.push(result); else pdata.inventory.push(result);
+          Persistent.save();
+          this.lastContainerResult = `${c.name} contained: ${result.icon} ${result.name} (${result.pvpUnique ? 'Unique' : RARITIES[result.rarity].label})`;
+          refresh();
+        });
+      });
+    }, () => this.showSanctuary(classId, tab));
+  },
+
+  showInvRecipesModal(classId, tab) {
+    this.showListModal('📜 Recipes', () => {
+      const recipeItems = Persistent.load().inventory.filter(i => i.slot === 'recipe');
+      return recipeItems.length ? recipeItems.map(r => `<div class="gear-row"><div class="desc"><span>${r.icon}</span><div><strong>${r.name}</strong><div class="small-text">${r.desc || 'Consume in Crafting to upgrade the matching recipe one rarity tier.'}</div></div></div></div>`).join('') : '<p class="small-text">None owned yet - recipes have a small chance to drop from encounters.</p>';
+    }, () => {}, () => this.showSanctuary(classId, tab));
+  },
+
+  showInvFoodModal(classId, tab) {
+    this.showListModal('🍗 Food', () => {
+      const foodItems = Persistent.load().inventory.filter(i => i.slot === 'food');
+      return foodItems.length ? foodItems.map(f => `<div class="gear-row" style="border-left:3px solid ${RARITIES[f.rarity].color}"><div class="desc"><span>${f.icon}</span><div><strong style="color:${RARITIES[f.rarity].color}">${f.name}</strong><div class="small-text">${RARITIES[f.rarity].label} · ${this.describeItemStats(f)}</div></div></div>
+        <button class="btn-secondary" data-eat-food="${f.uid}">Eat</button></div>`).join('') : '<p class="small-text">None owned yet - cook some from the Professions tab.</p>';
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-eat-food]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const pdata = Persistent.load();
+          const uid = btn.dataset.eatFood;
+          const idx = pdata.inventory.findIndex(i => i.uid === uid && i.slot === 'food');
+          if (idx === -1) return;
+          const food = pdata.inventory[idx];
+          pdata.inventory.splice(idx, 1);
+          grantTempBuff(food.name, food.icon, food.effect);
+          refresh();
+        });
+      });
+    }, () => this.showSanctuary(classId, tab));
+  },
+
+  showInvSpellsModal(classId, tab) {
+    this.showListModal(`🔮 Spells for ${CLASSES[classId].name}`, () => {
+      const pdata = Persistent.load();
+      const rec = Persistent.getCharacter(classId);
+      const cls = CLASSES[classId];
+      const spellOptions = [cls.defaultSpell, ...pdata.unlockedSpells].filter((v, i, a) => a.indexOf(v) === i);
+      return spellOptions.map(id => {
+        const sp = SPELLS[id];
+        const active = (rec.equipped.spell || cls.defaultSpell) === id;
+        return `<div class="gear-row"><div class="desc"><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
+          <button class="btn-secondary" data-spell="${id}" ${active ? 'disabled' : ''}>${active ? 'Active' : 'Equip'}</button></div>`;
+      }).join('');
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-spell]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rec = Persistent.getCharacter(classId);
+          const id = btn.dataset.spell;
+          rec.equipped.spell = id === CLASSES[classId].defaultSpell ? null : id;
+          Persistent.save();
+          refresh();
+        });
+      });
+    }, () => this.showSanctuary(classId, tab));
+  },
+
+  showInvRelicsModal(classId, tab) {
+    this.showListModal('💠 Permanent Relics', () => {
+      const pdata = Persistent.load();
+      return pdata.permanentRelics.length
+        ? pdata.permanentRelics.map(id => `<div class="gear-row"><div class="desc"><span>${RELICS[id].icon}</span><div><strong>${RELICS[id].name}</strong><div class="small-text">${RELICS[id].desc}</div></div></div></div>`).join('')
+        : '<p class="small-text">None yet - buy some from the Shop.</p>';
+    }, () => {}, () => this.showSanctuary(classId, tab));
+  },
+
+  showInvCompanionModal(classId, tab, kind, pool, title) {
+    this.showListModal(title, () => {
+      const pdata = Persistent.load();
+      const rec = Persistent.getCharacter(classId);
+      const ownedIds = kind === 'pet' ? pdata.ownedPets : pdata.ownedMounts;
       if (!ownedIds.length) return `<p class="small-text">No ${kind}s tamed yet - find one on a Wild Creature encounter.</p>`;
       return ownedIds.map(id => {
         const def = pool[id];
@@ -1766,53 +2091,17 @@ const App = {
           <button class="btn-secondary" data-companion-kind="${kind}" data-companion-id="${id}">${equipped ? 'Unequip' : 'Equip'}</button>
         </div>`;
       }).join('');
-    };
-
-    // Every category here is collapsible (native <details>, collapsed by
-    // default) same as the Shop's categories - a long-running save can pile
-    // up a lot of owned gear/relics/companions, and none of it needs to be
-    // visible until the player actually wants to browse that category.
-    return `
-      <details class="shop-category" data-key="weapons">
-        <summary>Weapons <span class="small-text">(${weapons.length} owned - main hand/off hand/ranged)</span></summary>
-        ${weapons.length ? weapons.map(gearRow).join('') : '<p class="small-text">No weapons owned. Craft or buy one.</p>'}
-      </details>
-      <details class="shop-category" data-key="armor">
-        <summary>Armor & Accessories <span class="small-text">(${armor.length} owned - chest, helm, shoulders, cloak, rings, trinkets, and more)</span></summary>
-        ${armor.length ? armor.map(gearRow).join('') : '<p class="small-text">None owned yet - find them on your adventures.</p>'}
-      </details>
-      <details class="shop-category" data-key="containers">
-        <summary>Containers <span class="small-text">(${containers.length} owned)</span></summary>
-        ${containerMsg ? `<p class="small-text" style="color:var(--accent)">${containerMsg}</p>` : ''}
-        ${containers.length ? containers.map(c => `<div class="gear-row"><div class="desc"><span>${c.icon}</span><div><strong>${c.name}</strong><div class="small-text">${CONTAINERS[c.containerId].desc}</div></div></div>
-          <button class="btn-secondary" data-open-container="${c.uid}">Open</button></div>`).join('') : '<p class="small-text">None owned yet - defeat a Rival Ghost in PvP to earn one.</p>'}
-      </details>
-      <details class="shop-category" data-key="recipes">
-        <summary>Recipes <span class="small-text">(${recipeItems.length} owned - consumed to permanently upgrade a Crafting recipe)</span></summary>
-        ${recipeItems.length ? recipeItems.map(r => `<div class="gear-row"><div class="desc"><span>${r.icon}</span><div><strong>${r.name}</strong><div class="small-text">${r.desc || 'Consume in Crafting to upgrade the matching recipe one rarity tier.'}</div></div></div></div>`).join('') : '<p class="small-text">None owned yet - recipes have a small chance to drop from encounters.</p>'}
-      </details>
-      <details class="shop-category" data-key="food">
-        <summary>Food <span class="small-text">(${foodItems.length} owned - eat for a 1-hour buff, or feed to a pet/mount at the House)</span></summary>
-        ${foodItems.length ? foodItems.map(f => `<div class="gear-row" style="border-left:3px solid ${RARITIES[f.rarity].color}"><div class="desc"><span>${f.icon}</span><div><strong style="color:${RARITIES[f.rarity].color}">${f.name}</strong><div class="small-text">${RARITIES[f.rarity].label} · ${this.describeItemStats(f)}</div></div></div>
-          <button class="btn-secondary" data-eat-food="${f.uid}">Eat</button></div>`).join('') : '<p class="small-text">None owned yet - cook some from the Professions tab.</p>'}
-      </details>
-      <details class="shop-category" data-key="spells">
-        <summary>Spells <span class="small-text">(for ${cls.name})</span></summary>
-        ${spellRows}
-      </details>
-      <details class="shop-category" data-key="relics">
-        <summary>Permanent Relics <span class="small-text">(${pdata.permanentRelics.length} owned - always active, every run, every class)</span></summary>
-        ${relicRows}
-      </details>
-      <details class="shop-category" data-key="pets">
-        <summary>Pets <span class="small-text">(${pdata.ownedPets.length} tamed - persistent, equip one per character)</span></summary>
-        ${companionRow('pet', PETS, pdata.ownedPets)}
-      </details>
-      <details class="shop-category" data-key="mounts">
-        <summary>Mounts <span class="small-text">(${pdata.ownedMounts.length} tamed - persistent, equip one per character)</span></summary>
-        ${companionRow('mount', MOUNTS, pdata.ownedMounts)}
-      </details>
-    `;
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-companion-kind]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rec = Persistent.getCharacter(classId);
+          const k = btn.dataset.companionKind, id = btn.dataset.companionId;
+          rec.equipped[k] = rec.equipped[k] === id ? null : id;
+          Persistent.save();
+          refresh();
+        });
+      });
+    }, () => this.showSanctuary(classId, tab));
   },
 
   // Smelting's passive discounts the GOLD half of a recipe's cost (materials
@@ -1825,73 +2114,161 @@ const App = {
     return Math.round(baseGold * (1 - discount));
   },
 
-  // Crafting (gear + food recipes) and Gathering (professions) combined into
-  // one tab - each category is its own collapsible dropdown, same pattern as
-  // the Armor & Accessories / Weapons split already used elsewhere.
-  renderSanctuaryProfessions(classId) {
+  renderRecipeRow(classId, r) {
+    const pdata = Persistent.load();
+    const tmpl = GEAR_TEMPLATES[r.defId];
+    const rarity = getRecipeRarity(r.id);
+    const cost = scaledRecipeCost(r.id, r.cost);
+    const goldCost = this.craftGoldCost(classId, cost.gold);
+    const canAfford = pdata.bankGold >= goldCost && Object.keys(cost).every(k => k === 'gold' || pdata.materials[k] >= cost[k]);
+    const costText = Object.entries(cost).map(([k, v]) => k === 'gold' ? `${goldCost} 🪙` : `${v} ${k}`).join(', ');
+    const ownedRecipeItem = pdata.inventory.find(i => i.slot === 'recipe' && i.recipeId === r.id);
+    const canUpgrade = !!ownedRecipeItem && rarity !== 'legendary';
+    return `<div class="gear-row" style="border-left:3px solid ${RARITIES[rarity].color}">
+      <div class="desc"><span>${tmpl.icon}</span><div><strong style="color:${RARITIES[rarity].color}">${tmpl.name}</strong>
+      <div class="small-text">${RARITIES[rarity].label} · Costs ${costText}</div></div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-secondary" data-recipe="${r.id}" ${canAfford ? '' : 'disabled'}>Craft</button>
+        <button class="btn-secondary" data-upgrade-recipe="${r.id}" title="${ownedRecipeItem ? `Consume ${ownedRecipeItem.name}` : 'Requires the matching Recipe item (drops rarely from encounters)'}" ${canUpgrade ? '' : 'disabled'}>Upgrade</button>
+      </div>
+    </div>`;
+  },
+
+  renderFoodRecipeRow(classId, r) {
     const pdata = Persistent.load();
     const rec = Persistent.getCharacter(classId);
-    const recipeRow = (r) => {
-      const tmpl = GEAR_TEMPLATES[r.defId];
-      const rarity = getRecipeRarity(r.id);
-      const goldCost = this.craftGoldCost(classId, r.cost.gold);
-      const canAfford = pdata.bankGold >= goldCost && Object.keys(r.cost).every(k => k === 'gold' || pdata.materials[k] >= r.cost[k]);
-      const costText = Object.entries(r.cost).map(([k, v]) => k === 'gold' ? `${goldCost} 🪙` : `${v} ${k}`).join(', ');
-      const ownedRecipeItem = pdata.inventory.find(i => i.slot === 'recipe' && i.recipeId === r.id);
-      const canUpgrade = !!ownedRecipeItem && rarity !== 'legendary';
-      return `<div class="gear-row" style="border-left:3px solid ${RARITIES[rarity].color}">
-        <div class="desc"><span>${tmpl.icon}</span><div><strong style="color:${RARITIES[rarity].color}">${tmpl.name}</strong>
-        <div class="small-text">${RARITIES[rarity].label} · Costs ${costText}</div></div></div>
-        <div style="display:flex;gap:6px">
-          <button class="btn-secondary" data-recipe="${r.id}" ${canAfford ? '' : 'disabled'}>Craft</button>
-          <button class="btn-secondary" data-upgrade-recipe="${r.id}" title="${ownedRecipeItem ? `Consume ${ownedRecipeItem.name}` : 'Requires the matching Recipe item (drops rarely from encounters)'}" ${canUpgrade ? '' : 'disabled'}>Upgrade</button>
-        </div>
-      </div>`;
-    };
+    const cookingLevel = rec.profession.levels.cooking;
+    const tmpl = FOOD_TEMPLATES[r.defId];
+    const rarity = getFoodRecipeRarity(r.id);
+    const cost = scaledRecipeCost(r.id, r.cost);
+    const goldCost = this.craftGoldCost(classId, cost.gold);
+    const meetsLevel = cookingLevel >= r.levelReq;
+    const canAfford = meetsLevel && pdata.bankGold >= goldCost && Object.keys(cost).every(k => k === 'gold' || pdata.materials[k] >= cost[k]);
+    const costText = Object.entries(cost).map(([k, v]) => k === 'gold' ? `${goldCost} 🪙` : `${v} ${k}`).join(', ');
+    const ownedRecipeItem = pdata.inventory.find(i => i.slot === 'recipe' && i.recipeId === r.id);
+    const canUpgrade = !!ownedRecipeItem && rarity !== 'legendary';
+    const buffText = Object.keys(tmpl.effect).map(k => describeEffectLever(k, instantiateFoodItem(r.defId, rarity).effect[k])).join(', ');
+    return `<div class="gear-row" style="border-left:3px solid ${RARITIES[rarity].color}">
+      <div class="desc"><span>${tmpl.icon}</span><div><strong style="color:${RARITIES[rarity].color}">${tmpl.name}</strong>
+      <div class="small-text">${RARITIES[rarity].label} · 1hr buff: ${buffText} · Costs ${costText}</div>
+      ${meetsLevel ? '' : `<div class="small-text" style="color:var(--bad)">Requires Cooking Lv.${r.levelReq}</div>`}</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-secondary" data-food-recipe="${r.id}" ${canAfford ? '' : 'disabled'}>Cook</button>
+        <button class="btn-secondary" data-upgrade-food-recipe="${r.id}" title="${ownedRecipeItem ? `Consume ${ownedRecipeItem.name}` : 'Requires the matching Recipe item (drops rarely from encounters)'}" ${canUpgrade ? '' : 'disabled'}>Upgrade</button>
+      </div>
+    </div>`;
+  },
+
+  // Crafting (gear + food recipes) and Gathering (professions) combined into
+  // one tab - each category is now a button opening showListModal instead of
+  // an inline collapsible section.
+  renderSanctuaryProfessions(classId) {
+    const rec = Persistent.getCharacter(classId);
     const weaponRecipes = RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot === 'weapon');
     const armorRecipes = RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot !== 'weapon');
-
-    const cookingLevel = rec.profession.levels.cooking;
-    const foodRow = (r) => {
-      const tmpl = FOOD_TEMPLATES[r.defId];
-      const rarity = getFoodRecipeRarity(r.id);
-      const goldCost = this.craftGoldCost(classId, r.cost.gold);
-      const meetsLevel = cookingLevel >= r.levelReq;
-      const canAfford = meetsLevel && pdata.bankGold >= goldCost && Object.keys(r.cost).every(k => k === 'gold' || pdata.materials[k] >= r.cost[k]);
-      const costText = Object.entries(r.cost).map(([k, v]) => k === 'gold' ? `${goldCost} 🪙` : `${v} ${k}`).join(', ');
-      const ownedRecipeItem = pdata.inventory.find(i => i.slot === 'recipe' && i.recipeId === r.id);
-      const canUpgrade = !!ownedRecipeItem && rarity !== 'legendary';
-      const buffText = Object.keys(tmpl.effect).map(k => describeEffectLever(k, instantiateFoodItem(r.defId, rarity).effect[k])).join(', ');
-      return `<div class="gear-row" style="border-left:3px solid ${RARITIES[rarity].color}">
-        <div class="desc"><span>${tmpl.icon}</span><div><strong style="color:${RARITIES[rarity].color}">${tmpl.name}</strong>
-        <div class="small-text">${RARITIES[rarity].label} · 1hr buff: ${buffText} · Costs ${costText}</div>
-        ${meetsLevel ? '' : `<div class="small-text" style="color:var(--bad)">Requires Cooking Lv.${r.levelReq}</div>`}</div></div>
-        <div style="display:flex;gap:6px">
-          <button class="btn-secondary" data-food-recipe="${r.id}" ${canAfford ? '' : 'disabled'}>Cook</button>
-          <button class="btn-secondary" data-upgrade-food-recipe="${r.id}" title="${ownedRecipeItem ? `Consume ${ownedRecipeItem.name}` : 'Requires the matching Recipe item (drops rarely from encounters)'}" ${canUpgrade ? '' : 'disabled'}>Upgrade</button>
-        </div>
-      </div>`;
-    };
-
+    const disenchanting = rec.disenchanting;
+    const disenchantXpNeed = disenchanting.level >= DISENCHANT_MAX_LEVEL ? 0 : professionXpForLevel(disenchanting.level);
     return `
       <h4>Professions</h4>
-      <p class="flavor">Crafting spends bank gold and materials (found on your adventures) to make guaranteed gear and food, both capped at Uncommon rarity - own a matching Recipe item (a rare encounter drop) to Upgrade one's ceiling one rarity higher, permanently. Gathering professions earn XP from every encounter while equipped.</p>
-      <details class="shop-category" data-key="weapons">
-        <summary>Weapons <span class="small-text">(${weaponRecipes.length} recipes)</span></summary>
-        ${weaponRecipes.map(recipeRow).join('')}
-      </details>
-      <details class="shop-category" data-key="armor">
-        <summary>Armor & Accessories <span class="small-text">(${armorRecipes.length} recipes)</span></summary>
-        ${armorRecipes.map(recipeRow).join('')}
-      </details>
-      <details class="shop-category" data-key="cooking">
-        <summary>Cooking <span class="small-text">(${COOKING_RECIPES.length} recipes - each grants a 1-hour buff when eaten)</span></summary>
-        ${COOKING_RECIPES.map(foodRow).join('')}
-      </details>
-      <details class="shop-category" data-key="gathering">
-        <summary>Gathering Professions <span class="small-text">(Lv.1-${PROFESSION_MAX_LEVEL} · only one may be actively leveled at a time)</span></summary>
-        ${this.renderProfessionRows(classId)}
-      </details>`;
+      <div class="gear-row profession-row" style="margin-bottom:10px">
+        <div class="desc"><span>♻️</span><div>
+          <strong>Enchanting</strong> <span class="small-text">Lv.${disenchanting.level}${disenchanting.level >= DISENCHANT_MAX_LEVEL ? ' (max)' : ''}</span>
+          <div class="small-text">Break down unwanted gear into Dust/Shard/Crystal, then spend it enchanting your equipped gear.</div>
+          ${disenchanting.level >= DISENCHANT_MAX_LEVEL ? '' : `<div class="small-text">${disenchanting.xp} / ${disenchantXpNeed} XP</div>`}
+        </div></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-secondary" id="btn-open-disenchant">Disenchant</button>
+          <button class="btn-secondary" id="btn-open-enchant">Enchant</button>
+        </div>
+      </div>
+      ${this.categoryButtonRow('prof-weapons', '⚔️', 'Weapons', `${weaponRecipes.length} recipes`)}
+      ${this.categoryButtonRow('prof-armor', '🛡️', 'Armor & Accessories', `${armorRecipes.length} recipes`)}
+      ${this.categoryButtonRow('prof-cooking', '🍳', 'Cooking', `${COOKING_RECIPES.length} recipes - each grants a 1-hour buff when eaten`)}
+      ${this.categoryButtonRow('prof-gathering', '⛏️', 'Gathering Professions', `Lv.1-${PROFESSION_MAX_LEVEL} · only one may be actively leveled at a time`)}
+    `;
+  },
+
+  showProfWeaponsModal(classId, tab) {
+    this.showListModal('⚔️ Weapons', () => RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot === 'weapon').map(r => this.renderRecipeRow(classId, r)).join(''),
+      (container, refresh) => this.wireRecipeCategoryClicks(classId, container, refresh),
+      () => this.showSanctuary(classId, tab));
+  },
+
+  showProfArmorModal(classId, tab) {
+    this.showListModal('🛡️ Armor & Accessories', () => RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot !== 'weapon').map(r => this.renderRecipeRow(classId, r)).join(''),
+      (container, refresh) => this.wireRecipeCategoryClicks(classId, container, refresh),
+      () => this.showSanctuary(classId, tab));
+  },
+
+  showProfCookingModal(classId, tab) {
+    this.showListModal('🍳 Cooking', () => COOKING_RECIPES.map(r => this.renderFoodRecipeRow(classId, r)).join(''),
+      (container, refresh) => this.wireRecipeCategoryClicks(classId, container, refresh),
+      () => this.showSanctuary(classId, tab));
+  },
+
+  showProfGatheringModal(classId, tab) {
+    this.showListModal('⛏️ Gathering Professions', () => this.renderProfessionRows(classId),
+      (container, refresh) => this.wireProfessionClicks(classId, container, refresh),
+      () => this.showSanctuary(classId, tab));
+  },
+
+  // Shared by all three recipe-category modals (Weapons/Armor/Cooking) -
+  // scoped to `container` (the modal) rather than this.root.
+  wireRecipeCategoryClicks(classId, container, refresh) {
+    const pdata = Persistent.load();
+    const rec = Persistent.getCharacter(classId);
+    container.querySelectorAll('[data-recipe]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const recipe = RECIPES.find(r => r.id === btn.dataset.recipe);
+        if (!recipe) return;
+        const cost = scaledRecipeCost(recipe.id, recipe.cost);
+        const goldCost = this.craftGoldCost(classId, cost.gold);
+        const canAfford = pdata.bankGold >= goldCost && Object.keys(cost).every(k => k === 'gold' || pdata.materials[k] >= cost[k]);
+        if (!canAfford) return;
+        pdata.bankGold -= goldCost;
+        Object.keys(cost).forEach(k => { if (k !== 'gold') pdata.materials[k] -= cost[k]; });
+        pdata.inventory.push(instantiateGear(recipe.defId, getRecipeRarity(recipe.id)));
+        Persistent.save();
+        refresh();
+      });
+    });
+    container.querySelectorAll('[data-upgrade-recipe]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const recipeId = btn.dataset.upgradeRecipe;
+        const idx = pdata.inventory.findIndex(i => i.slot === 'recipe' && i.recipeId === recipeId);
+        if (idx === -1 || getRecipeRarity(recipeId) === 'legendary') return;
+        pdata.inventory.splice(idx, 1);
+        pdata.recipeRarityBoost[recipeId] = (pdata.recipeRarityBoost[recipeId] || 0) + 1;
+        Persistent.save();
+        refresh();
+      });
+    });
+    container.querySelectorAll('[data-food-recipe]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const recipe = COOKING_RECIPES.find(r => r.id === btn.dataset.foodRecipe);
+        if (!recipe || rec.profession.levels.cooking < recipe.levelReq) return;
+        const cost = scaledRecipeCost(recipe.id, recipe.cost);
+        const goldCost = this.craftGoldCost(classId, cost.gold);
+        const canAfford = pdata.bankGold >= goldCost && Object.keys(cost).every(k => k === 'gold' || pdata.materials[k] >= cost[k]);
+        if (!canAfford) return;
+        pdata.bankGold -= goldCost;
+        Object.keys(cost).forEach(k => { if (k !== 'gold') pdata.materials[k] -= cost[k]; });
+        pdata.inventory.push(instantiateFoodItem(recipe.defId, getFoodRecipeRarity(recipe.id)));
+        Persistent.save();
+        refresh();
+      });
+    });
+    container.querySelectorAll('[data-upgrade-food-recipe]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const recipeId = btn.dataset.upgradeFoodRecipe;
+        const idx = pdata.inventory.findIndex(i => i.slot === 'recipe' && i.recipeId === recipeId);
+        if (idx === -1 || getFoodRecipeRarity(recipeId) === 'legendary') return;
+        pdata.inventory.splice(idx, 1);
+        pdata.recipeRarityBoost[recipeId] = (pdata.recipeRarityBoost[recipeId] || 0) + 1;
+        Persistent.save();
+        refresh();
+      });
+    });
   },
 
   // ---------------- House (pet/mount feeding + leveling) ----------------
@@ -1910,7 +2287,6 @@ const App = {
   renderSanctuaryHouse(classId) {
     const pdata = Persistent.load();
     const foodItems = pdata.inventory.filter(i => i.slot === 'food');
-    const foodOptions = foodItems.map(f => `<option value="${f.uid}">${f.icon} ${f.name} (${RARITIES[f.rarity].label})</option>`).join('');
 
     const companionSection = (kind, pool, ownedIds) => {
       if (!ownedIds.length) return `<p class="small-text">No ${kind}s tamed yet - find one on a Wild Creature encounter.</p>`;
@@ -1929,9 +2305,6 @@ const App = {
             <div class="small-text">${maxed ? 'Max level' : `${progress.xp} / ${xpNeed} XP`}</div>
           </div></div>
           <div class="house-feed">
-            <select class="house-food-select" data-kind="${kind}" data-id="${id}" ${foodItems.length ? '' : 'disabled'}>
-              ${foodItems.length ? foodOptions : '<option>No food owned</option>'}
-            </select>
             <button class="btn-secondary" data-feed-kind="${kind}" data-feed-id="${id}" ${foodItems.length ? '' : 'disabled'} title="Grants ${def.name}'s own bonus (${buffDesc}) to you for 1 hour, plus experience to ${def.name}.">Feed</button>
           </div>
         </div>`;
@@ -1958,7 +2331,6 @@ const App = {
 
     return `
       <h4>🏠 House</h4>
-      <p class="flavor">Feed your pets and mounts food from Cooking to grant them experience (up to level ${PROFESSION_MAX_LEVEL}) and grant YOURSELF a 1-hour buff matching their own ability. An equipped pet/mount also earns experience automatically alongside you, whether fed or not.</p>
       <details class="shop-category" data-key="pets" open>
         <summary>Pets <span class="small-text">(${pdata.ownedPets.length} tamed)</span></summary>
         ${companionSection('pet', PETS, pdata.ownedPets)}
@@ -1977,67 +2349,130 @@ const App = {
     `;
   },
 
+  // Named legendaries never appear here at all (unsellable), and permanent
+  // relics live in a separate list (pdata.permanentRelics) that this never
+  // touches - both satisfy "can't be sold" simply by never being sellable
+  // inventory. An item currently worn by any character can't be sold
+  // either, to avoid silently stripping someone's gear out from under them.
+  // Containers/Recipes aren't rarity-scaled gear at all (no .rarity field) -
+  // they're consumed via Open/Upgrade instead, not sold.
+  sellableItems(pdata) {
+    return pdata.inventory.filter(i => !i.legendary && i.slot !== 'recipe' && i.slot !== 'container');
+  },
+
   renderSanctuaryShop() {
     const pdata = Persistent.load();
-    // Purchased permanent relics are removed from the list entirely rather
-    // than left behind as a disabled "Owned" row - once bought there's
-    // nothing left to do with that row, so it's just clutter.
     const unpurchasedRelics = BANK_SHOP.relics.filter(entry => !pdata.permanentRelics.includes(entry.id));
-    const relicRows = unpurchasedRelics.length ? unpurchasedRelics.map(entry => {
-      const r = RELICS[entry.id];
-      return `<div class="gear-row"><div class="desc"><span>${r.icon}</span><div><strong>${r.name}</strong><div class="small-text">${r.desc}</div></div></div>
-        <button class="btn-secondary" data-buy-relic="${entry.id}" ${pdata.bankGold < entry.price ? 'disabled' : ''}>${entry.price} 🪙</button></div>`;
-    }).join('') : '<p class="small-text">All permanent relics purchased.</p>';
-    const spellRows = BANK_SHOP.spells.map(entry => {
-      const owned = pdata.unlockedSpells.includes(entry.id);
-      const sp = SPELLS[entry.id];
-      return `<div class="gear-row"><div class="desc"><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
-        <button class="btn-secondary" data-buy-spell="${entry.id}" ${owned || pdata.bankGold < entry.price ? 'disabled' : ''}>${owned ? 'Owned' : `${entry.price} 🪙`}</button></div>`;
-    }).join('');
-    const gearRows = BANK_SHOP.gear.map((entry, idx) => {
-      const tmpl = GEAR_TEMPLATES[entry.defId];
-      return `<div class="gear-row" style="border-left:3px solid ${RARITIES[entry.rarity].color}"><div class="desc"><span>${tmpl.icon}</span><div><strong style="color:${RARITIES[entry.rarity].color}">${tmpl.name}</strong><div class="small-text">${RARITIES[entry.rarity].label}</div></div></div>
-        <button class="btn-secondary" data-buy-gear="${idx}" ${pdata.bankGold < entry.price ? 'disabled' : ''}>${entry.price} 🪙</button></div>`;
-    }).join('');
-
-    // Named legendaries never appear here at all (unsellable), and permanent
-    // relics live in a separate list (pdata.permanentRelics) that this never
-    // touches - both satisfy "can't be sold" simply by never being sellable
-    // inventory. An item currently worn by any character can't be sold
-    // either, to avoid silently stripping someone's gear out from under them.
-    // Containers/Recipes aren't rarity-scaled gear at all (no .rarity field) -
-    // they're consumed via Open/Upgrade instead, not sold.
-    const sellableItems = pdata.inventory.filter(i => !i.legendary && i.slot !== 'recipe' && i.slot !== 'container');
-    const sellRows = sellableItems.length ? sellableItems.map(item => {
-      const equippedBy = Object.keys(pdata.characters).find(cid => Object.values(pdata.characters[cid].equipped).includes(item.uid));
-      const value = this.sellValueFor(item);
-      return `<div class="gear-row" style="border-left:3px solid ${RARITIES[item.rarity].color}">
-        <div class="desc"><span>${item.icon}</span><div><strong style="color:${RARITIES[item.rarity].color}">${item.name}</strong>
-        <div class="small-text">${RARITIES[item.rarity].label} · ${SLOT_LABELS[item.slot] || item.slot}${equippedBy ? ` · worn by ${CLASSES[equippedBy].name}` : ''}</div></div></div>
-        <button class="btn-secondary" data-sell-uid="${item.uid}" ${equippedBy ? 'disabled' : ''}>${equippedBy ? 'Equipped' : `Sell ${value} 🪙`}</button>
-      </div>`;
-    }).join('') : '<p class="small-text">Nothing to sell.</p>';
-
-    // Collapsed by default (via <details>, no JS needed to toggle) so the
-    // ~90-relic list doesn't dominate the screen the moment the Shop opens -
-    // the player expands whichever category they actually want to browse.
     return `
-      <details class="shop-category" data-key="relics">
-        <summary>Permanent Relics <span class="small-text">(${unpurchasedRelics.length} available - apply to every class, every run)</span></summary>
-        ${relicRows}
-      </details>
-      <details class="shop-category" data-key="spells">
-        <summary>Spells <span class="small-text">(equip from Inventory)</span></summary>
-        ${spellRows}
-      </details>
-      <details class="shop-category" data-key="starterGear">
-        <summary>Starter Gear</summary>
-        ${gearRows}
-      </details>
-      <details class="shop-category" data-key="sell">
-        <summary>Sell Items <span class="small-text">(${sellableItems.length} sellable - value scales with rarity; named legendaries and permanent relics can't be sold)</span></summary>
-        ${sellRows}
-      </details>`;
+      ${this.categoryButtonRow('shop-relics', '🏺', 'Permanent Relics', `${unpurchasedRelics.length} available - apply to every class, every run`)}
+      ${this.categoryButtonRow('shop-spells', '📖', 'Spells', 'equip from Inventory')}
+      ${this.categoryButtonRow('shop-gear', '🛡️', 'Starter Gear', `${BANK_SHOP.gear.length} items`)}
+      ${this.categoryButtonRow('shop-sell', '🪙', 'Sell Items', `${this.sellableItems(pdata).length} sellable - value scales with rarity`)}
+    `;
+  },
+
+  showShopRelicsModal(classId, tab) {
+    this.showListModal('🏺 Permanent Relics', () => {
+      const pdata = Persistent.load();
+      const unpurchasedRelics = BANK_SHOP.relics.filter(entry => !pdata.permanentRelics.includes(entry.id));
+      return unpurchasedRelics.length ? unpurchasedRelics.map(entry => {
+        const r = RELICS[entry.id];
+        return `<div class="gear-row"><div class="desc"><span>${r.icon}</span><div><strong>${r.name}</strong><div class="small-text">${r.desc}</div></div></div>
+          <button class="btn-secondary" data-buy-relic="${entry.id}" ${pdata.bankGold < entry.price ? 'disabled' : ''}>${entry.price} 🪙</button></div>`;
+      }).join('') : '<p class="small-text">All permanent relics purchased.</p>';
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-buy-relic]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const pdata = Persistent.load();
+          const id = btn.dataset.buyRelic;
+          const entry = BANK_SHOP.relics.find(r => r.id === id);
+          if (!entry || pdata.permanentRelics.includes(id) || pdata.bankGold < entry.price) return;
+          pdata.bankGold -= entry.price;
+          pdata.permanentRelics.push(id);
+          Persistent.save();
+          refresh();
+        });
+      });
+    }, () => this.showSanctuary(classId, tab));
+  },
+
+  showShopSpellsModal(classId, tab) {
+    this.showListModal('📖 Spells', () => {
+      const pdata = Persistent.load();
+      return BANK_SHOP.spells.map(entry => {
+        const owned = pdata.unlockedSpells.includes(entry.id);
+        const sp = SPELLS[entry.id];
+        return `<div class="gear-row"><div class="desc"><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
+          <button class="btn-secondary" data-buy-spell="${entry.id}" ${owned || pdata.bankGold < entry.price ? 'disabled' : ''}>${owned ? 'Owned' : `${entry.price} 🪙`}</button></div>`;
+      }).join('');
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-buy-spell]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const pdata = Persistent.load();
+          const id = btn.dataset.buySpell;
+          const entry = BANK_SHOP.spells.find(sp => sp.id === id);
+          if (!entry || pdata.unlockedSpells.includes(id) || pdata.bankGold < entry.price) return;
+          pdata.bankGold -= entry.price;
+          pdata.unlockedSpells.push(id);
+          Persistent.save();
+          refresh();
+        });
+      });
+    }, () => this.showSanctuary(classId, tab));
+  },
+
+  showShopGearModal(classId, tab) {
+    this.showListModal('🛡️ Starter Gear', () => {
+      const pdata = Persistent.load();
+      return BANK_SHOP.gear.map((entry, idx) => {
+        const tmpl = GEAR_TEMPLATES[entry.defId];
+        return `<div class="gear-row" style="border-left:3px solid ${RARITIES[entry.rarity].color}"><div class="desc"><span>${tmpl.icon}</span><div><strong style="color:${RARITIES[entry.rarity].color}">${tmpl.name}</strong><div class="small-text">${RARITIES[entry.rarity].label}</div></div></div>
+          <button class="btn-secondary" data-buy-gear="${idx}" ${pdata.bankGold < entry.price ? 'disabled' : ''}>${entry.price} 🪙</button></div>`;
+      }).join('');
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-buy-gear]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const pdata = Persistent.load();
+          const entry = BANK_SHOP.gear[parseInt(btn.dataset.buyGear, 10)];
+          if (!entry || pdata.bankGold < entry.price) return;
+          pdata.bankGold -= entry.price;
+          pdata.inventory.push(instantiateGear(entry.defId, entry.rarity));
+          Persistent.save();
+          refresh();
+        });
+      });
+    }, () => this.showSanctuary(classId, tab));
+  },
+
+  showShopSellModal(classId, tab) {
+    this.showListModal('🪙 Sell Items', () => {
+      const pdata = Persistent.load();
+      const sellable = this.sellableItems(pdata);
+      return sellable.length ? sellable.map(item => {
+        const equippedBy = Object.keys(pdata.characters).find(cid => Object.values(pdata.characters[cid].equipped).includes(item.uid));
+        const value = this.sellValueFor(item);
+        return `<div class="gear-row" style="border-left:3px solid ${RARITIES[item.rarity].color}">
+          <div class="desc"><span>${item.icon}</span><div><strong style="color:${RARITIES[item.rarity].color}">${item.name}</strong>
+          <div class="small-text">${RARITIES[item.rarity].label} · ${SLOT_LABELS[item.slot] || item.slot}${equippedBy ? ` · worn by ${CLASSES[equippedBy].name}` : ''}</div></div></div>
+          <button class="btn-secondary" data-sell-uid="${item.uid}" ${equippedBy ? 'disabled' : ''}>${equippedBy ? 'Equipped' : `Sell ${value} 🪙`}</button>
+        </div>`;
+      }).join('') : '<p class="small-text">Nothing to sell.</p>';
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-sell-uid]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const pdata = Persistent.load();
+          const uid = btn.dataset.sellUid;
+          const item = Persistent.findItem(uid);
+          if (!item || item.legendary) return;
+          const equippedBy = Object.keys(pdata.characters).find(cid => Object.values(pdata.characters[cid].equipped).includes(uid));
+          if (equippedBy) return;
+          pdata.bankGold += this.sellValueFor(item);
+          pdata.inventory = pdata.inventory.filter(i => i.uid !== uid);
+          Persistent.save();
+          refresh();
+        });
+      });
+    }, () => this.showSanctuary(classId, tab));
   },
 
   // ---------------- Journal (a catalog of everything obtainable) ----------------
@@ -2092,21 +2527,14 @@ const App = {
     const armorSlots = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket'];
     const armorSections = armorSlots.map(slot => section(`armor-${slot}`, SLOT_LABELS[slot], gearCards(t => t.slot === slot))).join('');
 
-    const reputationRows = ACT_THEMES.map(theme => {
-      const { rep, tier, next, idx } = getReputationProgress(theme.id);
-      const pct = next ? Math.min(100, Math.round(((rep - tier.threshold) / (next.threshold - tier.threshold)) * 100)) : 100;
-      return `<div class="gear-row">
-        <div class="desc"><span>${theme.particle}</span><div>
-          <strong style="color:${theme.accent}">${theme.name}</strong> <span class="small-text">${tier.name}${idx > 0 ? ` (+${(idx * REPUTATION_GOLD_BONUS_PER_TIER * 100).toFixed(1)}% gold)` : ''}</span>
-          <div class="xp-bar-wrap" style="margin-top:4px;width:180px"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
-          <div class="small-text">${next ? `${rep} / ${next.threshold} to ${next.name}` : `${rep} rep - Exalted (max)`}</div>
-        </div></div>
-      </div>`;
-    }).join('');
+    // Only zones the account has actually reached (Meta.bestAct, the same
+    // "highest act" tracker the class-select screen's Pick Up button reads)
+    // show up at all - no point in showing a reputation bar (or its bonus)
+    // for a zone the player hasn't set foot in yet.
+    const reachedThemeCount = this.reachedActThemes().length;
 
     return `
-      <h4>Reputation <span class="small-text">(earned by completing nodes while adventuring in that zone)</span></h4>
-      ${reputationRows}
+      ${this.categoryButtonRow('journal-reputation', '🎖️', 'Reputation', `${reachedThemeCount} zone${reachedThemeCount === 1 ? '' : 's'} reached - earned by completing nodes while adventuring there`)}
       <h4 style="margin-top:16px">Weapons</h4>
       ${weaponTypeSections}
       <h4 style="margin-top:16px">Armor & Accessories</h4>
@@ -2115,6 +2543,33 @@ const App = {
       ${section('pets', 'Pets', companionCards(PETS, pdata.ownedPets))}
       ${section('mounts', 'Mounts', companionCards(MOUNTS, pdata.ownedMounts))}
     `;
+  },
+
+  // Each ACT_THEMES entry covers 10 acts (see getActTheme in data.js) - a
+  // theme counts as "reached" once the account's highest recorded act
+  // (Meta.bestAct) falls anywhere in that range, matching the class-select
+  // screen's own "Pick up from your highest act" gate.
+  reachedActThemes() {
+    const bestAct = Meta.load().bestAct;
+    return ACT_THEMES.filter((theme, idx) => bestAct >= idx * 10 + 1);
+  },
+
+  showJournalReputationModal() {
+    this.showListModal('🎖️ Reputation', () => {
+      const themes = this.reachedActThemes();
+      if (!themes.length) return '<p class="small-text">Reach Act 1\'s end to start earning reputation with Elderglen Forest.</p>';
+      return themes.map(theme => {
+        const { rep, tier, next, idx } = getReputationProgress(theme.id);
+        const pct = next ? Math.min(100, Math.round(((rep - tier.threshold) / (next.threshold - tier.threshold)) * 100)) : 100;
+        return `<div class="gear-row">
+          <div class="desc"><span>${theme.particle}</span><div>
+            <strong style="color:${theme.accent}">${theme.name}</strong> <span class="small-text">${tier.name}${idx > 0 ? ` (+${(idx * REPUTATION_GOLD_BONUS_PER_TIER * 100).toFixed(1)}% gold)` : ''}</span>
+            <div class="xp-bar-wrap" style="margin-top:4px;width:180px"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+            <div class="small-text">${next ? `${rep} / ${next.threshold} to ${next.name}` : `${rep} rep - Exalted (max)`}</div>
+          </div></div>
+        </div>`;
+      }).join('');
+    }, () => {}, null);
   },
 
   renderSanctuaryQuests(classId) {
@@ -2194,9 +2649,9 @@ const App = {
     }).join('');
   },
 
-  wireProfessionClicks(classId, onChange) {
+  wireProfessionClicks(classId, root, onChange) {
     const rec = Persistent.getCharacter(classId);
-    this.root.querySelectorAll('[data-profession]').forEach(btn => {
+    root.querySelectorAll('[data-profession]').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.profession;
         rec.profession.active = rec.profession.active === id ? null : id;
@@ -2204,6 +2659,180 @@ const App = {
         onChange();
       });
     });
+  },
+
+  // ---------------- Disenchanting ----------------
+  // Weapons/armor/accessories only (recipes/containers/food aren't gear),
+  // never a named legendary (irreplaceable, like the Shop's Sell won't touch
+  // them either), and never anything any character currently has equipped.
+  disenchantableItems(pdata) {
+    const equippedUids = new Set();
+    Object.values(pdata.characters).forEach(c => Object.values(c.equipped).forEach(uid => { if (uid) equippedUids.add(uid); }));
+    const gearSlots = new Set(['weapon', 'chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket']);
+    return pdata.inventory.filter(i => gearSlots.has(i.slot) && !i.legendary && !equippedUids.has(i.uid));
+  },
+
+  // Same "would this beat what's currently in that slot" heuristic as the
+  // Armory's upgrade-glow (hasUpgradeAvailable), just for an arbitrary item
+  // rather than one already in the inventory list - drives Auto Disenchant.
+  isUpgradeFor(classId, item) {
+    const keys = equipSlotKeysFor(classId, item);
+    if (!keys.length) return false;
+    const rec = Persistent.getCharacter(classId);
+    return keys.some(key => {
+      const currentUid = rec.equipped[key];
+      const currentPower = currentUid ? this.gearPower(Persistent.findItem(currentUid)) : 0;
+      return this.gearPower(item) > currentPower;
+    });
+  },
+
+  // Appended to <body> (like showSettingsModal) so it survives independently
+  // of the Sanctuary underneath - `render()` redraws just the modal's own
+  // content on every action instead of re-running the whole Sanctuary
+  // template, and closing it does one showSanctuary refresh so the header's
+  // material counts and the Disenchanting level catch up.
+  showDisenchantModal(classId) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const closeModal = () => { overlay.remove(); this.showSanctuary(classId, 'professions'); };
+    const render = () => {
+      const pdata = Persistent.load();
+      const rec = Persistent.getCharacter(classId);
+      const d = rec.disenchanting;
+      const maxed = d.level >= DISENCHANT_MAX_LEVEL;
+      const xpNeed = maxed ? 0 : professionXpForLevel(d.level);
+      const items = this.disenchantableItems(pdata);
+      const rows = items.map(item => {
+        const yieldAmounts = disenchantYieldFor(item.rarity, d.level);
+        const yieldText = Object.entries(yieldAmounts).map(([k, v]) => `${v} ${k}`).join(', ');
+        const upgrade = this.isUpgradeFor(classId, item);
+        return `<div class="gear-row" style="border-left:3px solid ${RARITIES[item.rarity].color}">
+          <div class="desc"><span>${item.icon}</span><div>
+            <strong style="color:${RARITIES[item.rarity].color}">${item.name}</strong>
+            <div class="small-text">${RARITIES[item.rarity].label} · ${SLOT_LABELS[item.slot] || item.slot}${upgrade ? ` · <span style="color:var(--good)">upgrade for ${CLASSES[classId].name}</span>` : ''}</div>
+            <div class="small-text">Yields ${yieldText}</div>
+          </div></div>
+          <button class="btn-secondary" data-disenchant-uid="${item.uid}">Disenchant</button>
+        </div>`;
+      }).join('') || '<p class="small-text">Nothing in your inventory can be disenchanted right now.</p>';
+
+      overlay.innerHTML = `
+        <div class="panel modal-panel">
+          <h4>♻️ Disenchanting <span class="small-text">Lv.${d.level}${maxed ? ' (max)' : ''}</span></h4>
+          ${maxed ? '' : `<div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${Math.min(100, Math.round(d.xp / xpNeed * 100))}%"></div></div><div class="small-text">${d.xp} / ${xpNeed} XP</div>`}
+          <div class="small-text" style="margin:8px 0">✨ ${pdata.materials.dust} Dust · 🔹 ${pdata.materials.shard} Shard · 💠 ${pdata.materials.crystal} Crystal</div>
+          <button class="btn-primary" id="btn-auto-disenchant" ${items.length ? '' : 'disabled'}>Auto Disenchant Non-Upgrades</button>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">${rows}</div>
+          <button class="btn-secondary" id="btn-close-disenchant" style="margin-top:14px">Close</button>
+        </div>`;
+
+      overlay.querySelectorAll('[data-disenchant-uid]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = pdata.inventory.findIndex(i => i.uid === btn.dataset.disenchantUid);
+          if (idx === -1) return;
+          const item = pdata.inventory[idx];
+          pdata.inventory.splice(idx, 1);
+          disenchantItem(rec, pdata, item);
+          Persistent.save();
+          render();
+        });
+      });
+      const autoBtn = document.getElementById('btn-auto-disenchant');
+      if (autoBtn) autoBtn.addEventListener('click', () => {
+        this.disenchantableItems(pdata).filter(i => !this.isUpgradeFor(classId, i)).forEach(item => {
+          const idx = pdata.inventory.findIndex(i => i.uid === item.uid);
+          if (idx === -1) return;
+          pdata.inventory.splice(idx, 1);
+          disenchantItem(rec, pdata, item);
+        });
+        Persistent.save();
+        render();
+      });
+      document.getElementById('btn-close-disenchant').addEventListener('click', closeModal);
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    document.body.appendChild(overlay);
+    render();
+  },
+
+  // ---------------- Enchanting ----------------
+  // Reuses renderArmoryPaperdoll as-is (a "mirror of the Armory screen") -
+  // clicking a filled slot opens an enchant list for whatever's equipped
+  // there instead of a gear-swap picker; an empty slot is a no-op since
+  // there's nothing to enchant.
+  showEnchantModal(classId) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    let selectedSlot = null;
+    const closeModal = () => { overlay.remove(); this.showSanctuary(classId, 'professions'); };
+    const render = () => {
+      const pdata = Persistent.load();
+      const rec = Persistent.getCharacter(classId);
+      overlay.innerHTML = `
+        <div class="panel modal-panel" style="max-width:640px">
+          <h4>🔷 Enchanting <span class="small-text">- select an equipped item, then choose an enchant</span></h4>
+          <div class="small-text" style="margin-bottom:8px">✨ ${pdata.materials.dust} Dust · 🔹 ${pdata.materials.shard} Shard · 💠 ${pdata.materials.crystal} Crystal</div>
+          ${this.renderArmoryPaperdoll(classId)}
+          ${selectedSlot && rec.equipped[selectedSlot] ? this.renderEnchantPicker(classId, selectedSlot) : ''}
+          <button class="btn-secondary" id="btn-close-enchant" style="margin-top:14px">Close</button>
+        </div>`;
+      overlay.querySelectorAll('[data-slot-key]').forEach(el => {
+        el.addEventListener('click', () => {
+          const key = el.dataset.slotKey;
+          if (!rec.equipped[key]) return;
+          selectedSlot = selectedSlot === key ? null : key;
+          render();
+        });
+      });
+      overlay.querySelectorAll('[data-apply-enchant]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const enchant = ENCHANTS[btn.dataset.applyEnchant];
+          const item = Persistent.findItem(rec.equipped[selectedSlot]);
+          if (!enchant || !item) return;
+          const canAfford = Object.keys(enchant.cost).every(k => (pdata.materials[k] || 0) >= enchant.cost[k]);
+          if (!canAfford) return;
+          Object.keys(enchant.cost).forEach(k => { pdata.materials[k] -= enchant.cost[k]; });
+          item.enchantId = enchant.id;
+          Persistent.save();
+          render();
+        });
+      });
+      document.getElementById('btn-close-enchant').addEventListener('click', closeModal);
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    document.body.appendChild(overlay);
+    render();
+  },
+
+  // The enchant list shown below the paperdoll once a filled slot is picked -
+  // only this class's own flavored enchant plus the universal one (see
+  // enchantsFor in progression.js). One enchant per item, same as WoW - a
+  // new Apply replaces whatever was there before (its materials aren't
+  // refunded, matching how re-equipping different gear works everywhere else).
+  renderEnchantPicker(classId, slotKey) {
+    const pdata = Persistent.load();
+    const rec = Persistent.getCharacter(classId);
+    const item = Persistent.findItem(rec.equipped[slotKey]);
+    if (!item) return '';
+    const rows = enchantsFor(classId).map(e => {
+      const canAfford = Object.keys(e.cost).every(k => (pdata.materials[k] || 0) >= e.cost[k]);
+      const costText = Object.entries(e.cost).map(([k, v]) => `${v} ${k}`).join(', ');
+      const effectText = Object.keys(e.effect).map(k => describeEffectLever(k, e.effect[k])).join(', ');
+      const isCurrent = item.enchantId === e.id;
+      return `<div class="gear-row" style="${isCurrent ? 'border-left:3px solid var(--accent)' : ''}">
+        <div class="desc"><span>${e.icon}</span><div>
+          <strong>${e.name}</strong>${isCurrent ? ' <span class="small-text">(active)</span>' : ''}
+          <div class="small-text">${e.desc} - ${effectText}</div>
+          <div class="small-text">Costs ${costText}</div>
+        </div></div>
+        <button class="btn-secondary" data-apply-enchant="${e.id}" ${isCurrent || !canAfford ? 'disabled' : ''}>${isCurrent ? 'Active' : 'Apply'}</button>
+      </div>`;
+    }).join('');
+    return `
+      <div class="char-customize" style="margin-top:12px">
+        <h4>Enchant ${item.icon} ${item.name}</h4>
+        ${rows}
+      </div>`;
   },
 
 
@@ -2592,6 +3221,13 @@ const App = {
         this.customizationOpen = !this.customizationOpen;
         this.showSanctuary(classId, tab);
       });
+      const autoEquipChk = document.getElementById('chk-auto-equip');
+      if (autoEquipChk) autoEquipChk.addEventListener('change', () => {
+        rec.autoEquip = autoEquipChk.checked;
+        if (rec.autoEquip) this.autoEquipBestGear(classId);
+        Persistent.save();
+        this.showSanctuary(classId, tab);
+      });
       // Clicking a paperdoll slot toggles the inline picker for it (see
       // renderSlotPicker); clicking the same slot again closes it.
       this.root.querySelectorAll('[data-slot-key]').forEach(el => {
@@ -2612,6 +3248,9 @@ const App = {
             equipItemToSlot(rec, item, key);
           }
           Persistent.save();
+          // Equipping (or unequipping) closes the picker automatically -
+          // clicking Close afterward was a redundant extra step.
+          this.selectedArmorySlot = null;
           this.showSanctuary(classId, tab);
         });
       });
@@ -2645,145 +3284,34 @@ const App = {
         this.showSanctuary(classId, tab);
       });
     } else if (tab === 'inventory') {
-      this.wireGearEquipClicks(classId, () => this.showSanctuary(classId, tab));
-      this.root.querySelectorAll('[data-spell]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.dataset.spell;
-          rec.equipped.spell = id === CLASSES[classId].defaultSpell ? null : id;
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.root.querySelectorAll('[data-companion-kind]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const kind = btn.dataset.companionKind, id = btn.dataset.companionId;
-          rec.equipped[kind] = rec.equipped[kind] === id ? null : id;
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.root.querySelectorAll('[data-open-container]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const uid = btn.dataset.openContainer;
-          const idx = pdata.inventory.findIndex(i => i.uid === uid);
-          if (idx === -1) return;
-          const container = pdata.inventory[idx];
-          pdata.inventory.splice(idx, 1);
-          const result = openContainer(container.containerId);
-          if (result.pvpOnly) pdata.pvpInventory.push(result); else pdata.inventory.push(result);
-          Persistent.save();
-          this.lastContainerResult = `${container.name} contained: ${result.icon} ${result.name} (${result.pvpUnique ? 'Unique' : RARITIES[result.rarity].label})`;
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.root.querySelectorAll('[data-eat-food]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const uid = btn.dataset.eatFood;
-          const idx = pdata.inventory.findIndex(i => i.uid === uid && i.slot === 'food');
-          if (idx === -1) return;
-          const food = pdata.inventory[idx];
-          pdata.inventory.splice(idx, 1);
-          grantTempBuff(food.name, food.icon, food.effect);
-          this.showSanctuary(classId, tab);
-        });
+      const invModals = {
+        'inv-bank': () => this.showInvBankModal(classId, tab),
+        'inv-weapons': () => this.showInvWeaponsModal(classId, tab),
+        'inv-armor': () => this.showInvArmorModal(classId, tab),
+        'inv-containers': () => this.showInvContainersModal(classId, tab),
+        'inv-recipes': () => this.showInvRecipesModal(classId, tab),
+        'inv-food': () => this.showInvFoodModal(classId, tab),
+        'inv-spells': () => this.showInvSpellsModal(classId, tab),
+        'inv-relics': () => this.showInvRelicsModal(classId, tab),
+        'inv-pets': () => this.showInvCompanionModal(classId, tab, 'pet', PETS, '🐾 Pets'),
+        'inv-mounts': () => this.showInvCompanionModal(classId, tab, 'mount', MOUNTS, '🐎 Mounts')
+      };
+      this.root.querySelectorAll('[data-open-category]').forEach(btn => {
+        btn.addEventListener('click', () => invModals[btn.dataset.openCategory]());
       });
     } else if (tab === 'professions') {
-      this.root.querySelectorAll('[data-recipe]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const recipe = RECIPES.find(r => r.id === btn.dataset.recipe);
-          if (!recipe) return;
-          const goldCost = this.craftGoldCost(classId, recipe.cost.gold);
-          const canAfford = pdata.bankGold >= goldCost && Object.keys(recipe.cost).every(k => k === 'gold' || pdata.materials[k] >= recipe.cost[k]);
-          if (!canAfford) return;
-          pdata.bankGold -= goldCost;
-          Object.keys(recipe.cost).forEach(k => { if (k !== 'gold') pdata.materials[k] -= recipe.cost[k]; });
-          pdata.inventory.push(instantiateGear(recipe.defId, getRecipeRarity(recipe.id)));
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
+      const disenchantBtn = document.getElementById('btn-open-disenchant');
+      if (disenchantBtn) disenchantBtn.addEventListener('click', () => this.showDisenchantModal(classId));
+      const enchantBtn = document.getElementById('btn-open-enchant');
+      if (enchantBtn) enchantBtn.addEventListener('click', () => this.showEnchantModal(classId));
+      const profModals = { 'prof-weapons': 'showProfWeaponsModal', 'prof-armor': 'showProfArmorModal', 'prof-cooking': 'showProfCookingModal', 'prof-gathering': 'showProfGatheringModal' };
+      this.root.querySelectorAll('[data-open-category]').forEach(btn => {
+        btn.addEventListener('click', () => this[profModals[btn.dataset.openCategory]](classId, tab));
       });
-      this.root.querySelectorAll('[data-upgrade-recipe]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const recipeId = btn.dataset.upgradeRecipe;
-          const idx = pdata.inventory.findIndex(i => i.slot === 'recipe' && i.recipeId === recipeId);
-          if (idx === -1 || getRecipeRarity(recipeId) === 'legendary') return;
-          pdata.inventory.splice(idx, 1);
-          pdata.recipeRarityBoost[recipeId] = (pdata.recipeRarityBoost[recipeId] || 0) + 1;
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.root.querySelectorAll('[data-food-recipe]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const recipe = COOKING_RECIPES.find(r => r.id === btn.dataset.foodRecipe);
-          if (!recipe || rec.profession.levels.cooking < recipe.levelReq) return;
-          const goldCost = this.craftGoldCost(classId, recipe.cost.gold);
-          const canAfford = pdata.bankGold >= goldCost && Object.keys(recipe.cost).every(k => k === 'gold' || pdata.materials[k] >= recipe.cost[k]);
-          if (!canAfford) return;
-          pdata.bankGold -= goldCost;
-          Object.keys(recipe.cost).forEach(k => { if (k !== 'gold') pdata.materials[k] -= recipe.cost[k]; });
-          pdata.inventory.push(instantiateFoodItem(recipe.defId, getFoodRecipeRarity(recipe.id)));
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.root.querySelectorAll('[data-upgrade-food-recipe]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const recipeId = btn.dataset.upgradeFoodRecipe;
-          const idx = pdata.inventory.findIndex(i => i.slot === 'recipe' && i.recipeId === recipeId);
-          if (idx === -1 || getFoodRecipeRarity(recipeId) === 'legendary') return;
-          pdata.inventory.splice(idx, 1);
-          pdata.recipeRarityBoost[recipeId] = (pdata.recipeRarityBoost[recipeId] || 0) + 1;
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.wireProfessionClicks(classId, () => this.showSanctuary(classId, tab));
     } else if (tab === 'shop') {
-      this.root.querySelectorAll('[data-buy-relic]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.dataset.buyRelic;
-          const entry = BANK_SHOP.relics.find(r => r.id === id);
-          if (!entry || pdata.permanentRelics.includes(id) || pdata.bankGold < entry.price) return;
-          pdata.bankGold -= entry.price;
-          pdata.permanentRelics.push(id);
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.root.querySelectorAll('[data-buy-spell]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.dataset.buySpell;
-          const entry = BANK_SHOP.spells.find(sp => sp.id === id);
-          if (!entry || pdata.unlockedSpells.includes(id) || pdata.bankGold < entry.price) return;
-          pdata.bankGold -= entry.price;
-          pdata.unlockedSpells.push(id);
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.root.querySelectorAll('[data-buy-gear]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const entry = BANK_SHOP.gear[parseInt(btn.dataset.buyGear, 10)];
-          if (!entry || pdata.bankGold < entry.price) return;
-          pdata.bankGold -= entry.price;
-          pdata.inventory.push(instantiateGear(entry.defId, entry.rarity));
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
-      this.root.querySelectorAll('[data-sell-uid]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const uid = btn.dataset.sellUid;
-          const item = Persistent.findItem(uid);
-          if (!item || item.legendary) return;
-          const equippedBy = Object.keys(pdata.characters).find(cid => Object.values(pdata.characters[cid].equipped).includes(uid));
-          if (equippedBy) return;
-          pdata.bankGold += this.sellValueFor(item);
-          pdata.inventory = pdata.inventory.filter(i => i.uid !== uid);
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
+      const shopModals = { 'shop-relics': 'showShopRelicsModal', 'shop-spells': 'showShopSpellsModal', 'shop-gear': 'showShopGearModal', 'shop-sell': 'showShopSellModal' };
+      this.root.querySelectorAll('[data-open-category]').forEach(btn => {
+        btn.addEventListener('click', () => this[shopModals[btn.dataset.openCategory]](classId, tab));
       });
     } else if (tab === 'quests') {
       this.root.querySelectorAll('[data-accept-quest]').forEach(btn => {
@@ -2835,6 +3363,9 @@ const App = {
           this.showSanctuary(classId, tab);
         });
       });
+    } else if (tab === 'journal') {
+      const repBtn = this.root.querySelector('[data-open-category="journal-reputation"]');
+      if (repBtn) repBtn.addEventListener('click', () => this.showJournalReputationModal());
     } else if (tab === 'raids') {
       this.root.querySelectorAll('[data-dungeon]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -2855,18 +3386,7 @@ const App = {
     } else if (tab === 'house') {
       this.root.querySelectorAll('[data-feed-kind]').forEach(btn => {
         btn.addEventListener('click', () => {
-          const kind = btn.dataset.feedKind, id = btn.dataset.feedId;
-          const select = this.root.querySelector(`select.house-food-select[data-kind="${kind}"][data-id="${id}"]`);
-          const foodUid = select && select.value;
-          const idx = pdata.inventory.findIndex(i => i.uid === foodUid && i.slot === 'food');
-          if (idx === -1) return;
-          const food = pdata.inventory[idx];
-          pdata.inventory.splice(idx, 1);
-          grantCompanionXp(kind, id, Math.round(20 * RARITIES[food.rarity].mult));
-          const def = (kind === 'pet' ? PETS : MOUNTS)[id];
-          grantTempBuff(`Fed: ${def.name}`, def.icon, def.effect);
-          Persistent.save();
-          this.showSanctuary(classId, tab);
+          this.showFoodPickerModal(classId, btn.dataset.feedKind, btn.dataset.feedId);
         });
       });
       this.root.querySelectorAll('[data-toggle-companion]').forEach(btn => {
