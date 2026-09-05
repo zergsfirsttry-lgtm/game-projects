@@ -1,0 +1,351 @@
+// Branching node map generation (Slay-the-Spire style) and SVG/DOM rendering.
+
+const NODE_TYPES = {
+  combat: { icon: '⚔️', label: 'Battle' },
+  elite: { icon: '👹', label: 'Elite' },
+  event: { icon: '❓', label: 'Unknown' },
+  rest: { icon: '🔥', label: 'Rest' },
+  shop: { icon: '💰', label: 'Shop' },
+  treasure: { icon: '🎁', label: 'Treasure' },
+  classTrial: { icon: '🌟', label: 'Class Trial' },
+  legendary: { icon: '👑', label: 'Legendary Encounter' },
+  taming: { icon: '🐾', label: 'Wild Creature' },
+  boss: { icon: '☠️', label: 'Boss' }
+};
+
+// How "dangerous" each node type reads for AUTO's path-of-most-resistance
+// pick (see autoPickPath in main.js) - purely a UI-facing ranking, no
+// gameplay effect of its own; ties just keep whichever came first.
+const NODE_RESISTANCE_RANK = {
+  boss: 8, legendary: 7, elite: 6, classTrial: 5, taming: 4,
+  combat: 3, event: 2, treasure: 1, shop: 0, rest: 0
+};
+
+// What an unvisited, un-revealed node shows instead of its true type - the
+// path shape and which nodes are clickable are always visible, but their
+// contents stay a mystery until you actually step onto them. The boss node
+// is exempted (always shown) since its position already telegraphs it, and
+// so are the currently-available nodes - you can see what your immediate
+// next choices are, you just can't see any further than that.
+const FOG_NODE = { icon: '?', label: '???' };
+
+// MAP_WIDTH is deliberately mobile-safe (fits a ~360px phone viewport with
+// padding to spare) since the perspective view below no longer scrolls -
+// it's a fixed window, so nothing can rely on extra width via scrolling.
+const MAP_WIDTH = 320;
+const ROW_HEIGHT = 110;
+const REGULAR_ROWS = 12; // rows 0..11, then boss row = 12
+
+function pickType(rowIndex) {
+  if (rowIndex === 0) return 'combat';
+  const roll = Math.random();
+  if (roll < 0.39) return 'combat';
+  if (roll < 0.49) return 'elite';
+  if (roll < 0.66) return 'event';
+  if (roll < 0.78) return 'rest';
+  if (roll < 0.86) return 'shop';
+  if (roll < 0.94) return 'treasure';
+  if (roll < 0.97) return 'classTrial'; // rare - actual target class is chosen when the node is visited
+  if (roll < 0.995) return 'taming'; // rare - tame a persistent WoW/D&D-flavored pet or mount
+  return 'legendary'; // very rare - a multi-wave gauntlet guarding a named legendary item
+}
+
+function generateMap(act) {
+  const rows = [];
+  let idCounter = 0;
+
+  for (let r = 0; r < REGULAR_ROWS; r++) {
+    const count = r === REGULAR_ROWS - 1 ? 2 : rand(3, 4);
+    const nodes = [];
+    for (let i = 0; i < count; i++) {
+      const baseX = (MAP_WIDTH / (count + 1)) * (i + 1);
+      const jitter = rand(-18, 18);
+      nodes.push({
+        id: `n${idCounter++}`,
+        row: r,
+        slot: i,
+        x: Math.max(30, Math.min(MAP_WIDTH - 30, baseX + jitter)),
+        y: r * ROW_HEIGHT + 60,
+        type: pickType(r),
+        connections: [],
+        visited: false
+      });
+    }
+    rows.push(nodes);
+  }
+
+  // Force guarantees so a long act still has reliable pacing: rests at the
+  // midpoint and just before the boss, a couple of shops and treasures spread out.
+  const lastRow = rows[REGULAR_ROWS - 1];
+  lastRow[rand(0, lastRow.length - 1)].type = 'rest';
+  const midpointRow = rows[Math.floor(REGULAR_ROWS / 2)];
+  midpointRow[rand(0, midpointRow.length - 1)].type = 'rest';
+
+  const midRows = rows.slice(1, REGULAR_ROWS - 1);
+  const usedRowIndexes = new Set();
+  const forceTypeInFreshRow = (type) => {
+    if (!midRows.length) return;
+    let idx = rand(0, midRows.length - 1);
+    let attempts = 0;
+    while (usedRowIndexes.has(idx) && attempts < midRows.length) {
+      idx = (idx + 1) % midRows.length;
+      attempts++;
+    }
+    usedRowIndexes.add(idx);
+    const row = midRows[idx];
+    row[rand(0, row.length - 1)].type = type;
+  };
+  forceTypeInFreshRow('shop');
+  forceTypeInFreshRow('shop');
+  forceTypeInFreshRow('treasure');
+  forceTypeInFreshRow('treasure');
+
+  // Boss row
+  const bossNode = {
+    id: `n${idCounter++}`, row: REGULAR_ROWS, slot: 0,
+    x: MAP_WIDTH / 2, y: REGULAR_ROWS * ROW_HEIGHT + 60,
+    type: 'boss', connections: [], visited: false
+  };
+  rows.push([bossNode]);
+
+  // Connect each row to the next: every node gets 1-2 forward links, every node gets >=1 incoming link.
+  for (let r = 0; r < rows.length - 1; r++) {
+    const cur = rows[r];
+    const next = rows[r + 1];
+    const incoming = new Set();
+    cur.forEach(node => {
+      const nearestIdx = Math.round((node.slot / Math.max(1, cur.length - 1)) * (next.length - 1));
+      const linksCount = next.length > 1 && Math.random() < 0.4 ? 2 : 1;
+      const targets = new Set();
+      targets.add(clamp(nearestIdx, 0, next.length - 1));
+      if (linksCount === 2) {
+        const offset = Math.random() < 0.5 ? -1 : 1;
+        targets.add(clamp(nearestIdx + offset, 0, next.length - 1));
+      }
+      targets.forEach(idx => {
+        node.connections.push(next[idx].id);
+        incoming.add(idx);
+      });
+    });
+    // Ensure every node in the next row has an incoming connection.
+    next.forEach((node, idx) => {
+      if (!incoming.has(idx)) {
+        const closestCur = cur[clamp(Math.round((idx / Math.max(1, next.length - 1)) * (cur.length - 1)), 0, cur.length - 1)];
+        closestCur.connections.push(node.id);
+      }
+    });
+  }
+
+  const allNodes = {};
+  rows.forEach(row => row.forEach(n => { allNodes[n.id] = n; }));
+
+  return {
+    act,
+    rows,
+    nodes: allNodes,
+    entryIds: rows[0].map(n => n.id),
+    bossId: bossNode.id,
+    totalHeight: rows.length * ROW_HEIGHT + 40
+  };
+}
+
+function getAvailableNodeIds(map, currentNodeId, visited) {
+  if (!currentNodeId) return map.entryIds;
+  const cur = map.nodes[currentNodeId];
+  return cur.connections;
+}
+
+// ============================================================================
+// Perspective ("3rd person, over-the-shoulder") camera. Rather than a flat
+// top-down diagram of the whole act, the viewport is a fixed window centered
+// on wherever the player currently stands: that spot is anchored low in the
+// frame (like a camera trailing just behind/above the character), the road
+// ahead recedes upward with each row scaled down and pulled toward the
+// horizontal center (a classic 2D vanishing-point trick), and the one row
+// just behind fades away below. Rows beyond the visible window simply aren't
+// drawn yet - fitting neatly with the fog-of-war (you can't see far ahead).
+// ============================================================================
+
+const VIEW_HEIGHT = 500;
+const ROWS_AHEAD = 4;
+const ROWS_BEHIND = 1;
+const MIN_SCALE = 0.32;
+
+// Two camera profiles: a wider establishing shot for the very first choice
+// (nothing chosen yet - `currentRow` is -1), and a tighter, closer-in
+// over-the-shoulder framing once the player has actually set out down the
+// path. The close profile anchors lower in the frame, spaces rows further
+// apart, and falls off scale faster - all of which read as the camera having
+// pulled in right behind the character rather than watching from a distance.
+const ANCHOR_Y_START = 350;
+const ROW_GAP_START = 118;
+const SCALE_STEP_START = 0.17;
+
+const ANCHOR_Y_CLOSE = 400;
+const ROW_GAP_CLOSE = 145;
+const SCALE_STEP_CLOSE = 0.22;
+
+function perspectiveScale(depth, scaleStep) {
+  return Math.max(MIN_SCALE, 1 / (1 + Math.abs(depth) * scaleStep));
+}
+
+// Builds { nodeId: {sx, sy, scale} } for every node within the visible depth
+// window, plus the anchor point itself (where the traveler currently stands).
+function computeScreenPositions(map, currentRow, closeCam) {
+  const centerX = MAP_WIDTH / 2;
+  const anchorY = closeCam ? ANCHOR_Y_CLOSE : ANCHOR_Y_START;
+  const rowGap = closeCam ? ROW_GAP_CLOSE : ROW_GAP_START;
+  const scaleStep = closeCam ? SCALE_STEP_CLOSE : SCALE_STEP_START;
+  const screen = {};
+  const project = (node, depth, sy) => {
+    const scale = perspectiveScale(depth, scaleStep);
+    screen[node.id] = { sx: centerX + (node.x - centerX) * scale, sy, scale };
+  };
+
+  let cumUp = 0;
+  for (let r = currentRow + 1; r <= currentRow + ROWS_AHEAD && r < map.rows.length; r++) {
+    const depth = r - currentRow;
+    cumUp += rowGap * perspectiveScale(depth, scaleStep);
+    (map.rows[r] || []).forEach(node => project(node, depth, anchorY - cumUp));
+  }
+  let cumDown = 0;
+  for (let r = currentRow - 1; r >= currentRow - ROWS_BEHIND && r >= 0; r--) {
+    const depth = currentRow - r;
+    cumDown += rowGap * perspectiveScale(depth, scaleStep);
+    (map.rows[r] || []).forEach(node => project(node, depth, anchorY + cumDown));
+  }
+  if (currentRow >= 0 && map.rows[currentRow]) {
+    map.rows[currentRow].forEach(node => project(node, 0, anchorY));
+  }
+  return { screen, centerX, anchorY };
+}
+
+function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId) {
+  const available = new Set(getAvailableNodeIds(map, currentNodeId, visitedIds));
+  const visitedSet = new Set(visitedIds);
+  const cur = map.nodes[currentNodeId];
+  const currentRow = cur ? cur.row : -1;
+  const closeCam = !!cur; // pulled in tight once the player has taken their first step
+  const { screen, centerX, anchorY } = computeScreenPositions(map, currentRow, closeCam);
+
+  let svgLines = '';
+  let svgHitAreas = '';
+  const drawRoute = (fromScreen, targetId, dimmed) => {
+    const b = screen[targetId];
+    if (!b) return;
+    const width = Math.max(2.5, 8 * Math.min(fromScreen.scale, b.scale));
+    svgLines += `<line x1="${fromScreen.sx}" y1="${fromScreen.sy}" x2="${b.sx}" y2="${b.sy}" class="map-line ${dimmed ? 'dim' : 'active'}" stroke-width="${width}" />`;
+    if (!dimmed && available.has(targetId)) {
+      svgHitAreas += `<line x1="${fromScreen.sx}" y1="${fromScreen.sy}" x2="${b.sx}" y2="${b.sy}" class="map-line-hit" data-node-id="${targetId}" />`;
+    }
+  };
+
+  Object.values(map.nodes).forEach(node => {
+    const a = screen[node.id];
+    if (!a) return;
+    node.connections.forEach(targetId => {
+      const dimmed = !(visitedSet.has(node.id) && (visitedSet.has(targetId) || available.has(targetId)));
+      drawRoute(a, targetId, dimmed);
+    });
+  });
+  // No real "current node" yet (run just started) - draw synthetic roads
+  // from the anchor (dungeon entrance) out to row 0 so the first choice
+  // still reads as a fork in a path rather than floating markers.
+  if (!cur) {
+    map.entryIds.forEach(id => drawRoute({ sx: centerX, sy: anchorY, scale: 1 }, id, false));
+  }
+
+  let nodesHtml = '';
+  Object.keys(screen).forEach(nodeId => {
+    const node = map.nodes[nodeId];
+    const pos = screen[nodeId];
+    const isVisited = visitedSet.has(node.id);
+    const isAvailable = available.has(node.id) && !isVisited;
+    const revealed = isVisited || node.type === 'boss' || isAvailable;
+    const info = revealed ? NODE_TYPES[node.type] : FOG_NODE;
+    const isCurrent = node.id === currentNodeId;
+    const classes = ['map-node', revealed ? node.type : 'fogged'];
+    if (isAvailable) classes.push('available');
+    if (isVisited) classes.push('visited');
+    if (isCurrent) classes.push('current');
+    nodesHtml += `<div class="${classes.join(' ')}" style="left:${pos.sx}px; top:${pos.sy}px; --node-scale:${pos.scale.toFixed(3)}" data-node-id="${node.id}" title="${info.label}"
+      ${isAvailable ? 'role="button" tabindex="0"' : ''}>
+      <span class="map-node-icon">${info.icon}</span>
+    </div>`;
+  });
+
+  // Once the camera's pulled in close, the character itself renders bigger -
+  // part of what sells "closer to the player" beyond just the anchor/spacing.
+  // renderCompanionRig also folds in an equipped mount (rendered as a
+  // rideable steed underneath) and pet (rendered alongside).
+  const travelerSprite = classId ? renderCompanionRig(classId, closeCam ? 58 : 46) : '';
+  // The traveler rests at the CURRENT node's own projected position - not
+  // just the horizontal center - so it visibly stands on the circle you
+  // actually picked rather than snapping back to the middle of the road.
+  const restPos = screen[currentNodeId] || { sx: centerX, sy: anchorY, scale: 1 };
+
+  // Purely cosmetic per-act backdrop (see ACT_THEMES in data.js) - a themed
+  // background on the map's own bordered frame plus a handful of drifting
+  // particles, so the same node-graph generator reads as a different place
+  // every 10 acts instead of the same gray dungeon corridor forever.
+  const theme = getActTheme(map.act);
+  container.style.background = theme.bg;
+  const particles = Array.from({ length: 9 }, (_, i) => {
+    const pos = rand(2, 94);
+    const delay = (Math.random() * 6).toFixed(2);
+    const duration = (5 + Math.random() * 4).toFixed(2);
+    const drift = rand(-30, 30);
+    return `<span class="map-particle" style="${theme.motion === 'drift-side' ? 'top' : 'left'}:${pos}%; animation-delay:${delay}s; animation-duration:${duration}s; --particle-drift:${drift}px">${theme.particle}</span>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="map-scroll" style="height:${VIEW_HEIGHT}px">
+      <div class="map-particles particle-${theme.motion}">${particles}</div>
+      <div class="map-theme-label">${theme.name} · Act ${map.act}</div>
+      <svg class="map-svg" width="${MAP_WIDTH}" height="${VIEW_HEIGHT}">${svgLines}${svgHitAreas}</svg>
+      ${nodesHtml}
+      <div class="map-traveler" id="map-traveler" style="left:${restPos.sx}px; top:${restPos.sy}px; --traveler-scale:${restPos.scale.toFixed(3)}">${travelerSprite}</div>
+    </div>`;
+
+  const travelTo = (nodeId) => animateTravel(container, screen[nodeId], nodeId, onSelect);
+  container.querySelectorAll('.map-node.available').forEach(el => {
+    el.addEventListener('click', () => travelTo(el.dataset.nodeId));
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); travelTo(el.dataset.nodeId); }
+    });
+  });
+  container.querySelectorAll('.map-line-hit').forEach(el => {
+    el.addEventListener('click', () => travelTo(el.dataset.nodeId));
+  });
+}
+
+// Walks the traveler marker from the anchor point to the chosen node's
+// perspective-projected position (shrinking as it "moves into the distance")
+// before actually resolving the encounter - picking a route reads as setting
+// out down that path rather than opening a menu. Once the encounter resolves
+// and the map re-renders, the new current node becomes the anchor again, so
+// the "camera" reads as having followed the character forward.
+function animateTravel(container, targetPos, nodeId, onSelect) {
+  const traveler = container.querySelector('#map-traveler');
+  if (!traveler || !targetPos) { onSelect(nodeId); return; }
+
+  container.querySelectorAll('.map-node.available, .map-line-hit').forEach(el => {
+    el.style.pointerEvents = 'none';
+  });
+
+  const startX = parseFloat(traveler.style.left) || 0;
+  const startY = parseFloat(traveler.style.top) || 0;
+  const dist = Math.hypot(targetPos.sx - startX, targetPos.sy - startY);
+  const duration = Math.round(clamp(dist * 2.6, 450, 1100));
+
+  traveler.classList.add('walking');
+  traveler.classList.toggle('facing-left', targetPos.sx < startX);
+  traveler.style.transition = `left ${duration}ms ease-in-out, top ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+  requestAnimationFrame(() => {
+    traveler.style.left = `${targetPos.sx}px`;
+    traveler.style.top = `${targetPos.sy}px`;
+    traveler.style.setProperty('--traveler-scale', targetPos.scale.toFixed(3));
+  });
+
+  setTimeout(() => onSelect(nodeId), duration + 80);
+}
