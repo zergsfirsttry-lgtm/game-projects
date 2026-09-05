@@ -9,79 +9,149 @@
 // traced by the new outline pass as an ugly notch. Only rows that should
 // genuinely split (a gap between two legs, two ears) skip that column on
 // purpose, with the gap sized deliberately rather than left to chance.
+// ----------------------------------------------------------------------------
+// Resolution note: every template/overlay/weapon-shape below is authored at
+// 2x the grid density of the original hand-drawn art (each old cell became a
+// clean 2x2 block, THEN a handful of transition rows were hand-refined for
+// smoother diagonals - shoulder slopes, jaw curve, wingtip taper - rather
+// than staying blocky). This is what makes 32x32/64x64 (see
+// PLAYER_SPRITE_SIZE/EPIC_ENEMY_SPRITE_SIZE in main.js) actually look more
+// detailed instead of just uniformly bigger. Because it's a strict 2x scale,
+// every row/col/w/h coordinate in a SPRITES overlay or a WEAPON_SHAPES entry
+// is exactly double what it would have been against the old grid - see the
+// comments at each of those for the old->new mapping used.
+// ----------------------------------------------------------------------------
 const TEMPLATES = {
   humanoid: [
-    "........",
-    "..RRRRRR",
-    ".RRHHHHH",
-    ".RHHHFHH",
-    ".RHHHHHH",
-    "..HHHHHH",
-    "....NNNN",
-    "...AAAAA",
-    "...AAAAA",
-    "...AAAAA",
-    ".....LL.",
-    ".....LL.",
-    ".....LL.",
-    ".....LL.",
-    ".....BB.",
-    "........"
+    "................",
+    "................",
+    "....RRRRRRRRRRRR",
+    "....RRRRRRRRRRRR",
+    "..RRRRHHHHHHHHHH",
+    "..RRRRHHHHHHHHHH",
+    "..RRHHHHHHFFHHHH",
+    "..RRHHHHHHFFHHHH",
+    "..RRHHHHHHHHHHHH",
+    "..RRHHHHHHHHHHHH",
+    "....HHHHHHHHHHHH",
+    "....HHHHHHHHHHHH",
+    "........NNNNNNNN",
+    "........NNNNNNNN",
+    "......AAAAAAAAAA",
+    "......AAAAAAAAAA",
+    "......AAAAAAAAAA",
+    "......AAAAAAAAAA",
+    "......AAAAAAAAAA",
+    "......AAAAAAAAAA",
+    "..........LLLL..",
+    "..........LLLL..",
+    "..........LLLL..",
+    "..........LLLL..",
+    "..........LLLL..",
+    "..........LLLL..",
+    "..........LLLL..",
+    "..........LLLL..",
+    "..........BBBB..",
+    "..........BBBB..",
+    "................",
+    "................"
   ],
   creature: [
-    "........",
-    ".....EE.",
-    ".EEEEEEE",
-    ".EEHHHHH",
-    ".HHHHFHH",
-    ".HHHHHHH",
-    "...HHHHH",
-    "..BBBBBB",
-    "..BBBBBB",
-    "......B.",
-    "......P.",
-    "........"
+    "................",
+    "................",
+    "..........EEEE..",
+    "..........EEEE..",
+    "..EEEEEEEEEEEEEE",
+    "..EEEEEEEEEEEEEE",
+    "..EEEEHHHHHHHHHH",
+    "..EEEEHHHHHHHHHH",
+    "..HHHHHHHHFFHHHH",
+    "..HHHHHHHHFFHHHH",
+    "..HHHHHHHHHHHHHH",
+    "..HHHHHHHHHHHHHH",
+    "......HHHHHHHHHH",
+    "......HHHHHHHHHH",
+    "....BBBBBBBBBBBB",
+    "....BBBBBBBBBBBB",
+    "....BBBBBBBBBBBB",
+    "....BBBBBBBBBBBB",
+    "............BB..",
+    "............BB..",
+    "............PP..",
+    "............PP..",
+    "................",
+    "................"
   ],
   // Small winged creature - dragon whelplings, griffons, owls, pixies. Wings
   // (W) spread wide toward the outer edge, head/body (H) toward the seam.
   flyer: [
-    "........",
-    ".....EE.",
-    "....EEEE",
-    "...WHHHH",
-    ".WWWHHFH",
-    ".WWWWHHH",
-    "..WWHHHH",
-    "...BHHHH",
-    "....BBBB",
-    "....BB.."
+    "................",
+    "................",
+    "..........EEEE..",
+    "..........EEEE..",
+    "........EEEEEEEE",
+    "........EEEEEEEE",
+    "......WWHHHHHHHH",
+    "......WWHHHHHHHH",
+    "..WWWWWWHHHHFFHH",
+    "..WWWWWWHHHHFFHH",
+    "..WWWWWWWWHHHHHH",
+    "..WWWWWWWWHHHHHH",
+    "....WWWWHHHHHHHH",
+    "....WWWWHHHHHHHH",
+    "......BBHHHHHHHH",
+    "......BBHHHHHHHH",
+    "........BBBBBBBB",
+    "........BBBBBBBB",
+    "........BBBB....",
+    "........BBBB...."
   ],
   blob: [
-    "........",
-    "........",
-    "......GG",
-    ".....GGG",
-    "....GGGG",
-    "GGGGGGGG",
-    "GGGGGGGG",
-    "GGGGGGGG",
-    "GGGGGGGG",
-    "....GGGG",
-    ".....GGG",
-    "......GG",
-    "........",
-    "........",
-    "........",
-    "........"
+    "................",
+    "................",
+    "................",
+    "................",
+    "............GGGG",
+    "............GGGG",
+    "..........GGGGGG",
+    "..........GGGGGG",
+    "........GGGGGGGG",
+    "........GGGGGGGG",
+    "GGGGGGGGGGGGGGGG",
+    "GGGGGGGGGGGGGGGG",
+    "GGGGGGGGGGGGGGGG",
+    "GGGGGGGGGGGGGGGG",
+    "GGGGGGGGGGGGGGGG",
+    "GGGGGGGGGGGGGGGG",
+    "GGGGGGGGGGGGGGGG",
+    "GGGGGGGGGGGGGGGG",
+    "........GGGGGGGG",
+    "........GGGGGGGG",
+    "..........GGGGGG",
+    "..........GGGGGG",
+    "............GGGG",
+    "............GGGG",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................"
   ]
 };
 
+// Overlay/rect coordinates below are all 2x the original hand-authored
+// values (see the resolution note above TEMPLATES) - every row/col/w/h was
+// mechanically doubled to match the new finer grid, so a mirrored overlay
+// still lands in exactly the same relative spot it always did.
 const SPRITES = {
   // --- Regular enemies ---
   slime: { template: 'blob', palette: { G:'#4caf7d' },
-    overlays: [ { row:6, col:6, w:1, h:1, color:'#132015', mirror:true } ] },
+    overlays: [ { row:12, col:12, w:2, h:2, color:'#132015', mirror:true } ] },
   rat: { template: 'creature', palette: { E:'#8a8a8a', H:'#8a8a8a', F:'#1a1414', B:'#71706f', P:'#3d3a3a' },
-    overlays: [ { row:4, col:7, w:2, h:1, color:'#d98a9c' } ] },
+    overlays: [ { row:8, col:14, w:4, h:2, color:'#d98a9c' } ] },
   goblin: { template: 'humanoid', palette: { R:'#2f4a22', H:'#7fae5a', F:'#160f00', A:'#5b4632', L:'#3f3226', B:'#241b14' } },
   wolf: { template: 'creature', palette: { E:'#6b7280', H:'#6b7280', F:'#e8c94a', B:'#565c68', P:'#333842' } },
   bandit: { template: 'humanoid', palette: { R:'#332018', H:'#d9a066', F:'#150e08', A:'#4a4038', L:'#332a24', B:'#1c1712' } },
@@ -89,65 +159,65 @@ const SPRITES = {
   cultist: { template: 'humanoid', palette: { R:'#3a1f4d', H:'#c9a888', F:'#7d2ae8', A:'#2a1638', L:'#1c0f26', B:'#120a18' } },
   spider: { template: 'creature', palette: { E:'#241b2e', H:'#241b2e', F:'#c0392b', B:'#1a1420', P:'#0f0b14' },
     overlays: [
-      { row:9, col:2, w:1, h:2, color:'#1a1420', mirror:true },
-      { row:4, col:2, w:1, h:1, color:'#c0392b', mirror:true }
+      { row:18, col:4, w:2, h:4, color:'#1a1420', mirror:true },
+      { row:8, col:4, w:2, h:2, color:'#c0392b', mirror:true }
     ] },
   zombie: { template: 'humanoid', palette: { R:'#3e4a2e', H:'#7c8f5a', F:'#c0392b', A:'#4a3c2a', L:'#332a1c', B:'#231c14' } },
   imp: { template: 'humanoid', palette: { R:'#8a1f1f', H:'#c0392b', F:'#0f0805', A:'#7a1f1f', L:'#5c1717', B:'#3d0f0f' },
-    overlays: [ { row:0, col:5, w:1, h:1, color:'#2b0808', mirror:true }, { row:8, col:2, w:1, h:3, color:'#8a1f1f' } ] },
+    overlays: [ { row:0, col:10, w:2, h:2, color:'#2b0808', mirror:true }, { row:16, col:4, w:2, h:6, color:'#8a1f1f' } ] },
   harpy: { template: 'creature', palette: { E:'#a3947a', H:'#a3947a', F:'#1a1410', B:'#8a7a5e', P:'#5c4f3a' },
-    overlays: [ { row:7, col:0, w:2, h:2, color:'#c9b892', mirror:true } ] },
+    overlays: [ { row:14, col:0, w:4, h:4, color:'#c9b892', mirror:true } ] },
   boar: { template: 'creature', palette: { E:'#6b4a2f', H:'#6b4a2f', F:'#0f0805', B:'#503620', P:'#33220f' },
-    overlays: [ { row:5, col:2, w:1, h:1, color:'#f0e6d2', mirror:true } ] },
+    overlays: [ { row:10, col:4, w:2, h:2, color:'#f0e6d2', mirror:true } ] },
 
   // --- Elites ---
   ogre: { template: 'humanoid', palette: { R:'#4a3a2a', H:'#8a9c5e', F:'#1a1410', A:'#4a3c2a', L:'#332a1c', B:'#231c14' } },
   darkKnight: { template: 'humanoid', palette: { R:'#1a1a1f', H:'#8a7060', F:'#c0392b', A:'#26262e', L:'#1a1a20', B:'#0f0f14' } },
   witch: { template: 'humanoid', palette: { R:'#3a1f4d', H:'#c9a888', F:'#7d2ae8', A:'#4a2d63', L:'#331f44', B:'#1f1330' },
-    overlays: [ { row:0, col:7, w:2, h:1, color:'#2a1638' } ] },
+    overlays: [ { row:0, col:14, w:4, h:2, color:'#2a1638' } ] },
   minotaur: { template: 'humanoid', palette: { R:'#4a3222', H:'#6b4a2f', F:'#c0392b', A:'#3a2a1a', L:'#2a1f14', B:'#1a130c' },
-    overlays: [ { row:1, col:1, w:1, h:1, color:'#e8dcc4', mirror:true } ] },
+    overlays: [ { row:2, col:2, w:2, h:2, color:'#e8dcc4', mirror:true } ] },
   vampire: { template: 'humanoid', palette: { R:'#1a1a1f', H:'#e8d8d0', F:'#c0392b', A:'#3a1020', L:'#26141a', B:'#180c10' },
-    overlays: [ { row:7, col:5, w:1, h:1, color:'#e8e4d8', mirror:true } ] },
+    overlays: [ { row:14, col:10, w:2, h:2, color:'#e8e4d8', mirror:true } ] },
 
   // --- Bosses ---
   rotWarden: { template: 'humanoid', palette: { R:'#2f3a1f', H:'#5a6b3a', F:'#8fae4a', A:'#3a4526', L:'#262e18', B:'#181f10' } },
   banditKing: { template: 'humanoid', palette: { R:'#3a2418', H:'#d9a066', F:'#1a1410', A:'#6b1f1f', L:'#4a1515', B:'#2e0d0d' },
-    overlays: [ { row:0, col:5, w:6, h:1, color:'#e8c94a' } ] },
+    overlays: [ { row:0, col:10, w:12, h:2, color:'#e8c94a' } ] },
   lich: { template: 'humanoid', palette: { R:'#1a1a24', H:'#d8d4c8', F:'#4ae8e0', A:'#26202e', L:'#1a1620', B:'#100d16' },
-    overlays: [ { row:4, col:6, w:1, h:1, color:'#8ff5ef', mirror:true } ] },
+    overlays: [ { row:8, col:12, w:2, h:2, color:'#8ff5ef', mirror:true } ] },
 
   // --- Pets (see PETS in data.js) ---
   dragonWhelpling: { template: 'flyer', palette: { W:'#8a1f2a', H:'#c0392b', F:'#e8c94a', B:'#8a1f1f', E:'#e8c94a' } },
   direwolfPup: { template: 'creature', palette: { E:'#8a8f9c', H:'#8a8f9c', F:'#e8c94a', B:'#6b7280', P:'#4a505c' } },
   pseudodragon: { template: 'flyer', palette: { W:'#5a3a7a', H:'#8a5fd6', F:'#e8c94a', B:'#4a2f66', E:'#c9a8ff' } },
   impFamiliar: { template: 'humanoid', palette: { R:'#5c2a7a', H:'#a85fd6', F:'#0f0805', A:'#4a2166', L:'#331744', B:'#1f0d2b' },
-    overlays: [ { row:0, col:5, w:1, h:1, color:'#2b0838', mirror:true } ] },
+    overlays: [ { row:0, col:10, w:2, h:2, color:'#2b0838', mirror:true } ] },
   moonkinHatchling: { template: 'creature', palette: { E:'#8a6b3a', H:'#8a6b3a', F:'#e8c94a', B:'#5c4623', P:'#3a2c16' },
-    overlays: [ { row:0, col:6, w:1, h:1, color:'#e8c94a', mirror:true } ] },
+    overlays: [ { row:0, col:12, w:2, h:2, color:'#e8c94a', mirror:true } ] },
   mechanicalSquirrel: { template: 'creature', palette: { E:'#b0b8c4', H:'#b0b8c4', F:'#4ae8e0', B:'#7a828e', P:'#565c68' },
-    overlays: [ { row:0, col:6, w:1, h:1, color:'#4ae8e0', mirror:true } ] },
+    overlays: [ { row:0, col:12, w:2, h:2, color:'#4ae8e0', mirror:true } ] },
   owlFamiliar: { template: 'flyer', palette: { W:'#5c4530', H:'#8a7050', F:'#e8c94a', B:'#4a3624', E:'#c9b892' },
-    overlays: [ { row:4, col:7, w:2, h:1, color:'#e8a94a' } ] },
+    overlays: [ { row:8, col:14, w:4, h:2, color:'#e8a94a' } ] },
   pixieSprite: { template: 'flyer', palette: { W:'#e87dc9', H:'#8adbe8', F:'#ffffff', B:'#5ab0c9', E:'#f5e8ff' },
-    overlays: [ { row:1, col:7, w:2, h:1, color:'#ffffff' } ] },
+    overlays: [ { row:2, col:14, w:4, h:2, color:'#ffffff' } ] },
 
   // --- Mounts (see MOUNTS in data.js) ---
   netherdrake: { template: 'flyer', palette: { W:'#3a7a2a', H:'#5fae3a', F:'#e8f5a0', B:'#2a5c1e', E:'#a0e85a' },
-    overlays: [ { row:1, col:7, w:2, h:1, color:'#e8f5a0' } ] },
+    overlays: [ { row:2, col:14, w:4, h:2, color:'#e8f5a0' } ] },
   griffonMount: { template: 'flyer', palette: { W:'#8a6b3a', H:'#c9a866', F:'#1a1410', B:'#7a5f38', E:'#e8dcc4' },
-    overlays: [ { row:3, col:7, w:2, h:1, color:'#e8c94a' } ] },
+    overlays: [ { row:6, col:14, w:4, h:2, color:'#e8c94a' } ] },
   frostwolfMount: { template: 'creature', palette: { E:'#c9d6e8', H:'#c9d6e8', F:'#4ae8e0', B:'#8a9cb0', P:'#5a6c80' } },
   warKodo: { template: 'creature', palette: { E:'#6b4a2f', H:'#6b4a2f', F:'#1a1410', B:'#4a3220', P:'#2a1c12' },
-    overlays: [ { row:5, col:1, w:1, h:1, color:'#e8e4d8', mirror:true } ] },
+    overlays: [ { row:10, col:2, w:2, h:2, color:'#e8e4d8', mirror:true } ] },
   hippogriffMount: { template: 'flyer', palette: { W:'#6b5a4a', H:'#a8927a', F:'#1a1410', B:'#5c4a3a', E:'#d9c9a8' } },
   nightmareSteed: { template: 'creature', palette: { E:'#1a1414', H:'#1a1414', F:'#e8722a', B:'#0f0c0c', P:'#050404' } },
   unicornMount: { template: 'creature', palette: { E:'#f0ecff', H:'#f0ecff', F:'#7d2ae8', B:'#d8cff0', P:'#b8a8e0' },
-    overlays: [ { row:0, col:7, w:2, h:1, color:'#e8c94a' } ] },
+    overlays: [ { row:0, col:14, w:4, h:2, color:'#e8c94a' } ] },
   spectralTiger: { template: 'creature', palette: { E:'#8fd9e8', H:'#8fd9e8', F:'#e8f5ff', B:'#5ab0c9', P:'#3a7a8f' },
     overlays: [
-      { row:5, col:3, w:1, h:1, color:'#2a5560', mirror:true },
-      { row:7, col:2, w:1, h:1, color:'#2a5560', mirror:true }
+      { row:10, col:6, w:2, h:2, color:'#2a5560', mirror:true },
+      { row:14, col:4, w:2, h:2, color:'#2a5560', mirror:true }
     ] }
 };
 
@@ -309,72 +379,125 @@ function spriteSvg(id, sizePx) {
 // see WEAPON_SHAPES below. The body/armor silhouettes themselves are
 // unchanged, just shifted inward by that same padding (every row below is the
 // old row with "..." prepended) so they still read as flush-to-seam.
-const SPRITE_W = 26;
-const SPRITE_HALF = 13;
-const SPRITE_H = 22;
+// Doubled from the original 26x22 canvas (13-wide half x 22 rows) to 52x44 -
+// see the resolution note above TEMPLATES for the same 2x-then-hand-refine
+// approach. WEAPON_SHAPES below is doubled the same way.
+const SPRITE_W = 52;
+const SPRITE_HALF = 26;
+const SPRITE_H = 44;
 
-// BODY: head/hair/face. Always visible, never affected by equipment. Rows 7-21
-// are intentionally blank so the ARMOR layer (drawn on top) shows through.
+// BODY: head/hair/face. Always visible, never affected by equipment. Rows
+// 14-43 are intentionally blank so the ARMOR layer (drawn on top) shows through.
 const HEAD_SHAPE = [
-  '.......rrrrrr', // 0 hair top - reaches the seam so it's one head, not two
-  '......rrrrrrr', // 1 hair sides
-  '......rrhhhhh', // 2 hairline / face
-  '......rhhhehh', // 3 face + eye (eye away from the seam so its mirror twin isn't touching it)
-  '......hhhhhhh', // 4 face
-  '.......hhhhhh', // 5 jaw
-  '.........nnnn', // 6 neck
-  '.............', '.............', '.............', '.............', '.............',
-  '.............', '.............', '.............', '.............', '.............',
-  '.............', '.............', '.............', '.............', '.............'
+  '..............rrrrrrrrrrrr', // 0  hair top - reaches the seam so it's one head, not two
+  '..............rrrrrrrrrrrr', // 1
+  '............rrrrrrrrrrrrrr', // 2  hair sides
+  '............rrrrrrrrrrrrrr', // 3
+  '............rrrrhhhhhhhhhh', // 4  hairline / face
+  '............rrrrhhhhhhhhhh', // 5
+  '............rrhhhhhheehhhh', // 6  face + eye (eye away from the seam so its mirror twin isn't touching it)
+  '............rrhhhhhheehhhh', // 7
+  '............hhhhhhhhhhhhhh', // 8  face
+  '............hhhhhhhhhhhhhh', // 9
+  '..............hhhhhhhhhhhh', // 10 jaw
+  '..............hhhhhhhhhhhh', // 11
+  '..................nnnnnnnn', // 12 neck
+  '..................nnnnnnnn', // 13
+  '..........................', '..........................', '..........................', '..........................',
+  '..........................', '..........................', '..........................', '..........................',
+  '..........................', '..........................', '..........................', '..........................',
+  '..........................', '..........................', '..........................', '..........................',
+  '..........................', '..........................', '..........................', '..........................',
+  '..........................', '..........................', '..........................', '..........................',
+  '..........................', '..........................', '..........................', '..........................',
+  '..........................', '..........................'
 ];
 
 // ARMOR shapes. "armor" = martial silhouette (shoulder flare, split legs,
 // boots) used by plate/mail/leather/hide. "robe" = flowing caster silhouette
 // (no leg split, wide hem) used by cloth/dark-robe. Both share identical
-// shoulder/torso/waist rows (5-12) so the two read as the same body underneath.
+// shoulder/torso/waist rows so the two read as the same body underneath.
 // T = rarity trim (collar + chest emblem - both light up together on rare+
 // gear), W = belt/sash accent (a third distinct color band for definition,
 // also brightened on rare+ gear).
 const ARMOR_SHAPES = {
   armor: [
-    '.............', '.............', '.............', '.............', '.............',
-    '........TTTTT', // 5  collar
-    '......TAAAAAA', // 6  shoulder flare + pauldron cap at the tip
-    '.......AAAAAA', // 7  torso
-    '.......AAAAAT', // 8  torso + chest emblem
-    '.......AAAAAA', // 9  torso
-    '.......WWWWWW', // 10 belt
-    '........AAAAA', // 11 waist
-    '........AAAAA', // 12 waist taper
-    '.........AAA.', // 13 legs split
-    '.........AAA.', // 14
-    '.........AAA.', // 15
-    '.........AAA.', // 16
-    '.........AAA.', // 17
-    '.........AAA.', // 18
-    '.........AAA.', // 19
-    '.........BBB.', // 20 boots
-    '.........BBB.'  // 21
+    '..........................', '..........................', '..........................', '..........................',
+    '..........................', '..........................', '..........................', '..........................',
+    '..........................', '..........................',
+    '................TTTTTTTTTT', // 10 collar
+    '................TTTTTTTTTT', // 11
+    '............TTAAAAAAAAAAAA', // 12 shoulder flare + pauldron cap at the tip
+    '............TTAAAAAAAAAAAA', // 13
+    '..............AAAAAAAAAAAA', // 14 torso
+    '..............AAAAAAAAAAAA', // 15
+    '..............AAAAAAAAAATT', // 16 torso + chest emblem
+    '..............AAAAAAAAAATT', // 17
+    '..............AAAAAAAAAAAA', // 18 torso
+    '..............AAAAAAAAAAAA', // 19
+    '..............WWWWWWWWWWWW', // 20 belt
+    '..............WWWWWWWWWWWW', // 21
+    '................AAAAAAAAAA', // 22 waist
+    '................AAAAAAAAAA', // 23
+    '................AAAAAAAAAA', // 24 waist taper
+    '................AAAAAAAAAA', // 25
+    '..................AAAAAA..', // 26 legs split
+    '..................AAAAAA..', // 27
+    '..................AAAAAA..', // 28
+    '..................AAAAAA..', // 29
+    '..................AAAAAA..', // 30
+    '..................AAAAAA..', // 31
+    '..................AAAAAA..', // 32
+    '..................AAAAAA..', // 33
+    '..................AAAAAA..', // 34
+    '..................AAAAAA..', // 35
+    '..................AAAAAA..', // 36
+    '..................AAAAAA..', // 37
+    '..................AAAAAA..', // 38
+    '..................AAAAAA..', // 39
+    '..................BBBBBB..', // 40 boots
+    '..................BBBBBB..', // 41
+    '..................BBBBBB..', // 42
+    '..................BBBBBB..'  // 43
   ],
   robe: [
-    '.............', '.............', '.............', '.............', '.............',
-    '........TTTTT', // 5 collar
-    '......TAAAAAA', // 6 shoulder flare + pauldron cap
-    '.......AAAAAA', // 7 torso
-    '.......AAAAAT', // 8 torso + chest emblem
-    '.......AAAAAA', // 9 torso
-    '.......WWWWWW', // 10 sash
-    '........AAAAA', // 11 waist
-    '........AAAAA', // 12 waist
-    '.......AAAAAA', // 13 robe body
-    '.......AAAAAA', // 14
-    '.......AAAAAA', // 15
-    '.......AAAAAA', // 16
-    '.......AAAAAA', // 17
-    '......AAAAAAA', // 18 hem flare
-    '......BBBBBBB', // 19 hem trim
-    '......BBBBBBB', // 20 hem trim
-    '......BBBBBBB'  // 21
+    '..........................', '..........................', '..........................', '..........................',
+    '..........................', '..........................', '..........................', '..........................',
+    '..........................', '..........................',
+    '................TTTTTTTTTT', // 10 collar
+    '................TTTTTTTTTT', // 11
+    '............TTAAAAAAAAAAAA', // 12 shoulder flare + pauldron cap
+    '............TTAAAAAAAAAAAA', // 13
+    '..............AAAAAAAAAAAA', // 14 torso
+    '..............AAAAAAAAAAAA', // 15
+    '..............AAAAAAAAAATT', // 16 torso + chest emblem
+    '..............AAAAAAAAAATT', // 17
+    '..............AAAAAAAAAAAA', // 18 torso
+    '..............AAAAAAAAAAAA', // 19
+    '..............WWWWWWWWWWWW', // 20 sash
+    '..............WWWWWWWWWWWW', // 21
+    '................AAAAAAAAAA', // 22 waist
+    '................AAAAAAAAAA', // 23
+    '................AAAAAAAAAA', // 24 waist
+    '................AAAAAAAAAA', // 25
+    '..............AAAAAAAAAAAA', // 26 robe body (no leg split - full width)
+    '..............AAAAAAAAAAAA', // 27
+    '..............AAAAAAAAAAAA', // 28
+    '..............AAAAAAAAAAAA', // 29
+    '..............AAAAAAAAAAAA', // 30
+    '..............AAAAAAAAAAAA', // 31
+    '..............AAAAAAAAAAAA', // 32
+    '..............AAAAAAAAAAAA', // 33
+    '..............AAAAAAAAAAAA', // 34
+    '..............AAAAAAAAAAAA', // 35
+    '............AAAAAAAAAAAAAA', // 36 hem flare
+    '............AAAAAAAAAAAAAA', // 37
+    '............BBBBBBBBBBBBBB', // 38 hem trim
+    '............BBBBBBBBBBBBBB', // 39
+    '............BBBBBBBBBBBBBB', // 40
+    '............BBBBBBBBBBBBBB', // 41
+    '............BBBBBBBBBBBBBB', // 42
+    '............BBBBBBBBBBBBBB'  // 43
   ]
 };
 
@@ -387,49 +510,49 @@ const ARMOR_SHAPES = {
 // below is sized to use that room fully rather than being squeezed into it.
 const WEAPON_SHAPES = {
   sword: [
-    { row:5, col:22, w:2, h:1, key:'blade' },  // tapered tip
-    { row:6, col:21, w:3, h:5, key:'blade' },  // blade
-    { row:11, col:19, w:7, h:1, key:'guard' }, // full-width crossguard
-    { row:12, col:21, w:3, h:2, key:'hilt' },  // grip
-    { row:14, col:21, w:3, h:1, key:'guard' }  // pommel cap
+    { row:10, col:44, w:4, h:2, key:'blade' },  // tapered tip
+    { row:12, col:42, w:6, h:10, key:'blade' }, // blade
+    { row:22, col:38, w:14, h:2, key:'guard' }, // full-width crossguard
+    { row:24, col:42, w:6, h:4, key:'hilt' },   // grip
+    { row:28, col:42, w:6, h:2, key:'guard' }   // pommel cap
   ],
   dagger: [
-    { row:8, col:22, w:2, h:1, key:'blade' },
-    { row:9, col:21, w:3, h:3, key:'blade' },
-    { row:11, col:20, w:5, h:1, key:'hilt' },  // small guard
-    { row:12, col:21, w:3, h:1, key:'hilt' }
+    { row:16, col:44, w:4, h:2, key:'blade' },
+    { row:18, col:42, w:6, h:6, key:'blade' },
+    { row:22, col:40, w:10, h:2, key:'hilt' },  // small guard
+    { row:24, col:42, w:6, h:2, key:'hilt' }
   ],
   axe: [
-    { row:7, col:20, w:4, h:2, key:'blade' },  // upper curve of the axe-head
-    { row:9, col:19, w:6, h:2, key:'blade' },  // wide cutting edge
-    { row:11, col:22, w:2, h:6, key:'handle' },
-    { row:17, col:22, w:2, h:1, key:'blade' }  // butt spike
+    { row:14, col:40, w:8, h:4, key:'blade' },  // upper curve of the axe-head
+    { row:18, col:38, w:12, h:4, key:'blade' }, // wide cutting edge
+    { row:22, col:44, w:4, h:12, key:'handle' },
+    { row:34, col:44, w:4, h:2, key:'blade' }   // butt spike
   ],
   staff: [
-    { row:4, col:21, w:3, h:2, key:'orb' },    // bigger orb
-    { row:6, col:22, w:2, h:9, key:'handle' },
-    { row:10, col:20, w:5, h:1, key:'orb' },   // banding mid-shaft
-    { row:15, col:22, w:2, h:1, key:'orb' }    // butt cap
+    { row:8, col:42, w:6, h:4, key:'orb' },     // bigger orb
+    { row:12, col:44, w:4, h:18, key:'handle' },
+    { row:20, col:40, w:10, h:2, key:'orb' },   // banding mid-shaft
+    { row:30, col:44, w:4, h:2, key:'orb' }     // butt cap
   ],
   bow: [
-    { row:5, col:25, w:1, h:2, key:'wood' },
-    { row:7, col:23, w:1, h:2, key:'wood' },
-    { row:9, col:21, w:1, h:3, key:'wood' },   // widest point of the curve
-    { row:9, col:22, w:2, h:1, key:'wood' },   // grip
-    { row:12, col:23, w:1, h:2, key:'wood' },
-    { row:14, col:25, w:1, h:2, key:'wood' }
+    { row:10, col:50, w:2, h:4, key:'wood' },
+    { row:14, col:46, w:2, h:4, key:'wood' },
+    { row:18, col:42, w:2, h:6, key:'wood' },   // widest point of the curve
+    { row:18, col:44, w:4, h:2, key:'wood' },   // grip
+    { row:24, col:46, w:2, h:4, key:'wood' },
+    { row:28, col:50, w:2, h:4, key:'wood' }
   ],
   mace: [
-    { row:6, col:22, w:2, h:1, key:'head' },   // top spike
-    { row:7, col:20, w:5, h:3, key:'head' },   // flanged head
-    { row:10, col:22, w:2, h:1, key:'head' },  // neck taper
-    { row:11, col:22, w:2, h:5, key:'handle' }
+    { row:12, col:44, w:4, h:2, key:'head' },   // top spike
+    { row:14, col:40, w:10, h:6, key:'head' },  // flanged head
+    { row:20, col:44, w:4, h:2, key:'head' },   // neck taper
+    { row:22, col:44, w:4, h:10, key:'handle' }
   ],
   lute: [
-    { row:4, col:22, w:2, h:1, key:'neck' },   // tuning pegs
-    { row:5, col:22, w:2, h:4, key:'neck' },
-    { row:9, col:21, w:3, h:2, key:'body' },   // upper body
-    { row:11, col:19, w:5, h:3, key:'body' }   // lower, rounder body
+    { row:8, col:44, w:4, h:2, key:'neck' },    // tuning pegs
+    { row:10, col:44, w:4, h:8, key:'neck' },
+    { row:18, col:42, w:6, h:4, key:'body' },   // upper body
+    { row:22, col:38, w:10, h:6, key:'body' }   // lower, rounder body
   ]
 };
 const WEAPON_ACCENT_KEY = { sword: 'blade', dagger: 'blade', axe: 'blade', staff: 'orb', bow: 'wood', mace: 'head', lute: 'body' };
