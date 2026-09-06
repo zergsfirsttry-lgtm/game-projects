@@ -62,12 +62,52 @@ const Combat = {
     return bonus;
   },
 
+  // An equipped pet/mount joins in on every one of the player's own offensive
+  // actions (see the call sites in playerAttack/playerSkill), each landing
+  // its own hit scaled off the player's current ATK (COMPANION_COMBAT_SCALE
+  // in data.js: 30% for a pet, 50% for a mount). A `role` pet (Tank/DPS/
+  // Healer - see PETS in data.js) goes further: DPS hits harder still, Tank
+  // sets up a guard that blunts the enemy's next reply (consumed in
+  // resolveEnemyTurn), Healer mends a little HP right when it acts. Sets
+  // s.companionAnim so renderCombatScreen can flash each acting companion
+  // with a role-colored lunge.
+  resolveCompanionAttacks(stats) {
+    const s = this.state;
+    if (s.over) return;
+    const rec = Persistent.getCharacter(Game.player.classId);
+    const anim = {};
+    [['pet', rec.equipped.pet, PETS], ['mount', rec.equipped.mount, MOUNTS]].forEach(([kind, id, pool]) => {
+      if (!id || s.enemy.hp <= 0) return;
+      const def = pool[id];
+      if (!def) return;
+      let scale = COMPANION_COMBAT_SCALE[kind];
+      if (def.role === 'dps') scale *= 1.5;
+      const dmg = Math.max(1, Math.round(stats.atk * scale));
+      s.enemy.hp = Math.max(0, s.enemy.hp - dmg);
+      anim[kind] = def.role || 'attack';
+      this.addLog(`${def.icon} ${def.name} strikes for ${dmg} damage.`);
+      if (def.role === 'healer') {
+        const healAmt = Math.max(1, Math.round(stats.maxHp * 0.05));
+        Game.heal(healAmt);
+        this.addLog(`${def.icon} ${def.name} mends ${healAmt} HP.`);
+      } else if (def.role === 'tank') {
+        s.tankGuardPct = 0.3;
+      }
+    });
+    s.companionAnim = anim;
+  },
+
   // `crit`/`dmg` drive the floating "CRITICAL!" combat text over the enemy's
-  // portrait (see renderCombatScreen in main.js) - only playerAttack actually
-  // rolls a crit chance today, so skills/items just pass crit:false.
+  // health bar (see renderCombatScreen in main.js) - only playerAttack
+  // actually rolls a crit chance today, so skills/items just pass crit:false.
   resolveAfterPlayerHit(lifesteal, crit, dmg) {
     const s = this.state;
     s.critText = crit ? { dmg } : null;
+    // Drives the health bar's hit-shake/red-flash (see renderCombatScreen) -
+    // scaled by how big a bite this hit took out of the enemy's own max HP,
+    // so a huge crit against a fresh boss flashes harder than the same raw
+    // damage number would against a much beefier one.
+    s.hpFlash = { target: 'enemy', pct: Math.min(1, dmg / s.enemy.maxHp) };
     if (s.enemy.hp <= 0) {
       s.enemy.hp = 0;
       s.over = true;
@@ -91,6 +131,24 @@ const Combat = {
     return clamp(stats.speed * 0.03 + (stats.comboChance || 0), 0, 0.75);
   },
 
+  // Which equipped weapon-bearing slot this Attack visibly swings - see
+  // characterSpriteFor in progression.js, which resolves the body art from
+  // whichever slot this returns. A character carrying both a melee weapon
+  // (mainHand) and a bow (ranged) has each Attack randomly pick one, so
+  // consecutive attacks can visibly alternate; carrying only one of the two
+  // always uses that one, and an item with no `visual` (wand/blessing/shield)
+  // never gets picked since there's no body art for it.
+  pickAttackWeaponSlot() {
+    const rec = Persistent.getCharacter(Game.player.classId);
+    const eq = rec.equipped;
+    const mainHand = eq.mainHand ? Persistent.findItem(eq.mainHand) : null;
+    const ranged = eq.ranged ? Persistent.findItem(eq.ranged) : null;
+    const mainVisual = mainHand && mainHand.visual;
+    const rangedVisual = ranged && ranged.visual;
+    if (mainVisual && rangedVisual) return Math.random() < 0.5 ? 'mainHand' : 'ranged';
+    return rangedVisual ? 'ranged' : 'mainHand';
+  },
+
   playerAttack() {
     const s = this.state;
     if (s.over || s.locked) return;
@@ -108,9 +166,11 @@ const Combat = {
       if (s.enemy.hp <= 0) break;
     } while (hits <= COMBO_MAX_EXTRA_HITS && Math.random() < comboChance);
     s.anim.player = 'attack';
+    s.anim.weaponSlot = this.pickAttackWeaponSlot();
     s.comboHits = hits > 1 ? hits : null;
     const comboText = hits > 1 ? ` - a ${hits}-hit combo!` : '';
     this.addLog(`You attack for ${totalDmg} damage${lastCrit ? ' (critical!)' : ''}${comboText}.`);
+    this.resolveCompanionAttacks(stats);
     this.resolveAfterPlayerHit(stats.lifesteal ? stats.lifesteal * hits : stats.lifesteal, lastCrit, totalDmg);
   },
 
@@ -154,6 +214,7 @@ const Combat = {
       Game.heal(healed);
       this.addLog(`You drain ${healed} HP.`);
     }
+    this.resolveCompanionAttacks(stats);
     this.resolveAfterPlayerHit(stats.lifesteal, false, dmg);
   },
 
@@ -231,7 +292,15 @@ const Combat = {
     const useSpecial = s.enemy.elite || s.enemy.boss ? Math.random() < 0.35 : Math.random() < 0.15;
     let dmg = Math.max(1, s.enemy.atk - stats.def);
     if (useSpecial) dmg = Math.round(dmg * 1.6);
+    // A Tank-role pet's guard (see resolveCompanionAttacks) blunts exactly
+    // one incoming hit, then clears - it doesn't stack across rounds.
+    if (s.tankGuardPct) {
+      dmg = Math.max(1, Math.round(dmg * (1 - s.tankGuardPct)));
+      this.addLog(`Your pet's guard softens the blow!`);
+      s.tankGuardPct = 0;
+    }
     const dead = Game.damage(dmg);
+    s.hpFlash = { target: 'player', pct: Math.min(1, dmg / stats.maxHp) };
     this.addLog(`${s.enemy.name} ${useSpecial ? 'unleashes a fierce strike' : 'attacks'} for ${dmg} damage.`);
     if (dead) {
       s.over = true;

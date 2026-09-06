@@ -41,6 +41,7 @@ html, body {
 button {
   font-family: var(--font);
   cursor: pointer;
+  text-align: center;
 }
 
 /* ---------- Title / Class select ---------- */
@@ -78,6 +79,12 @@ button {
   color: var(--text-dim);
   font-size: 0.85rem;
 }
+
+/* The title screen's own button column - a fixed uniform width (rather than
+   each button sizing to its own label length) so "Begin Adventure" and
+   "Change Difficulty (Normal)" read as one consistent column, not a
+   staggered stack of different widths. */
+.title-btn { width: 300px; max-width: 100%; }
 
 /* ---------- Ornate buttons (beveled metal/wood, carved-text look) ---------- */
 .btn-primary {
@@ -181,9 +188,14 @@ button {
   gap: 10px;
 }
 
+/* Wraps .hp-bar-wrap (not just the bar itself) so the floating crit text
+   (see .floating-crit below) can sit right above the bar without being
+   clipped by the bar's own overflow:hidden. */
+.hp-bar-container { position: relative; }
 .hp-bar-wrap {
   width: 140px;
   height: 14px;
+  margin: 0 auto;
   background: var(--hp-bg);
   border-radius: 4px;
   overflow: hidden;
@@ -193,22 +205,46 @@ button {
 .hp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--hp), #e56a6a); transition: width 0.3s ease; }
 .hp-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 2px; }
 
-.hud-gold { color: var(--accent); font-weight: bold; }
-.hud-relics { display: flex; gap: 4px; font-size: 1.1rem; }
-.relic-icon { position: relative; display: inline-flex; }
-.relic-icon .stack-badge {
-  position: absolute;
-  bottom: -5px;
-  right: -6px;
-  background: var(--accent);
-  color: #1a1206;
-  font-size: 0.6rem;
-  font-weight: 800;
-  line-height: 1;
-  border-radius: 8px;
-  padding: 1px 4px;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.6);
+/* Health bar "just got hit" feedback (see Combat.resolveAfterPlayerHit and
+   resolveEnemyTurn, and the hpFlash handling in renderCombatScreen) - a
+   quick shake plus a red flash on the bar itself, both scaled by
+   --flash-intensity (set inline per-hit from how big a bite the damage took
+   out of that side's own max HP), so a huge crit visibly rattles the bar
+   while a glancing hit barely nudges it. */
+@keyframes hpBarShakeFlash {
+  0% { transform: translateX(0); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+  15% { transform: translateX(calc(-6px * var(--flash-intensity, 1))); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 calc(10px * var(--flash-intensity, 1)) rgba(255,40,40,0.9); }
+  30% { transform: translateX(calc(5px * var(--flash-intensity, 1))); }
+  45% { transform: translateX(calc(-4px * var(--flash-intensity, 1))); }
+  60% { transform: translateX(calc(2px * var(--flash-intensity, 1))); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 calc(4px * var(--flash-intensity, 1)) rgba(255,40,40,0.5); }
+  100% { transform: translateX(0); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
 }
+.hp-bar-wrap.hp-bar-hit { animation: hpBarShakeFlash 0.45s ease-out; }
+@keyframes hpBarFillFlash {
+  0% { filter: brightness(1) saturate(1); }
+  20% { filter: brightness(calc(1.3 + 1.3 * var(--flash-intensity, 1))) saturate(1.4); }
+  100% { filter: brightness(1) saturate(1); }
+}
+.hp-bar-wrap.hp-bar-hit .hp-bar-fill { animation: hpBarFillFlash 0.45s ease-out; }
+
+.hud-gold { color: var(--accent); font-weight: bold; }
+/* Opens showRunRelicsModal - was previously an icon strip rendered inline
+   here, which overflowed the HUD row once a long run had picked up a
+   dozen+ distinct relics. */
+.hud-relics-btn {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: var(--accent);
+  font-family: inherit;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.hud-relics-btn:hover { border-color: var(--accent-2); }
+.relic-icon { position: relative; display: inline-flex; }
 .hud-curses { display: flex; gap: 4px; font-size: 1.1rem; filter: drop-shadow(0 0 3px rgba(192,57,43,0.7)); }
 .hud-buffs { display: flex; gap: 4px; font-size: 1.1rem; filter: drop-shadow(0 0 3px rgba(76,175,125,0.7)); }
 .hud-act { font-size: 0.78rem; color: var(--text-dim); }
@@ -239,6 +275,119 @@ button {
 /* Per-act theme backdrop (see ACT_THEMES in data.js / renderMap in map.js) -
    a handful of drifting particles behind the node graph, plus a small label
    naming the current stretch. */
+.map-ground {
+  position: absolute; inset: 0;
+  background-repeat: repeat;
+  background-size: 32px 32px;
+  image-rendering: pixelated;
+  opacity: 0.45;
+  z-index: 0;
+}
+.map-skyline { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.map-skyline .zone-skyline { width: 100%; height: 100%; display: block; }
+
+/* A fully painted third-person scene for zones with one (see
+   ZONE_SCENE_READY/renderZoneScene in map.js) - a plain CSS gradient sky
+   plus the zone's own ground tileset as a land strip, with a pulsing
+   sun/moon, two clouds drifting at different speeds, and a pair of
+   foreground props swaying (or bobbing) in the wind layered on top so the
+   scene reads as alive rather than a single frozen frame. */
+.map-scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.map-scene-sky { position: absolute; inset: 0; }
+/* The walkable dirt path/clearing between the two framing trees - sized to
+   sit within the tree corridor (not the full container width, so it doesn't
+   bleed out past the treeline into open ground) with only a short mask fade
+   at its top edge so the seam into the sky stays crisp rather than smearing
+   the texture upward. Cycles with the trees (see leaveForegroundTrees /
+   bloomForegroundTrees in map.js) so the whole corridor reads as one plane
+   sliding away and back, not just the trees. */
+.map-scene-path {
+  position: absolute; left: 27%; right: 27%; bottom: 0; height: 30%;
+  background-repeat: repeat-x;
+  background-position: bottom;
+  background-size: auto 100%;
+  image-rendering: pixelated;
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+}
+.map-scene-path.path-leaving { animation: pathLeave 0.5s ease-in forwards; }
+.map-scene-path.path-blooming { animation: pathBloom 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) forwards; }
+@keyframes pathLeave {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(120%); opacity: 0; }
+}
+@keyframes pathBloom {
+  0% { transform: scaleY(0.05); opacity: 0; }
+  60% { transform: scaleY(1.08); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+.map-scene-sky-body {
+  position: absolute;
+  top: 5%; right: 10%;
+  width: 16%; height: auto;
+  image-rendering: pixelated;
+  animation: sceneSunPulse 4s ease-in-out infinite;
+}
+@keyframes sceneSunPulse {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 6px rgba(255,200,80,0.5)); transform: scale(1); }
+  50% { filter: brightness(1.18) drop-shadow(0 0 16px rgba(255,200,80,0.85)); transform: scale(1.05); }
+}
+.map-scene-cloud { position: absolute; width: 24%; height: auto; image-rendering: pixelated; opacity: 0.92; }
+.map-scene-cloud-1 { top: 8%; animation: sceneCloudDrift1 42s linear infinite; }
+.map-scene-cloud-2 { top: 16%; width: 17%; animation: sceneCloudDrift2 58s linear infinite reverse; }
+@keyframes sceneCloudDrift1 { from { left: -26%; } to { left: 106%; } }
+@keyframes sceneCloudDrift2 { from { left: -20%; } to { left: 110%; } }
+.map-scene-fg {
+  position: absolute;
+  bottom: -2%;
+  width: 40%; height: auto;
+  image-rendering: pixelated;
+  transform-origin: bottom center;
+}
+.map-scene-fg-left { left: -9%; }
+.map-scene-fg-right { right: -9%; }
+.map-scene-fg-sway-left { animation: sceneFgSwayLeft 3.4s ease-in-out infinite; }
+.map-scene-fg-sway-right { animation: sceneFgSwayRight 3.7s ease-in-out infinite; animation-delay: 0.4s; }
+.map-scene-fg-bob-left { animation: sceneFgBobLeft 3.6s ease-in-out infinite; }
+.map-scene-fg-bob-right { animation: sceneFgBobRight 4s ease-in-out infinite; animation-delay: 0.3s; }
+@keyframes sceneFgSwayLeft { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
+@keyframes sceneFgSwayRight { 0%, 100% { transform: scaleX(-1) rotate(-1.6deg); } 50% { transform: scaleX(-1) rotate(1.6deg); } }
+@keyframes sceneFgBobLeft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3%); } }
+@keyframes sceneFgBobRight { 0%, 100% { transform: scaleX(-1) translateY(0); } 50% { transform: scaleX(-1) translateY(-3%); } }
+
+/* Played each time the player selects their next encounter (see
+   cycleForegroundTrees in map.js) - the compound selector (two classes)
+   outweighs the single-class sway/bob rules above regardless of source
+   order, so this cleanly takes over the `animation` property for one run
+   and hands it back once the class is removed. */
+.map-scene-fg-left.fg-leaving { animation: fgLeaveLeft 0.5s ease-in forwards; }
+.map-scene-fg-right.fg-leaving { animation: fgLeaveRight 0.5s ease-in forwards; }
+.map-scene-fg-left.fg-blooming { animation: fgBloomLeft 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
+.map-scene-fg-right.fg-blooming { animation: fgBloomRight 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
+@keyframes fgLeaveLeft {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(160%) rotate(8deg); opacity: 0; }
+}
+@keyframes fgLeaveRight {
+  0% { transform: scaleX(-1) translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: scaleX(-1) translateY(160%) rotate(8deg); opacity: 0; }
+}
+/* transform-origin is bottom-center (see .map-scene-fg above), so scaling
+   up from ~0 reads as sprouting out of the ground rather than fading in;
+   the overshoot past 1 and settle back gives it a springy "pop". */
+@keyframes fgBloomLeft {
+  0% { transform: scale(0.05, 0.08) rotate(0deg); opacity: 0; }
+  55% { transform: scale(1.12, 1.06) rotate(-1deg); opacity: 1; }
+  75% { transform: scale(0.96, 1.02) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1, 1) rotate(0deg); opacity: 1; }
+}
+@keyframes fgBloomRight {
+  0% { transform: scale(-0.05, 0.08) rotate(0deg); opacity: 0; }
+  55% { transform: scale(-1.12, 1.06) rotate(1deg); opacity: 1; }
+  75% { transform: scale(-0.96, 1.02) rotate(-1deg); opacity: 1; }
+  100% { transform: scale(-1, 1) rotate(0deg); opacity: 1; }
+}
 .map-particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 .map-particle { position: absolute; font-size: 13px; opacity: 0; text-shadow: 0 0 4px rgba(0,0,0,0.6); }
 .particle-drift-down .map-particle { top: -22px; animation: particleDriftDown linear infinite; }
@@ -295,17 +444,36 @@ button {
   pointer-events: none;
   z-index: 3;
 }
-.map-traveler svg { image-rendering: pixelated; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.6)); }
-.map-traveler.facing-left svg { transform: scaleX(-1); }
-.map-traveler.walking svg { animation: travelerWalk 0.28s ease-in-out infinite alternate; }
+.map-traveler svg, .map-traveler img { image-rendering: pixelated; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.6)); }
+.map-traveler.facing-left svg, .map-traveler.facing-left img { transform: scaleX(-1); }
+.map-traveler.walking svg, .map-traveler.walking img { animation: travelerWalk 0.28s ease-in-out infinite alternate; }
 @keyframes travelerWalk {
   0% { transform: translateY(0) rotate(-3deg); }
   100% { transform: translateY(-4px) rotate(3deg); }
 }
-.map-traveler.walking.facing-left svg { animation: travelerWalkLeft 0.28s ease-in-out infinite alternate; }
+.map-traveler.walking.facing-left svg, .map-traveler.walking.facing-left img { animation: travelerWalkLeft 0.28s ease-in-out infinite alternate; }
 @keyframes travelerWalkLeft {
   0% { transform: scaleX(-1) translateY(0) rotate(-3deg); }
   100% { transform: scaleX(-1) translateY(-4px) rotate(3deg); }
+}
+/* Played once on arrival (see animateTravel in map.js) instead of the
+   looping walk-cycle - a little hop that buys time for the treeline/path
+   bloom-in to actually be seen before the screen cuts to the encounter. */
+.map-traveler.jumping svg, .map-traveler.jumping img { animation: travelerJump 0.6s ease-out 1; }
+.map-traveler.jumping.facing-left svg, .map-traveler.jumping.facing-left img { animation: travelerJumpLeft 0.6s ease-out 1; }
+@keyframes travelerJump {
+  0% { transform: translateY(0) rotate(0deg) scale(1, 1); }
+  25% { transform: translateY(-6px) rotate(-4deg) scale(0.94, 1.08); }
+  55% { transform: translateY(-24px) rotate(3deg) scale(1.04, 0.96); }
+  80% { transform: translateY(-2px) rotate(-2deg) scale(0.97, 1.05); }
+  100% { transform: translateY(0) rotate(0deg) scale(1, 1); }
+}
+@keyframes travelerJumpLeft {
+  0% { transform: scaleX(-1) translateY(0) rotate(0deg) scale(1, 1); }
+  25% { transform: scaleX(-1) translateY(-6px) rotate(4deg) scale(0.94, 1.08); }
+  55% { transform: scaleX(-1) translateY(-24px) rotate(-3deg) scale(1.04, 0.96); }
+  80% { transform: scaleX(-1) translateY(-2px) rotate(2deg) scale(0.97, 1.05); }
+  100% { transform: scaleX(-1) translateY(0) rotate(0deg) scale(1, 1); }
 }
 
 .map-node {
@@ -402,6 +570,39 @@ button {
 .category-btn:active { transform: translateY(1px); }
 .category-btn-icon { font-size: 1.2rem; flex-shrink: 0; }
 .category-btn-label { flex: 1; font-weight: 600; color: var(--accent); }
+
+/* Zone skyline banner - a themed strip shown above every in-run encounter
+   panel (combat, campsite, shop, event, treasure, taming...) so the current
+   act's zone (see ACT_THEMES/ZONE_SKYLINE_STYLE in data.js, renderZoneSkyline
+   in sprites.js) is felt everywhere during a run, not just on the map
+   screen. Kept as its own opaque strip (rather than layered under the
+   panel's own text) so the art always reads clearly without ever fighting
+   with text contrast. */
+.zone-banner {
+  position: relative;
+  height: 80px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 4px;
+  box-shadow: inset 0 0 0 1px rgba(212,175,90,0.1);
+}
+.zone-banner .zone-ground {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+  background-size: 32px 32px;
+  image-rendering: pixelated;
+  opacity: 0.45;
+}
+.zone-banner .zone-skyline { position: relative; z-index: 1; width: 100%; height: 100%; display: block; }
+.zone-banner .zone-banner-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%);
+  pointer-events: none;
+}
 
 /* ---------- Panels (event / rest / shop / treasure / gameover) ---------- */
 .panel {
@@ -548,7 +749,7 @@ button {
    combatant column shrinks the sprite proportionally instead of squashing
    it sideways - a flex item with an explicit width/height SVG child only
    shrinks the main-axis dimension by default, distorting the aspect ratio. */
-.combatant .portrait svg { image-rendering: pixelated; max-width: 100%; height: auto; }
+.combatant .portrait svg, .combatant .portrait img { image-rendering: pixelated; max-width: 100%; height: auto; }
 
 /* A companion "row": an equipped mount walks just behind/beside the
    character (not ridden - it's its own creature, trotting along), and an
@@ -557,8 +758,8 @@ button {
    than overlapping. Shared between the map traveler and the combat portrait
    via renderCompanionRig() in progression.js. */
 .companion-row { display: flex; align-items: flex-end; gap: 3px; min-width: 0; }
-.companion-row svg { display: block; image-rendering: pixelated; max-width: 100%; height: auto; }
-.companion-mount svg, .companion-pet svg { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+.companion-row svg, .companion-row img { display: block; image-rendering: pixelated; max-width: 100%; height: auto; }
+.companion-mount svg, .companion-pet svg, .companion-mount img, .companion-pet img { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
 .companion-mount { opacity: 0.92; }
 
 /* A recruited companion "acting" in sync with the player's own turn (see
@@ -570,6 +771,17 @@ button {
   40% { transform: translateX(4px) scale(1.08); }
 }
 .companion-card { opacity: 0.95; }
+
+/* An equipped pet/mount landing its own hit alongside the player's action
+   (see Combat.resolveCompanionAttacks) - a lunge toward the enemy plus a
+   role-colored glow (--companion-glow, set inline per role - see
+   COMPANION_ROLE_GLOW in data.js and renderCompanionRig), so a Tank/DPS/
+   Healer pet reads as visually distinct from a plain one mid-fight. */
+@keyframes companionAttackLunge {
+  0%, 100% { transform: translateX(0); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+  40% { transform: translateX(8px) scale(1.15); filter: drop-shadow(0 0 6px var(--companion-glow, var(--accent))) drop-shadow(0 0 10px var(--companion-glow, var(--accent))) brightness(1.2); }
+}
+.companion-mount.companion-acting, .companion-pet.companion-acting { animation: companionAttackLunge 0.5s ease; }
 
 /* A WoW-style floating nameplate above the character's own head (not the
    mount/pet) - see renderCompanionRig() in progression.js. */
@@ -590,7 +802,7 @@ button {
 .combatant.enemy.elite { border-color: var(--bad); }
 .combatant.enemy.boss { border-color: var(--accent); }
 .combatant.enemy.spectral { border-color: var(--accent-2); box-shadow: 0 0 14px rgba(138,95,214,0.5); }
-.combatant.enemy.spectral .portrait svg { filter: hue-rotate(200deg) saturate(1.4) brightness(1.15) drop-shadow(0 0 6px rgba(138,95,214,0.7)); opacity: 0.92; }
+.combatant.enemy.spectral .portrait svg, .combatant.enemy.spectral .portrait img { filter: hue-rotate(200deg) saturate(1.4) brightness(1.15) drop-shadow(0 0 6px rgba(138,95,214,0.7)); opacity: 0.92; }
 
 .panel.legendary-encounter { border-color: var(--accent); animation: legendaryPanelPulse 2.4s ease-in-out infinite; }
 @keyframes legendaryPanelPulse {
@@ -654,9 +866,9 @@ button {
 }
 
 .sprite-mini { height: 36px; flex-shrink: 0; display: flex; align-items: flex-end; }
-.sprite-mini svg { image-rendering: pixelated; }
+.sprite-mini svg, .sprite-mini img { image-rendering: pixelated; }
 .class-icon { display: flex; justify-content: center; margin-bottom: 4px; }
-.class-icon svg { image-rendering: pixelated; }
+.class-icon svg, .class-icon img { image-rendering: pixelated; }
 
 /* Battle animations - the wrapping .portrait element is a fresh DOM node on
    every combat re-render, so these keyframes simply autoplay on mount. */
@@ -696,6 +908,21 @@ button {
 .portrait.anim-skill-arcane { --ability-glow: #3fa9ff; }
 .portrait.anim-skill-default { --ability-glow: var(--accent-2); }
 
+/* Basic Attack gets the same class-flavor glow as Skill, layered onto the
+   lunge (see animClass in main.js) - every physical class's own Attack now
+   reads distinctly instead of a plain colorless lunge. Mage/Warlock never
+   carry this class (see magicBallColor) since their Attack throws a
+   projectile instead of lunging at all, so there's no lunge to tint. */
+.combatant.player .portrait[class*="anim-attack-"] { animation: lungeRight 0.5s ease, classAbilityGlow 0.5s ease; }
+.portrait.anim-attack-rage { --ability-glow: #ff3b3b; }
+.portrait.anim-attack-holy { --ability-glow: #fff4c2; }
+.portrait.anim-attack-shadow { --ability-glow: #6a3fa0; }
+.portrait.anim-attack-shine { --ability-glow: #ffe680; }
+.portrait.anim-attack-nature { --ability-glow: #4caf50; }
+.portrait.anim-attack-fel { --ability-glow: #9b30ff; }
+.portrait.anim-attack-arcane { --ability-glow: #3fa9ff; }
+.portrait.anim-attack-default { --ability-glow: var(--accent-2); }
+
 /* Mage/Warlock's basic Attack throws a small glowing orb across the arena
    instead of the melee lunge (see animClass in main.js, which suppresses
    anim-attack for these two classes so this doesn't play alongside it). The
@@ -719,6 +946,29 @@ button {
   65% { left: 80%; opacity: 1; transform: translateY(-4px) scale(1); }
   82% { left: 84%; opacity: 1; transform: translateY(-4px) scale(2.4); }
   100% { left: 84%; opacity: 0; transform: translateY(-4px) scale(3); }
+}
+
+/* A ranged weapon Attack (see pickAttackWeaponSlot in combat.js - only fires
+   when the character actually has a bow-visual item equipped in their ranged
+   slot) shoots a small fletched shaft across the arena instead of lunging,
+   mirroring the magic-ball projectile's own positioning/timing convention. */
+.arrow-shot {
+  position: absolute;
+  top: 47%;
+  left: 8%;
+  width: 26px;
+  height: 5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent 0%, #c9a876 45%, #8a5a2e 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  animation: arrowTravel 0.4s ease-in forwards;
+  pointer-events: none;
+  z-index: 5;
+}
+@keyframes arrowTravel {
+  0% { left: 8%; opacity: 1; transform: translateY(0) scaleX(1); }
+  75% { left: 78%; opacity: 1; transform: translateY(-3px) scaleX(1); }
+  100% { left: 84%; opacity: 0; transform: translateY(-3px) scaleX(1.8); }
 }
 
 /* Fireball's own projectile - warm flame gradient, a flicker layered on top
@@ -856,16 +1106,26 @@ button {
 .combat-actions button:hover:not(:disabled) { border-color: var(--accent-2); transform: translateY(-1px); }
 .combat-actions button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
-.item-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.item-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+/* Previously just a 1px border on a background barely lighter than the
+   panel behind it - easy to lose against the dark brown combat backdrop.
+   Now matches the same defined, lifted look as the Attack/Skill/Flee
+   buttons (gradient + shadow + a brighter border) so items read as clearly
+   clickable, with a bit more padding/weight on the label itself. */
 .item-chip {
-  background: var(--bg-panel-2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 8px 14px;
-  font-size: 0.78rem;
-  min-height: 36px;
+  background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+  border: 2px solid var(--border-light);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  min-height: 40px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 4px rgba(0,0,0,0.35);
+  transition: border-color 0.15s ease, transform 0.08s ease;
 }
-.item-chip:hover:not(:disabled) { border-color: var(--accent-2); }
+.item-chip:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
+.item-chip:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
 /* ---------- Game over / victory ---------- */
 .result-title { font-size: 2rem; font-variant: small-caps; letter-spacing: 1px; }
@@ -1060,6 +1320,9 @@ button {
   flex-wrap: wrap;
 }
 .gear-row .desc { display: flex; align-items: center; gap: 10px; }
+.spell-icon img { image-rendering: pixelated; display: block; }
+.btn-icon { image-rendering: pixelated; vertical-align: -4px; margin-right: 5px; }
+.gear-icon { image-rendering: pixelated; vertical-align: -6px; }
 .gear-row button { min-height: 40px; }
 
 ::-webkit-scrollbar { width: 8px; }
@@ -1100,7 +1363,7 @@ button {
   border-radius: 6px;
   padding: 8px;
 }
-.armory-portrait svg { image-rendering: pixelated; max-width: 100%; height: auto; }
+.armory-portrait svg, .armory-portrait img { image-rendering: pixelated; max-width: 100%; height: auto; }
 /* Wraps independently of the outer .armory-layout (which is nowrap) - on a
    very narrow screen the 3 weapon slots fold to 2-then-1 under the
    portrait instead of forcing the whole paperdoll to overflow or reflow. */

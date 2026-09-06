@@ -22,21 +22,25 @@ const DIFFICULTIES = {
 //  - multiplier: normal hit multiplied by `power`
 //  - drain:      normal hit + power bonus damage, then heals for half of that
 //  - rage:       normal hit + power bonus damage, +50% more if caster is below half HP
+// `icon` is a PixelLab-generated asset path (assets/icons/spells/<id>.png) -
+// every spell had no icon at all before (just name/desc text); see
+// showInvSpellsModal and the combat Skill button in main.js for where this
+// actually renders.
 const SPELLS = {
-  cleave: { id: 'cleave', name: 'Cleave', desc: '+8 damage, ignores 2 DEF', cooldown: 2, type: 'cleave', power: 8, ignoreDef: 2 },
-  backstab: { id: 'backstab', name: 'Backstab', desc: 'Deal 2.2x damage', cooldown: 3, type: 'multiplier', power: 2.2 },
-  fireball: { id: 'fireball', name: 'Fireball', desc: 'Deal 14 magic damage', cooldown: 2, type: 'flat', power: 14 },
-  holyStrike: { id: 'holyStrike', name: 'Holy Strike', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 6 },
-  aimedShot: { id: 'aimedShot', name: 'Aimed Shot', desc: '+7 damage, ignores 3 DEF', cooldown: 2, type: 'cleave', power: 7, ignoreDef: 3 },
-  lifeDrain: { id: 'lifeDrain', name: 'Life Drain', desc: 'Deal damage and heal for half', cooldown: 3, type: 'drain', power: 8 },
-  recklessRage: { id: 'recklessRage', name: 'Reckless Rage', desc: '+9 damage, 50% more if below half HP', cooldown: 2, type: 'rage', power: 9 },
-  divineLight: { id: 'divineLight', name: 'Divine Light', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 10 },
-  viciousMockery: { id: 'viciousMockery', name: 'Vicious Mockery', desc: 'Deal 1.8x damage', cooldown: 2, type: 'multiplier', power: 1.8 },
+  cleave: { id: 'cleave', name: 'Cleave', desc: '+8 damage, ignores 2 DEF', cooldown: 2, type: 'cleave', power: 8, ignoreDef: 2, icon: 'assets/icons/spells/cleave.png' },
+  backstab: { id: 'backstab', name: 'Backstab', desc: 'Deal 2.2x damage', cooldown: 3, type: 'multiplier', power: 2.2, icon: 'assets/icons/spells/backstab.png' },
+  fireball: { id: 'fireball', name: 'Fireball', desc: 'Deal 14 magic damage', cooldown: 2, type: 'flat', power: 14, icon: 'assets/icons/spells/fireball.png' },
+  holyStrike: { id: 'holyStrike', name: 'Holy Strike', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 6, icon: 'assets/icons/spells/holyStrike.png' },
+  aimedShot: { id: 'aimedShot', name: 'Aimed Shot', desc: '+7 damage, ignores 3 DEF', cooldown: 2, type: 'cleave', power: 7, ignoreDef: 3, icon: 'assets/icons/spells/aimedShot.png' },
+  lifeDrain: { id: 'lifeDrain', name: 'Life Drain', desc: 'Deal damage and heal for half', cooldown: 3, type: 'drain', power: 8, icon: 'assets/icons/spells/lifeDrain.png' },
+  recklessRage: { id: 'recklessRage', name: 'Reckless Rage', desc: '+9 damage, 50% more if below half HP', cooldown: 2, type: 'rage', power: 9, icon: 'assets/icons/spells/recklessRage.png' },
+  divineLight: { id: 'divineLight', name: 'Divine Light', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 10, icon: 'assets/icons/spells/divineLight.png' },
+  viciousMockery: { id: 'viciousMockery', name: 'Vicious Mockery', desc: 'Deal 1.8x damage', cooldown: 2, type: 'multiplier', power: 1.8, icon: 'assets/icons/spells/viciousMockery.png' },
   // Bank-shop-only extras, purchasable by any class with bank gold.
-  frostbolt: { id: 'frostbolt', name: 'Frostbolt', desc: 'Deal 17 frost damage', cooldown: 3, type: 'flat', power: 17 },
-  execute: { id: 'execute', name: 'Execute', desc: 'Deal 3x damage', cooldown: 4, type: 'multiplier', power: 3 },
-  chainLightning: { id: 'chainLightning', name: 'Chain Lightning', desc: '+10 damage, ignores 3 DEF', cooldown: 2, type: 'cleave', power: 10, ignoreDef: 3 },
-  inspire: { id: 'inspire', name: 'Inspire', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 7 }
+  frostbolt: { id: 'frostbolt', name: 'Frostbolt', desc: 'Deal 17 frost damage', cooldown: 3, type: 'flat', power: 17, icon: 'assets/icons/spells/frostbolt.png' },
+  execute: { id: 'execute', name: 'Execute', desc: 'Deal 3x damage', cooldown: 4, type: 'multiplier', power: 3, icon: 'assets/icons/spells/execute.png' },
+  chainLightning: { id: 'chainLightning', name: 'Chain Lightning', desc: '+10 damage, ignores 3 DEF', cooldown: 2, type: 'cleave', power: 10, ignoreDef: 3, icon: 'assets/icons/spells/chainLightning.png' },
+  inspire: { id: 'inspire', name: 'Inspire', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 7, icon: 'assets/icons/spells/inspire.png' }
 };
 
 const CLASSES = {
@@ -277,7 +281,15 @@ const PETS = {
   moonkinHatchling: { id: 'moonkinHatchling', name: 'Moonkin Hatchling', icon: '🐣', universe: 'WoW', desc: 'An owlbeast chick attuned to the moon. +3 Max HP, +3% spell damage.', effect: { maxHp: 3, spellPower: 0.03 } },
   mechanicalSquirrel: { id: 'mechanicalSquirrel', name: 'Mechanical Squirrel', icon: '🐿️', universe: 'WoW', desc: 'A clockwork tinker\'s toy. +2 Speed, +5% gold from all sources.', effect: { speed: 2, goldBonus: 0.05 } },
   owlFamiliar: { id: 'owlFamiliar', name: 'Owl Familiar', icon: '🦉', universe: 'D&D', desc: 'A wise arcane companion. +4% critical hit chance.', effect: { critBonus: 0.04 } },
-  pixieSprite: { id: 'pixieSprite', name: 'Pixie Sprite', icon: '🧚', universe: 'D&D', desc: 'A mischievous fey friend. Heal 1 HP per round.', effect: { hpRegen: 1 } }
+  pixieSprite: { id: 'pixieSprite', name: 'Pixie Sprite', icon: '🧚', universe: 'D&D', desc: 'A mischievous fey friend. Heal 1 HP per round.', effect: { hpRegen: 1 } },
+  // Three dedicated "support" pets (see COMPANION_COMBAT_SCALE/role handling
+  // in combat.js) - every pet/mount already fights alongside you for a cut
+  // of your own ATK, but these three layer a WoW/D&D-style role on top:
+  // Tank blunts the enemy's next reply, DPS hits noticeably harder than a
+  // plain pet, Healer mends you a little each round it acts.
+  ironshellTortle: { id: 'ironshellTortle', name: 'Ironshell Tortle', icon: '🐢', universe: 'D&D', desc: 'A stalwart tortle hatchling, shell hardened like plate. +4 DEF. In battle: braces before the enemy\'s reply, blunting the next hit.', effect: { def: 4 }, role: 'tank' },
+  direhornRaptor: { id: 'direhornRaptor', name: 'Direhorn Raptor', icon: '🦖', universe: 'WoW', desc: 'A vicious hatchling bred for the pit fights of Pandaria. +3 ATK. In battle: strikes noticeably harder than an ordinary pet.', effect: { atk: 3 }, role: 'dps' },
+  faerieDragonling: { id: 'faerieDragonling', name: 'Faerie Dragonling', icon: '🦚', universe: 'D&D', desc: 'A tiny prismatic dragon, more mischief than menace. +3% healing from items. In battle: mends a little HP each round it acts.', effect: { potionHealBonus: 0.03 }, role: 'healer' }
 };
 
 const MOUNTS = {
@@ -291,25 +303,64 @@ const MOUNTS = {
   spectralTiger: { id: 'spectralTiger', name: 'Spectral Tiger', icon: '🐯', universe: 'WoW', desc: 'A ghostly, impossibly fast hunting cat. +3 Speed, +6% critical hit chance.', effect: { speed: 3, critBonus: 0.06 } }
 };
 
+// An equipped pet/mount doesn't just grant a passive stat (see
+// companionStatBonus in progression.js) - it also joins every one of your
+// own Attack/Skill actions with a bonus hit of its own, scaled off your
+// current ATK: a pet fights at 30% of you, a mount (bigger, more
+// battle-trained) at 50%. See Combat.resolveCompanionAttacks in combat.js.
+const COMPANION_COMBAT_SCALE = { pet: 0.3, mount: 0.5 };
+// A `role` pet's combat contribution goes further than a plain pet's flat
+// hit: DPS hits harder, Tank blunts the enemy's next reply, Healer mends a
+// little HP - see the role branch in Combat.resolveCompanionAttacks.
+const COMPANION_ROLE_GLOW = { tank: '#4a8fe8', dps: '#e8522f', healer: '#5cae6e' };
+
 // --- Act themes ---
 // Every 10 acts moves the adventure into a new WoW-flavored backdrop - purely
 // cosmetic (map background gradient + a drifting particle effect + an enemy
-// portrait tint, see map.js's renderMap and main.js's renderCombatScreen),
-// layered on top of the existing encounter/loot systems which don't change.
-// After the 9 curated stretches (90 acts) run out, getActTheme reuses one of
-// them - picked by a fixed hash of the act number so it doesn't re-roll (and
-// visually flicker) on every re-render, but still reads as "random" act to act.
+// portrait lighting grade, see map.js's renderMap and main.js's
+// renderCombatScreen), layered on top of the existing encounter/loot systems
+// which don't change. After the 9 curated stretches (90 acts) run out,
+// getActTheme reuses one of them - picked by a fixed hash of the act number
+// so it doesn't re-roll (and visually flicker) on every re-render, but still
+// reads as "random" act to act.
+// enemyTint used to be a strong hue-rotate (able to reskin a monster's whole
+// color, e.g. green->blue) back when every monster shared a handful of flat
+// recolored silhouettes - now that each monster/pet/mount has its own
+// PixelLab-generated art with deliberately chosen colors (see
+// CREATURE_ART_IDS in sprites.js), a full hue swap fights the art instead of
+// setting a mood. These are now gentle "ambient lighting" grades (mild
+// saturate/brightness/contrast, a few degrees of hue-rotate at most) that
+// still shift the same reused monster pool per zone without recoloring it.
 const ACT_THEMES = [
-  { id: 'forest', name: 'Elderglen Forest', bg: 'linear-gradient(180deg, #2c4a30 0%, #1c3320 55%, #0f1f13 100%)', particle: '🍃', motion: 'drift-down', accent: '#6fbf73', enemyTint: 'hue-rotate(70deg) saturate(1.1)' },
-  { id: 'swamp', name: 'Murkfen Swamp', bg: 'linear-gradient(180deg, #313d2c 0%, #202a1c 55%, #0d150f 100%)', particle: '🦟', motion: 'drift-side', accent: '#7a9a5a', enemyTint: 'hue-rotate(60deg) saturate(0.7) brightness(0.9)' },
-  { id: 'desert', name: 'Sunscar Wastes', bg: 'linear-gradient(180deg, #6b4a2a 0%, #4a3018 55%, #2a1a0d 100%)', particle: '✨', motion: 'drift-side', accent: '#e0a458', enemyTint: 'sepia(0.4) saturate(1.3) hue-rotate(-10deg)' },
-  { id: 'hellfire', name: 'Shattered Hellscape', bg: 'linear-gradient(180deg, #5a1f14 0%, #3a1310 55%, #1a0a08 100%)', particle: '🔥', motion: 'drift-up', accent: '#e0522f', enemyTint: 'sepia(0.5) saturate(2) hue-rotate(-30deg) brightness(1.05)' },
-  { id: 'emerald', name: 'The Emerald Dream', bg: 'linear-gradient(180deg, #1f5c3f 0%, #14402c 55%, #0a2418 100%)', particle: '🌿', motion: 'drift-down', accent: '#5fe6a0', enemyTint: 'hue-rotate(90deg) saturate(1.3) brightness(1.1)' },
-  { id: 'silvermoon', name: 'Silvermoon Spires', bg: 'linear-gradient(180deg, #3a2a5c 0%, #281c40 55%, #140e24 100%)', particle: '🔮', motion: 'drift-up', accent: '#c48aff', enemyTint: 'hue-rotate(220deg) saturate(1.3)' },
-  { id: 'blacktemple', name: 'The Black Bastion', bg: 'linear-gradient(180deg, #3a1030 0%, #260a20 55%, #120410 100%)', particle: '💀', motion: 'drift-up', accent: '#a13ce0', enemyTint: 'hue-rotate(270deg) saturate(1.6) brightness(0.95)' },
-  { id: 'northrend', name: 'Northrend Wastes', bg: 'linear-gradient(180deg, #1a2e3d 0%, #14212c 55%, #0a1218 100%)', particle: '❄️', motion: 'drift-down', accent: '#8fd8f0', enemyTint: 'hue-rotate(180deg) saturate(0.9) brightness(1.1)' },
-  { id: 'nether', name: 'The Twisting Nether', bg: 'linear-gradient(180deg, #1a1030 0%, #100a20 55%, #050310 100%)', particle: '⭐', motion: 'drift-up', accent: '#7a5cff', enemyTint: 'hue-rotate(250deg) saturate(1.8) brightness(0.9)' }
+  { id: 'forest', name: 'Elderglen Forest', bg: 'linear-gradient(180deg, #2c4a30 0%, #1c3320 55%, #0f1f13 100%)', particle: '🍃', motion: 'drift-down', accent: '#6fbf73', enemyTint: 'saturate(1.08) brightness(1.02)' },
+  { id: 'swamp', name: 'Murkfen Swamp', bg: 'linear-gradient(180deg, #313d2c 0%, #202a1c 55%, #0d150f 100%)', particle: '🦟', motion: 'drift-side', accent: '#7a9a5a', enemyTint: 'saturate(0.85) brightness(0.92) hue-rotate(-5deg)' },
+  { id: 'desert', name: 'Sunscar Wastes', bg: 'linear-gradient(180deg, #6b4a2a 0%, #4a3018 55%, #2a1a0d 100%)', particle: '✨', motion: 'drift-side', accent: '#e0a458', enemyTint: 'sepia(0.15) saturate(1.1) brightness(1.05)' },
+  { id: 'hellfire', name: 'Shattered Hellscape', bg: 'linear-gradient(180deg, #5a1f14 0%, #3a1310 55%, #1a0a08 100%)', particle: '🔥', motion: 'drift-up', accent: '#e0522f', enemyTint: 'sepia(0.2) saturate(1.3) hue-rotate(-8deg) brightness(1.05)' },
+  { id: 'emerald', name: 'The Emerald Dream', bg: 'linear-gradient(180deg, #1f5c3f 0%, #14402c 55%, #0a2418 100%)', particle: '🌿', motion: 'drift-down', accent: '#5fe6a0', enemyTint: 'saturate(1.15) brightness(1.08) hue-rotate(6deg)' },
+  { id: 'silvermoon', name: 'Silvermoon Spires', bg: 'linear-gradient(180deg, #3a2a5c 0%, #281c40 55%, #140e24 100%)', particle: '🔮', motion: 'drift-up', accent: '#c48aff', enemyTint: 'saturate(1.1) hue-rotate(12deg) brightness(1.03)' },
+  { id: 'blacktemple', name: 'The Black Bastion', bg: 'linear-gradient(180deg, #3a1030 0%, #260a20 55%, #120410 100%)', particle: '💀', motion: 'drift-up', accent: '#a13ce0', enemyTint: 'saturate(1.2) hue-rotate(-10deg) brightness(0.92)' },
+  { id: 'northrend', name: 'Northrend Wastes', bg: 'linear-gradient(180deg, #1a2e3d 0%, #14212c 55%, #0a1218 100%)', particle: '❄️', motion: 'drift-down', accent: '#8fd8f0', enemyTint: 'saturate(0.95) hue-rotate(8deg) brightness(1.08)' },
+  { id: 'nether', name: 'The Twisting Nether', bg: 'linear-gradient(180deg, #1a1030 0%, #100a20 55%, #050310 100%)', particle: '⭐', motion: 'drift-up', accent: '#7a5cff', enemyTint: 'saturate(1.3) hue-rotate(15deg) brightness(0.95)' }
 ];
+
+// Per-zone procedural backdrop art (see renderZoneSkyline in sprites.js) - a
+// silhouette skyline shown in a themed banner above every encounter screen
+// (map, combat, campsite, shop, event, treasure...) during a run, so each
+// zone reads as an actual place instead of just a color gradient. 'units'
+// draws repeated discrete silhouettes (trees, spires...); 'ridge' draws one
+// continuous mountain/dune line. `disc` adds a moon/sun; `glow` adds a soft
+// ambient light matching the zone's danger/magic (lava, fel, starlight...).
+const ZONE_SKYLINE_STYLE = {
+  forest: { family: 'units', shape: 'tree', color: '#0b1c0d' },
+  swamp: { family: 'units', shape: 'gnarled', color: '#0a130c' },
+  desert: { family: 'ridge', shape: 'dune', color: '#3a2410' },
+  hellfire: { family: 'ridge', shape: 'jagged', color: '#200b08', glow: '#e0522f' },
+  emerald: { family: 'units', shape: 'mushroom', color: '#0c2417', glow: '#5fe6a0' },
+  silvermoon: { family: 'units', shape: 'spire', color: '#160f28', disc: '#c48aff' },
+  blacktemple: { family: 'units', shape: 'arch', color: '#170518' },
+  northrend: { family: 'ridge', shape: 'peak', color: '#0b161e', disc: '#e8f4fa' },
+  nether: { family: 'units', shape: 'asteroid', color: '#0a0618', glow: '#7a5cff' }
+};
 
 function getActTheme(act) {
   const idx = Math.floor((act - 1) / 10);

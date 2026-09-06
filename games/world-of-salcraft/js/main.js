@@ -15,6 +15,16 @@ function epicEnemySize(enemy) {
   return (enemy.boss || enemy.elite) ? EPIC_ENEMY_SPRITE_SIZE : REGULAR_ENEMY_SPRITE_SIZE;
 }
 
+// How far into the current act's map the player has traveled (0-1) - drives
+// the zone skyline banner's parallax shift (see renderZoneSkyline in
+// sprites.js) so the backdrop visibly advances as the run pushes deeper into
+// a zone instead of sitting frozen behind every screen.
+function zoneProgress() {
+  if (!Game.map || !Game.map.nodes) return 0;
+  const total = Object.keys(Game.map.nodes).length || 1;
+  return Math.min(1, (Game.visitedNodes || []).length / total);
+}
+
 const App = {
   root: null,
   selectedClass: null,
@@ -30,7 +40,15 @@ const App = {
     this.root.addEventListener('change', (e) => {
       if (e.target && e.target.id === 'hud-auto-toggle') {
         this.autoCombat = e.target.checked;
-        if (!this.autoCombat) return;
+        if (!this.autoCombat) {
+          // Turning Auto off doesn't otherwise trigger a re-render anywhere -
+          // without this, the combat buttons stay however they were last
+          // drawn (disabled, from Auto's own render) until some unrelated
+          // event happens to redraw the screen, silently locking the player
+          // out of manual control in the meantime.
+          if (Combat.state && !Combat.state.over && this.currentCombatNode) this.renderCombatScreen(this.currentCombatNode);
+          return;
+        }
         if (Combat.state && !Combat.state.over) {
           this.performAutoAction(this.currentCombatNode);
         } else {
@@ -41,6 +59,11 @@ const App = {
           if (mapContainer) this.autoPickPath(mapContainer);
         }
       }
+    });
+    // Same delegation approach for the HUD's Relics button (see renderHud) -
+    // reachable from every in-run screen without re-binding it at each one.
+    this.root.addEventListener('click', (e) => {
+      if (e.target && e.target.closest && e.target.closest('#btn-open-relics')) this.showRunRelicsModal();
     });
     const afkResult = computeAfkProgress();
     if (afkResult) {
@@ -91,11 +114,11 @@ const App = {
           <span>Best act reached: ${meta.bestAct}</span>
           <span>Bank: ${pdata.bankGold} 🪙</span>
         </div>
-        <button class="btn-primary" id="btn-new-run">Begin Adventure</button>
-        <button class="btn-secondary" id="btn-sanctuary">Sanctuary</button>
-        <button class="btn-secondary" id="btn-difficulty">🎚️ Change Difficulty (${DIFFICULTIES[pdata.difficulty].name})</button>
-        <button class="btn-secondary" id="btn-settings">⚙️ Settings</button>
-        <button class="btn-secondary" id="btn-how-to-play">❔ How to Play</button>
+        <button class="btn-primary title-btn" id="btn-new-run">Begin Adventure</button>
+        <button class="btn-secondary title-btn" id="btn-sanctuary">Sanctuary</button>
+        <button class="btn-secondary title-btn" id="btn-difficulty">🎚️ Change Difficulty (${DIFFICULTIES[pdata.difficulty].name})</button>
+        <button class="btn-secondary title-btn" id="btn-settings">⚙️ Settings</button>
+        <button class="btn-secondary title-btn" id="btn-how-to-play">❔ How to Play</button>
       </div>`;
     document.getElementById('btn-new-run').addEventListener('click', () => this.showClassSelect());
     document.getElementById('btn-sanctuary').addEventListener('click', () => this.showSanctuary());
@@ -201,23 +224,32 @@ const App = {
 
   // Collapses a run's relic list (which can hold real duplicates - picking
   // the same relic twice legitimately stacks its effect, see
-  // applyRelicEffects in data.js) into one icon per unique relic with a
-  // stack-count badge, so 5 copies of Lucky Coin don't take up 5 icon slots.
-  // The tooltip recomputes the effect description AT that stack count
-  // (rather than showing the single-copy desc text) so it always reflects
-  // the true total, e.g. "+125% gold" for 5 stacks of a +25% relic.
-  renderStackedRelics(relicIds) {
+  // applyRelicEffects in data.js) into one row per unique relic with a
+  // stack count, so a long run's dozen+ distinct relics show as a readable
+  // list instead of spilling the HUD off screen (see showRunRelicsModal).
+  // The description recomputes the effect AT that stack count (rather than
+  // showing the single-copy desc text) so it always reflects the true
+  // total, e.g. "+125% gold" for 5 stacks of a +25% relic.
+  renderStackedRelicRows(relicIds) {
     const counts = {};
     relicIds.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
-    return Object.keys(counts).map(id => {
+    const ids = Object.keys(counts);
+    if (!ids.length) return '<p class="small-text">No relics found yet this run.</p>';
+    return ids.map(id => {
       const relic = RELICS[id];
       const count = counts[id];
       const stackedDesc = relic.effect
         ? Object.keys(relic.effect).map(k => describeEffectLever(k, relic.effect[k] * count)).join(', ')
         : relic.desc;
-      const title = count > 1 ? `${relic.name} ×${count}: ${stackedDesc}` : `${relic.name}: ${relic.desc}`;
-      return `<span class="relic-icon" title="${title}">${relic.icon}${count > 1 ? `<span class="stack-badge">${count}</span>` : ''}</span>`;
+      return `<div class="gear-row"><div class="desc"><span>${relic.icon}</span><div>
+        <strong>${relic.name}</strong>${count > 1 ? ` <span class="small-text">×${count}</span>` : ''}
+        <div class="small-text">${stackedDesc}</div>
+      </div></div></div>`;
     }).join('');
+  },
+
+  showRunRelicsModal() {
+    this.showListModal(`💠 Relics (${new Set(Game.player.relics).size})`, () => this.renderStackedRelicRows(Game.player.relics), () => {}, null);
   },
 
   // ---------------- Shared HUD ----------------
@@ -225,7 +257,7 @@ const App = {
     const p = Game.player;
     const stats = Game.effectiveStats();
     const hpPct = Math.max(0, Math.round((p.hp / stats.maxHp) * 100));
-    const relics = this.renderStackedRelics(p.relics);
+    const relicCount = new Set(p.relics).size;
     const curses = (p.curses || []).map(id => `<span title="${CURSES[id].name}: ${CURSES[id].desc}">${CURSES[id].icon}</span>`).join('');
     const now = Date.now();
     const buffs = Persistent.load().activeBuffs.filter(b => b.expiresAt > now).map(b => {
@@ -247,7 +279,7 @@ const App = {
           </div>
         </div>
         <div class="hud-gold">${p.gold} 🪙</div>
-        <div class="hud-relics">${relics || '<span class="small-text">no relics</span>'}</div>
+        <button type="button" class="hud-relics-btn" id="btn-open-relics" title="View every relic found this run">💠 Relics (${relicCount})</button>
         ${curses ? `<div class="hud-curses">${curses}</div>` : ''}
         ${buffs ? `<div class="hud-buffs">${buffs}</div>` : ''}
         ${moralEffects ? `<div class="hud-buffs">${moralEffects}</div>` : ''}
@@ -256,6 +288,21 @@ const App = {
           <input type="checkbox" id="hud-auto-toggle" ${this.autoCombat ? 'checked' : ''}> AUTO
         </label>
       </div>`;
+  },
+
+  // A themed skyline strip shown above every in-run encounter panel (combat,
+  // campsite, shop, event, treasure, taming...) so the current act's zone
+  // (see ACT_THEMES/ZONE_SKYLINE_STYLE in data.js) is felt everywhere during
+  // a run, not just on the map screen. Returns '' outside a run (no Game.act
+  // yet) so title/Sanctuary screens are unaffected.
+  renderZoneBanner() {
+    if (!Game.act) return '';
+    const theme = getActTheme(Game.act);
+    return `<div class="zone-banner" style="background:${theme.bg}">
+      <div class="zone-ground" style="background-image:url('assets/tilesets/${theme.id}.png')"></div>
+      ${renderZoneSkyline(theme.id, zoneProgress())}
+      <div class="zone-banner-fade"></div>
+    </div>`;
   },
 
   refreshHud() {
@@ -395,6 +442,7 @@ const App = {
     const reward = node.tamingReward;
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel taming-encounter">
         <h2>${reward.def.icon} A Wild ${reward.def.name}</h2>
         <p class="small-text">Step ${node.tamingStep + 1} of ${TAMING_DECISIONS.length}</p>
@@ -445,6 +493,7 @@ const App = {
     ];
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel taming-encounter">
         <h2>Tamed!</h2>
         <div class="outcome-box">${lines.join('<br>')}</div>
@@ -522,6 +571,7 @@ const App = {
     const lines = [`Wave ${g.waveIndex - 1} of ${g.totalWaves} cleared.`, ...this.rewardLines(reward), 'A short respite heals you before the next wave.'];
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel legendary-encounter">
         <h2>Legendary Encounter - Wave ${g.waveIndex} of ${g.totalWaves}</h2>
         <div class="outcome-box">${lines.join('<br>')}</div>
@@ -541,6 +591,7 @@ const App = {
     ];
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel legendary-encounter">
         <h2>Legendary!</h2>
         <div class="outcome-box">${lines.join('<br>')}</div>
@@ -555,6 +606,7 @@ const App = {
     node.eventRef = event;
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>${event.title}</h2>
         <p class="flavor">${event.text}</p>
@@ -599,6 +651,7 @@ const App = {
     }
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>Treasure</h2>
         <div class="outcome-box">${lines.join('<br>')}</div>
@@ -623,6 +676,7 @@ const App = {
     const fishOwned = pdata.materials.fish;
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>Campfire</h2>
         <p class="flavor">You may rest here before continuing your adventure.</p>
@@ -702,6 +756,7 @@ const App = {
 
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>Traveling Shop</h2>
         <p class="flavor">Spend your gold wisely before the adventure continues.</p>
@@ -752,6 +807,10 @@ const App = {
     if (isPlayer && kind === 'attack' && this.magicBallColor[Game.player.classId]) return '';
     let cls = `anim-${kind}`;
     if (isPlayer && kind === 'skill') cls += ` anim-skill-${this.classAbilityVfx[Game.player.classId] || 'default'}`;
+    // Basic Attacks get the same class-flavor glow layered onto the lunge
+    // (see .portrait[class*="anim-attack-"] in styles.css) so every physical
+    // class's own attack reads distinctly, not just their Skill.
+    if (isPlayer && kind === 'attack') cls += ` anim-attack-${this.classAbilityVfx[Game.player.classId] || 'default'}`;
     return cls;
   },
 
@@ -808,6 +867,27 @@ const App = {
     // them. See Combat.resolveAfterPlayerHit for where these get set.
     const critText = s.critText;
     s.critText = null;
+    // The health bar hit-shake/flash (see Combat.resolveAfterPlayerHit and
+    // resolveEnemyTurn) - `pct` (how big a bite this hit took out of that
+    // side's own max HP) drives --flash-intensity, so a huge crit shakes and
+    // flashes noticeably harder than a glancing hit. Floor of 0.4 so even a
+    // tiny hit still reads as "something happened."
+    const hpFlash = s.hpFlash;
+    s.hpFlash = null;
+    const hpFlashClass = (side) => (hpFlash && hpFlash.target === side) ? 'hp-bar-hit' : '';
+    const hpFlashStyleAttr = (side) => (hpFlash && hpFlash.target === side)
+      ? ` style="--flash-intensity:${(0.4 + Math.min(1, hpFlash.pct) * 3).toFixed(2)}"` : '';
+    // Which companion(s) landed a hit this round (see
+    // Combat.resolveCompanionAttacks) - consumed once so the lunge/glow only
+    // plays on the render right after it happens, same pattern as critText.
+    const companionAnim = s.companionAnim;
+    s.companionAnim = null;
+    // Which weapon-bearing slot this Attack swung (see pickAttackWeaponSlot in
+    // combat.js) - consumed once, same pattern as critText/hpFlash, so the
+    // portrait reverts to the resting mainHand look on the next render.
+    const weaponSlot = s.anim.weaponSlot;
+    s.anim.weaponSlot = null;
+    const isRangedAttack = s.anim.player === 'attack' && weaponSlot === 'ranged';
     const ballColor = s.anim.player === 'attack' ? this.magicBallColor[p.classId] : null;
     // Fireball gets its own fire-colored, flickering projectile (see
     // .fireball-projectile in styles.css) instead of the plain glow every
@@ -818,6 +898,7 @@ const App = {
     const theme = getActTheme(Game.act || 1);
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel ${inGauntlet || inRaid || inDungeon || inPvp ? 'legendary-encounter' : ''}">
         ${inGauntlet ? `<div class="gauntlet-banner">👑 Legendary Encounter - Wave ${Game.gauntlet.waveIndex} of ${Game.gauntlet.totalWaves}</div>` : ''}
         ${inPvp ? `<div class="gauntlet-banner">⚔️ PvP Match - Mirror of Yourself</div>` : ''}
@@ -841,22 +922,27 @@ const App = {
         ${this.renderCompanionParty(!!s.anim.player)}
         <div class="combat-arena">
           <div class="combatant player">
-            <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE)}</div>
+            <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE, companionAnim, weaponSlot)}</div>
             <div class="name">${p.className}</div>
-            <div class="hp-bar-wrap"><div class="hp-bar-fill" style="width:${Math.round((p.hp/stats.maxHp)*100)}%"></div></div>
+            <div class="hp-bar-container">
+              <div class="hp-bar-wrap ${hpFlashClass('player')}"${hpFlashStyleAttr('player')}><div class="hp-bar-fill" style="width:${Math.round((p.hp/stats.maxHp)*100)}%"></div></div>
+            </div>
             <div class="hp-label">${Math.max(0, Math.round((p.hp/stats.maxHp)*100))}%</div>
           </div>
           <div class="combatant enemy ${s.enemy.elite ? 'elite' : ''} ${s.enemy.boss ? 'boss' : ''} ${s.enemy.spectral ? 'spectral' : ''}">
             <div class="portrait ${this.animClass(s.anim.enemy, false)}" style="${!s.enemy.spectral ? `filter:${theme.enemyTint}` : ''}">
               ${anyCharacterSvg(s.enemy.id, epicEnemySize(s.enemy))}
-              ${critText ? `<div class="floating-crit">CRITICAL!<br>-${critText.dmg}</div>` : ''}
             </div>
             <div class="name">${s.enemy.name}</div>
-            <div class="hp-bar-wrap"><div class="hp-bar-fill" style="width:${Math.round((s.enemy.hp/s.enemy.maxHp)*100)}%"></div></div>
+            <div class="hp-bar-container">
+              <div class="hp-bar-wrap ${hpFlashClass('enemy')}"${hpFlashStyleAttr('enemy')}><div class="hp-bar-fill" style="width:${Math.round((s.enemy.hp/s.enemy.maxHp)*100)}%"></div></div>
+              ${critText ? `<div class="floating-crit">CRITICAL!<br>-${critText.dmg}</div>` : ''}
+            </div>
             <div class="hp-label">${Math.max(0, Math.round((s.enemy.hp/s.enemy.maxHp)*100))}%</div>
           </div>
           ${ballColor ? `<div class="magic-ball" style="--ball-color:${ballColor}"></div>` : ''}
           ${isFireballCast ? `<div class="fireball-projectile"></div>` : ''}
+          ${isRangedAttack ? `<div class="arrow-shot"></div>` : ''}
         </div>
 
         <div class="combat-log" id="combat-log">${s.log.map(l => `<div>${l}</div>`).join('')}</div>
@@ -866,7 +952,7 @@ const App = {
         `) : `
           <div class="combat-actions">
             <button id="act-attack" ${inputLocked ? 'disabled' : ''}>Attack</button>
-            <button id="act-skill" ${inputLocked || skill.cooldownLeft > 0 ? 'disabled' : ''}>${skill.name}${skill.cooldownLeft > 0 ? ` (${skill.cooldownLeft})` : ''}</button>
+            <button id="act-skill" ${inputLocked || skill.cooldownLeft > 0 ? 'disabled' : ''}>${skill.icon ? `<img src="${skill.icon}" width="18" height="18" alt="" class="btn-icon">` : ''}${skill.name}${skill.cooldownLeft > 0 ? ` (${skill.cooldownLeft})` : ''}</button>
             <button id="act-flee" ${inputLocked || s.enemy.boss || inGauntlet || stats.fleeDisabled ? 'disabled' : ''} title="${stats.fleeDisabled ? 'A curse binds your feet' : ''}">Flee</button>
           </div>
           <div class="item-row" id="item-row">
@@ -1075,6 +1161,7 @@ const App = {
     }
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>Trial Complete!</h2>
         <div class="outcome-box">You have proven yourself worthy of the ${CLASSES[classId].name}.<br>
@@ -1093,6 +1180,7 @@ const App = {
     const choices = choiceIds.map(id => RELICS[id]);
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel relic-choice">
         <h2>Choose a Relic</h2>
         <p class="flavor">A run-bound boon - lost if you fall. Pick one, or move on.</p>
@@ -1137,6 +1225,7 @@ const App = {
     const lines = [`Defeated ${enemy.name}.`, ...this.rewardLines(reward)];
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>Victory</h2>
         <div class="outcome-box">${lines.join('<br>')}</div>
@@ -1175,6 +1264,7 @@ const App = {
     if (cursedThisAct) lines.push(`<strong style="color:#c0392b">A curse falls upon you: ${cursedThisAct.icon} ${cursedThisAct.name}</strong> - ${cursedThisAct.desc}`);
     this.root.innerHTML = `
       ${this.renderHud()}
+      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>Act ${Game.act} Complete</h2>
         <div class="outcome-box">${lines.join('<br>')}</div>
@@ -2079,7 +2169,7 @@ const App = {
       return spellOptions.map(id => {
         const sp = SPELLS[id];
         const active = (rec.equipped.spell || cls.defaultSpell) === id;
-        return `<div class="gear-row"><div class="desc"><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
+        return `<div class="gear-row"><div class="desc"><span class="spell-icon"><img src="${sp.icon}" width="28" height="28" alt=""></span><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
           <button class="btn-secondary" data-spell="${id}" ${active ? 'disabled' : ''}>${active ? 'Active' : 'Equip'}</button></div>`;
       }).join('');
     }, (container, refresh) => {
@@ -2445,7 +2535,7 @@ const App = {
       return BANK_SHOP.spells.map(entry => {
         const owned = pdata.unlockedSpells.includes(entry.id);
         const sp = SPELLS[entry.id];
-        return `<div class="gear-row"><div class="desc"><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
+        return `<div class="gear-row"><div class="desc"><span class="spell-icon"><img src="${sp.icon}" width="28" height="28" alt=""></span><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
           <button class="btn-secondary" data-buy-spell="${entry.id}" ${owned || pdata.bankGold < entry.price ? 'disabled' : ''}>${owned ? 'Owned' : `${entry.price} 🪙`}</button></div>`;
       }).join('');
     }, (container, refresh) => {

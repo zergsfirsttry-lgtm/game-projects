@@ -142,6 +142,11 @@ const TEMPLATES = {
   ]
 };
 
+// Every id below also has PixelLab-generated art at assets/sprites/<id>.png
+// (see CREATURE_ART_IDS/spriteSvg further down) which takes over rendering -
+// SPRITES/TEMPLATES stay defined as the pre-PixelLab fallback for any
+// monster/pet/mount id that isn't (yet) in CREATURE_ART_IDS.
+//
 // Overlay/rect coordinates below are all 2x the original hand-authored
 // values (see the resolution note above TEMPLATES) - every row/col/w/h was
 // mechanically doubled to match the new finer grid, so a mirrored overlay
@@ -201,6 +206,12 @@ const SPRITES = {
     overlays: [ { row:8, col:14, w:4, h:2, color:'#e8a94a' } ] },
   pixieSprite: { template: 'flyer', palette: { W:'#e87dc9', H:'#8adbe8', F:'#ffffff', B:'#5ab0c9', E:'#f5e8ff' },
     overlays: [ { row:2, col:14, w:4, h:2, color:'#ffffff' } ] },
+  // Three support-role pets (see COMPANION_ROLE_GLOW/resolveCompanionAttacks
+  // in combat.js) - Tank, DPS, Healer.
+  ironshellTortle: { template: 'creature', palette: { E:'#4a6b3a', H:'#7a8a72', F:'#c9d4b8', B:'#5c6b52', P:'#8a5a2e' } },
+  direhornRaptor: { template: 'creature', palette: { E:'#8a2a1f', H:'#c9502e', F:'#e8c94a', B:'#6b1f14', P:'#3a1008' } },
+  faerieDragonling: { template: 'flyer', palette: { W:'#e87dc9', H:'#7de8c9', F:'#e8c94a', B:'#5ab0c9', E:'#ffd9f5' },
+    overlays: [ { row:2, col:14, w:4, h:2, color:'#e8c94a' } ] },
 
   // --- Mounts (see MOUNTS in data.js) ---
   netherdrake: { template: 'flyer', palette: { W:'#3a7a2a', H:'#5fae3a', F:'#e8f5a0', B:'#2a5c1e', E:'#a0e85a' },
@@ -340,7 +351,25 @@ function buildCompositeSVG(gridLayers, rectLayers, width, height, displayWidth, 
 
 // sizePx here means WIDTH (unchanged, existing convention) - monster
 // templates aren't affected by the wider class canvas above.
+// Monster/pet/mount ids with PixelLab-generated art (all square canvases,
+// generated at assets/sprites/<id>.png - see the session's art-migration
+// pass). Anything not listed here still falls back to the procedural
+// SPRITES/TEMPLATES compositor below, e.g. a newly-added monster before its
+// art is generated.
+const CREATURE_ART_IDS = new Set([
+  'slime', 'rat', 'goblin', 'wolf', 'bandit', 'skeleton', 'cultist', 'spider', 'zombie', 'imp', 'harpy', 'boar',
+  'ogre', 'darkKnight', 'witch', 'minotaur', 'vampire',
+  'rotWarden', 'banditKing', 'lich',
+  'dragonWhelpling', 'direwolfPup', 'pseudodragon', 'impFamiliar', 'moonkinHatchling', 'mechanicalSquirrel',
+  'owlFamiliar', 'pixieSprite', 'ironshellTortle', 'direhornRaptor', 'faerieDragonling',
+  'netherdrake', 'griffonMount', 'frostwolfMount', 'warKodo', 'hippogriffMount', 'nightmareSteed',
+  'unicornMount', 'spectralTiger'
+]);
+
 function spriteSvg(id, sizePx) {
+  if (CREATURE_ART_IDS.has(id)) {
+    return `<img src="assets/sprites/${id}.png" width="${sizePx}" height="${sizePx}" style="image-rendering:pixelated" alt="${id}">`;
+  }
   const def = SPRITES[id];
   if (!def) return '';
   const rows = TEMPLATES[def.template];
@@ -619,6 +648,34 @@ function wrapLegendaryWeaponGlow(svgMarkup) {
 // legs/boots -> L/B, chest -> A) into those dicts before calling in here.
 // capeColor/tabardColor/bracerColor/gloveColor have no dedicated shape region,
 // so they're painted as small extra rect accents instead.
+// Playable classes with PixelLab-generated body art (see
+// assets/sprites/classes/<id>/<armorStyle>_<weaponVisual>.png) - a full
+// one-shot illustration per armor-style/weapon-visual combo that classId can
+// actually reach (see characterSpriteFor in progression.js, which resolves
+// the combo from equipped gear and falls back to CLASS_ART_DEFAULTS for any
+// empty slot). Classes not in this set still render through the fully
+// procedural renderCharacterSprite below.
+const CLASS_ART_READY = new Set(['warrior', 'rogue', 'mage', 'paladin', 'hunter', 'warlock', 'barbarian', 'cleric', 'bard']);
+
+// The armor style / weapon visual shown for a class's still-unequipped
+// slots - an ungeared character reads as a light adventurer rather than
+// naked, and wielding their class's own signature weapon.
+const CLASS_ART_DEFAULTS = {
+  warrior: { armorStyle: 'leather', weaponVisual: 'sword' },
+  rogue: { armorStyle: 'leather', weaponVisual: 'dagger' },
+  mage: { armorStyle: 'cloth', weaponVisual: 'staff' },
+  paladin: { armorStyle: 'plate', weaponVisual: 'mace' },
+  hunter: { armorStyle: 'leather', weaponVisual: 'bow' },
+  warlock: { armorStyle: 'cloth', weaponVisual: 'staff' },
+  barbarian: { armorStyle: 'leather', weaponVisual: 'axe' },
+  cleric: { armorStyle: 'cloth', weaponVisual: 'mace' },
+  bard: { armorStyle: 'leather', weaponVisual: 'lute' }
+};
+
+function classBodyArtPath(classId, armorStyle, weaponVisual) {
+  return `assets/sprites/classes/${classId}/${armorStyle}_${weaponVisual}.png`;
+}
+
 // sizePx here means HEIGHT (not width, unlike spriteSvg) - the class canvas is
 // wider than it is tall (to give the weapon room), so sizing by height keeps
 // the character's on-screen height consistent regardless of that extra margin.
@@ -635,6 +692,30 @@ function renderCharacterSprite(classId, sizePx, options) {
   const weaponParts = (WEAPON_SHAPES[weaponStyle] || []).map(p => ({ row: p.row, col: p.col, w: p.w, h: p.h, color: weaponPalette[p.key] }));
 
   const accentParts = [];
+  // Shoulder guards physically broaden the silhouette rather than just
+  // tinting the existing pauldron-cap cells (armorPalette.T) - any equipped
+  // shoulder item extends the frame outward past the torso's own edge;
+  // epic/legendary shoulders (see WoW's own oversized/spiked epics for the
+  // reference) add a spike on top of that, bigger again at legendary.
+  // Drawn before the cape below so a cape's own accent (same corner of the
+  // canvas) layers over it, matching a cloak resting outside the pauldrons.
+  if (opts.shoulderStyle) {
+    // The torso's own pauldron cap (ARMOR_SHAPES row 12-13) is exactly as
+    // wide as the head (cols 12-20 / 32-40) - so the broadening pad sits just
+    // outside that, at cols 6-11 / 40-45, clear of the head at every row it
+    // touches. Epic adds a spike above the pad (row 9); legendary adds a
+    // bigger wing flourish above and further out again (row 7).
+    accentParts.push({ row: 11, col: 6, w: 6, h: 4, color: opts.shoulderPadColor });
+    accentParts.push({ row: 11, col: 40, w: 6, h: 4, color: opts.shoulderPadColor });
+    if (opts.shoulderStyle === 'spiked' || opts.shoulderStyle === 'winged') {
+      accentParts.push({ row: 9, col: 8, w: 3, h: 2, color: opts.shoulderPadColor });
+      accentParts.push({ row: 9, col: 41, w: 3, h: 2, color: opts.shoulderPadColor });
+    }
+    if (opts.shoulderStyle === 'winged') {
+      accentParts.push({ row: 7, col: 4, w: 6, h: 3, color: opts.shoulderPadColor });
+      accentParts.push({ row: 7, col: 42, w: 6, h: 3, color: opts.shoulderPadColor });
+    }
+  }
   if (opts.capeColor) {
     accentParts.push({ row: 12, col: 9, w: 3, h: 14, color: opts.capeColor });
     accentParts.push({ row: 12, col: 40, w: 3, h: 14, color: opts.capeColor });
@@ -658,4 +739,102 @@ function renderCharacterSprite(classId, sizePx, options) {
     SPRITE_W, SPRITE_H, displayWidth, sizePx, OUTLINE_COLOR,
     opts.legendaryWeapon ? 'legendary-weapon-glow' : ''
   );
+}
+
+// --- Zone skyline backdrops ---
+// One silhouette "unit" (a tree, spire, floating rock...) at a given center
+// x / baseline y. Purely geometric shapes, same spirit as the character
+// compositor: no raster art, just polygons tinted to the zone's own color.
+function zoneUnitShape(shape, cx, baseY, w, h, color) {
+  switch (shape) {
+    case 'tree':
+      return `<polygon points="${cx},${baseY - h} ${cx - w / 2},${baseY} ${cx + w / 2},${baseY}" fill="${color}"/>`;
+    case 'gnarled': {
+      const lean = w * 0.3;
+      return `<polygon points="${cx - w * 0.12},${baseY} ${cx + w * 0.12},${baseY} ${cx + lean},${baseY - h} ${cx + lean - w * 0.35},${baseY - h * 0.7} ${cx - lean + w * 0.4},${baseY - h * 0.55} ${cx - lean},${baseY - h * 0.9}" fill="${color}"/>`;
+    }
+    case 'mushroom':
+      return `<circle cx="${cx}" cy="${baseY - h * 0.85}" r="${w * 0.55}" fill="${color}"/><rect x="${cx - w * 0.08}" y="${baseY - h * 0.5}" width="${w * 0.16}" height="${h * 0.5}" fill="${color}"/>`;
+    case 'spire':
+      return `<rect x="${cx - w * 0.22}" y="${baseY - h * 0.55}" width="${w * 0.44}" height="${h * 0.55}" fill="${color}"/><polygon points="${cx - w * 0.3},${baseY - h * 0.55} ${cx + w * 0.3},${baseY - h * 0.55} ${cx},${baseY - h}" fill="${color}"/>`;
+    case 'arch':
+      return `<rect x="${cx - w * 0.4}" y="${baseY - h}" width="${w * 0.22}" height="${h}" fill="${color}"/><rect x="${cx + w * 0.18}" y="${baseY - h}" width="${w * 0.22}" height="${h}" fill="${color}"/><polygon points="${cx - w * 0.4},${baseY - h} ${cx + w * 0.4},${baseY - h} ${cx},${baseY - h * 1.35}" fill="${color}"/>`;
+    case 'asteroid':
+      return `<polygon points="${cx - w / 2},${baseY} ${cx - w * 0.2},${baseY - h} ${cx + w * 0.3},${baseY - h * 0.8} ${cx + w / 2},${baseY - h * 0.2} ${cx + w * 0.1},${baseY + h * 0.15}" fill="${color}"/>`;
+    default:
+      return `<rect x="${cx - w / 2}" y="${baseY - h}" width="${w}" height="${h}" fill="${color}"/>`;
+  }
+}
+
+// A row of `count` units spread across (and a bit past) the 400-wide
+// viewBox, with a deterministic sine-based jitter (not Math.random) so the
+// skyline doesn't visibly reshuffle every re-render - only the parallax
+// translate (driven by zone progress) moves it. 'asteroid' floats at a
+// varying height instead of sitting on the baseline.
+function buildZoneUnits(style, count, baseY, near) {
+  let out = '';
+  const spacing = 460 / count;
+  for (let i = 0; i < count; i++) {
+    const jitter = Math.sin(i * 2.7) * spacing * 0.28;
+    const cx = -20 + i * spacing + jitter;
+    const hJitter = 0.7 + ((i * 53) % 10) / 15;
+    const w = (near ? 34 : 22) * (0.85 + (i % 3) * 0.12);
+    const h = (near ? 42 : 26) * hJitter;
+    const y = style.shape === 'asteroid' ? baseY - 10 - ((i * 37) % 26) : baseY;
+    out += zoneUnitShape(style.shape, cx, y, w, h, style.color);
+  }
+  return out;
+}
+
+// One continuous mountain/dune line spanning the viewBox - a smooth wave for
+// dunes, a hard zigzag for jagged/icy peaks. `floorY` is the bottom edge of
+// the current canvas (120 for the wide encounter banner, taller for the
+// map's own canvas - see renderZoneSkyline's `viewH`).
+function buildZoneRidge(style, baseY, amplitude, near, floorY) {
+  const points = [`-20,${floorY}`];
+  const steps = near ? 14 : 10;
+  for (let i = 0; i <= steps; i++) {
+    const x = -20 + (460 / steps) * i;
+    const wave = style.shape === 'dune'
+      ? Math.sin(i * 1.3) * amplitude * 0.5 + Math.sin(i * 0.6) * amplitude * 0.3
+      : (i % 2 === 0 ? -amplitude : -amplitude * 0.35);
+    points.push(`${x.toFixed(1)},${(baseY + wave).toFixed(1)}`);
+  }
+  points.push(`440,${floorY}`);
+  return `<polygon points="${points.join(' ')}" fill="${style.color}"/>`;
+}
+
+// The full backdrop: a far (dimmer, slower) and near (fuller, faster) layer
+// for a cheap parallax read, plus an optional moon/sun disc or ambient glow.
+// `progress` (0-1, see zoneProgress in main.js) is how far into the current
+// act's map the player has traveled - it nudges both layers sideways so the
+// backdrop visibly drifts onward as the run pushes deeper into a zone,
+// instead of sitting frozen behind every screen.
+// `fit` picks how the 400-wide art fills whatever box it's dropped into:
+// 'cover' (default, used by the wide/short encounter banner) scales up and
+// crops the sides so the strip is filled edge to edge; 'contain' (used by
+// the map screen) scales to fit the full width instead, letterboxing empty
+// sky above rather than cropping the art. `viewH` is the canvas's own height
+// in SVG units (default 120, a short wide strip) - the map passes a much
+// taller value so, combined with 'contain', the skyline fills most of its
+// tall portrait-ish frame instead of being squeezed into a thin sliver at
+// the very bottom.
+function renderZoneSkyline(themeId, progress, fit, viewH) {
+  const style = ZONE_SKYLINE_STYLE[themeId] || ZONE_SKYLINE_STYLE.forest;
+  const p = Math.max(0, Math.min(1, progress || 0));
+  const h = viewH || 120;
+  const farShift = (-(p * 14)).toFixed(1);
+  const nearShift = (-(p * 30)).toFixed(1);
+  const farBaseY = h * 0.65, nearBaseY = h * 0.8;
+  const far = style.family === 'ridge' ? buildZoneRidge(style, farBaseY, h * 0.13, false, h) : buildZoneUnits(style, 7, farBaseY, false);
+  const near = style.family === 'ridge' ? buildZoneRidge(style, nearBaseY, h * 0.2, true, h) : buildZoneUnits(style, 5, nearBaseY, true);
+  const disc = style.disc ? `<circle cx="330" cy="${h * 0.18}" r="14" fill="${style.disc}" opacity="0.85"/>` : '';
+  const glow = style.glow ? `<circle cx="80" cy="${h * 0.58}" r="30" fill="${style.glow}" opacity="0.18"/><circle cx="300" cy="${h * 0.7}" r="24" fill="${style.glow}" opacity="0.15"/>` : '';
+  const preserve = fit === 'contain' ? 'xMidYMax meet' : 'xMidYMax slice';
+  return `<svg class="zone-skyline" viewBox="0 0 400 ${h}" preserveAspectRatio="${preserve}" xmlns="http://www.w3.org/2000/svg">
+    ${disc}
+    <g style="transform:translateX(${farShift}px)" opacity="0.5">${far}</g>
+    ${glow}
+    <g style="transform:translateX(${nearShift}px)" opacity="0.85">${near}</g>
+  </svg>`;
 }

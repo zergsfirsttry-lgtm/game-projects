@@ -10,6 +10,26 @@ const RARITIES = {
   legendary: { label: 'Legendary', color: '#e8a94a', mult: 3.6 }
 };
 
+// Once a class's body art is a flat PixelLab image (see CLASS_ART_READY in
+// sprites.js) rather than an SVG built from named color regions, per-slot
+// rarity tinting is no longer possible - this is the replacement: a single
+// CSS filter graded by the better of the equipped weapon/armor rarity,
+// echoing each rarity's own color (RARITIES[x].color) as a glow so an
+// upgrade still visibly reads on the portrait.
+const RARITY_SPRITE_FILTER = {
+  common: 'none',
+  uncommon: 'saturate(1.15) brightness(1.03)',
+  rare: 'saturate(1.3) brightness(1.06) hue-rotate(6deg) drop-shadow(0 0 3px rgba(74,143,232,0.55))',
+  epic: 'saturate(1.45) brightness(1.08) hue-rotate(-8deg) drop-shadow(0 0 4px rgba(157,111,232,0.65))',
+  legendary: 'saturate(1.6) brightness(1.1) hue-rotate(4deg) drop-shadow(0 0 5px rgba(232,169,74,0.75))'
+};
+
+function maxRarity(a, b) {
+  if (!a) return b || 'common';
+  if (!b) return a;
+  return RARITIES[a].mult >= RARITIES[b].mult ? a : b;
+}
+
 // The account's current Change Difficulty pick (see DIFFICULTIES in
 // data.js) - falls back to Normal if a save somehow has an unrecognized id.
 function currentDifficulty() {
@@ -44,7 +64,24 @@ const GEAR_TEMPLATES = {
 // 2-6, baseDef 1-5, baseHp 3-14) so a generated legendary doesn't dwarf the
 // hand-tuned named LEGENDARY_ITEMS.
 const WEAPON_VISUAL_CYCLE = ['sword', 'dagger', 'axe', 'staff', 'bow', 'mace', 'lute'];
-const WEAPON_VISUAL_ICON = { sword: '⚔️', dagger: '🗡️', axe: '🪓', staff: '🔮', bow: '🏹', mace: '🔨', lute: '🎻' };
+// PixelLab-generated icons (assets/icons/gear/) - every weapon/armor/
+// accessory item's `icon` field is stamped straight from one of these three
+// lookup tables (see generateGearPool/generateAccessoryPool/
+// generateEffectPool below), so swapping the table swaps the icon
+// everywhere that item ever renders (shop, inventory, armory, quest
+// rewards) without touching each call site.
+function gearIconImg(path) {
+  return `<img src="${path}" width="22" height="22" class="gear-icon" alt="">`;
+}
+const WEAPON_VISUAL_ICON = {
+  sword: gearIconImg('assets/icons/gear/weapon_sword.png'),
+  dagger: gearIconImg('assets/icons/gear/weapon_dagger.png'),
+  axe: gearIconImg('assets/icons/gear/weapon_axe.png'),
+  staff: gearIconImg('assets/icons/gear/weapon_staff.png'),
+  bow: gearIconImg('assets/icons/gear/weapon_bow.png'),
+  mace: gearIconImg('assets/icons/gear/weapon_mace.png'),
+  lute: gearIconImg('assets/icons/gear/weapon_lute.png')
+};
 const WEAPON_VISUAL_NOUNS = {
   sword: ['Sword', 'Blade', 'Saber', 'Longsword', 'Rapier'],
   dagger: ['Dagger', 'Knife', 'Shiv', 'Stiletto', 'Kris'],
@@ -55,7 +92,12 @@ const WEAPON_VISUAL_NOUNS = {
   lute: ['Lute', 'Harp', 'Fiddle', 'Mandolin', 'Lyre']
 };
 const ARMOR_VISUAL_CYCLE = ['cloth', 'leather', 'mail', 'plate'];
-const ARMOR_VISUAL_ICON = { cloth: '👕', leather: '🥋', mail: '🧥', plate: '🛡️' };
+const ARMOR_VISUAL_ICON = {
+  cloth: gearIconImg('assets/icons/gear/armor_cloth.png'),
+  leather: gearIconImg('assets/icons/gear/armor_leather.png'),
+  mail: gearIconImg('assets/icons/gear/armor_mail.png'),
+  plate: gearIconImg('assets/icons/gear/armor_plate.png')
+};
 const ARMOR_VISUAL_NOUNS = {
   cloth: ['Robe', 'Vestments', 'Cassock', 'Tunic', 'Wrap'],
   leather: ['Vest', 'Jerkin', 'Garb', 'Hide', 'Coat'],
@@ -117,7 +159,19 @@ const EXTRA_WEAPON_TEMPLATES = {
 };
 Object.assign(GEAR_TEMPLATES, EXTRA_WEAPON_TEMPLATES);
 
-const ACCESSORY_SLOT_ICON = { head: '⛑️', neck: '📿', shoulders: '🎽', back: '🧣', wrists: '⌚', hands: '🧤', waist: '🎗️', legs: '👖', boots: '👢', ring: '💍', trinket: '🔯' };
+const ACCESSORY_SLOT_ICON = {
+  head: gearIconImg('assets/icons/gear/slot_head.png'),
+  neck: gearIconImg('assets/icons/gear/slot_neck.png'),
+  shoulders: gearIconImg('assets/icons/gear/slot_shoulders.png'),
+  back: gearIconImg('assets/icons/gear/slot_back.png'),
+  wrists: gearIconImg('assets/icons/gear/slot_wrists.png'),
+  hands: gearIconImg('assets/icons/gear/slot_hands.png'),
+  waist: gearIconImg('assets/icons/gear/slot_waist.png'),
+  legs: gearIconImg('assets/icons/gear/slot_legs.png'),
+  boots: gearIconImg('assets/icons/gear/slot_boots.png'),
+  ring: gearIconImg('assets/icons/gear/slot_ring.png'),
+  trinket: gearIconImg('assets/icons/gear/slot_trinket.png')
+};
 const ACCESSORY_SLOT_NOUNS = {
   head: ['Helm', 'Hood', 'Circlet', 'Cowl', 'Crown'],
   neck: ['Necklace', 'Amulet', 'Pendant', 'Choker', 'Torc'],
@@ -1435,11 +1489,15 @@ function previewClassStats(classId) {
   // Sanctuary preview matches what combat will actually show.
   const setBonusPct = gearSetBonusPct(rec);
   const boost = (v) => v * (1 + setBonusPct);
+  // Every displayed stat is rounded to a whole number (Math.round - .5 and
+  // above rounds up) - `boost()` multiplies by a float set-bonus percentage,
+  // so without this a geared-up character would show a stat like 226.345...
+  // instead of a clean 226.
   return {
-    atk: Math.round((cls.atk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + talent.atk,
-    def: cls.def + boost(gear.def + bonus.def + companion.def + buff.def) + talent.def,
-    maxHp: Math.round((cls.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + talent.maxHp,
-    speed: cls.speed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + talent.speed,
+    atk: Math.round(Math.round((cls.atk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + talent.atk),
+    def: Math.round(cls.def + boost(gear.def + bonus.def + companion.def + buff.def) + talent.def),
+    maxHp: Math.round(Math.round((cls.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + talent.maxHp),
+    speed: Math.round(cls.speed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + talent.speed),
     goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + talent.goldBonus + reputation.goldBonus,
     setBonusPct
   };
@@ -1454,11 +1512,31 @@ function previewClassStats(classId) {
 // instead tints its own region of the shared body silhouette to that item's
 // rarity color - a helmet, say, recolors the hair region, and a legendary
 // piece reads as visually fancier than a common one.
-function characterSpriteFor(classId, sizePx) {
+// `weaponSlot` ('mainHand'|'ranged', default 'mainHand') picks which equipped
+// weapon-bearing slot's visual actually gets drawn - see pickAttackWeaponSlot
+// in combat.js, which rolls this per Attack so a character carrying both a
+// melee weapon and a bow visibly swings whichever one that specific attack
+// used, reverting to their mainHand "resting" look everywhere else (map,
+// armory, HUD) since those calls never pass a slot.
+function characterSpriteFor(classId, sizePx, weaponSlot) {
   const rec = Persistent.getCharacter(classId);
   const eq = rec.equipped;
   const weapon = eq.mainHand ? Persistent.findItem(eq.mainHand) : null;
   const armor = eq.chest ? Persistent.findItem(eq.chest) : null;
+
+  if (CLASS_ART_READY.has(classId)) {
+    const defaults = CLASS_ART_DEFAULTS[classId];
+    const rangedItem = eq.ranged ? Persistent.findItem(eq.ranged) : null;
+    const useRanged = weaponSlot === 'ranged' && rangedItem && rangedItem.visual;
+    const activeWeapon = useRanged ? rangedItem : weapon;
+    const armorStyle = (armor && armor.visual) || defaults.armorStyle;
+    const weaponVisual = (activeWeapon && activeWeapon.visual) || defaults.weaponVisual;
+    const path = classBodyArtPath(classId, armorStyle, weaponVisual);
+    const filter = RARITY_SPRITE_FILTER[maxRarity(activeWeapon && activeWeapon.rarity, armor && armor.rarity)];
+    const filterAttr = filter !== 'none' ? ` style="filter:${filter}"` : '';
+    return `<img src="${path}" width="${sizePx}" height="${sizePx}"${filterAttr} alt="${classId}">`;
+  }
+
   const shirt = eq.shirt ? Persistent.findItem(eq.shirt) : null;
   const shoulders = eq.shoulders ? Persistent.findItem(eq.shoulders) : null;
   const waist = eq.waist ? Persistent.findItem(eq.waist) : null;
@@ -1500,6 +1578,13 @@ function characterSpriteFor(classId, sizePx) {
   if (tabard) options.tabardColor = RARITIES[tabard.rarity].color;
   if (wrists) options.bracerColor = RARITIES[wrists.rarity].color;
   if (hands) options.gloveColor = RARITIES[hands.rarity].color;
+  // Any equipped shoulder item physically broadens the silhouette; epic gets
+  // a spike, legendary a full wing, on top of the same broadened base.
+  if (shoulders) {
+    options.shoulderPadColor = RARITIES[shoulders.rarity].color;
+    options.shoulderStyle = shoulders.rarity === 'legendary' ? 'winged'
+      : shoulders.rarity === 'epic' ? 'spiked' : 'flared';
+  }
 
   // Player-chosen customization (hair/eye/armor color, from the Sanctuary
   // Character tab) layers on top of gear-driven options - it overrides just
@@ -1523,8 +1608,8 @@ function characterSpriteFor(classId, sizePx) {
 // monster sprite, whichever the id resolves to - lets combat render enemy
 // portraits without caring whether the "enemy" is a monster or a class-trial
 // guardian wearing a class's own look.
-function anyCharacterSvg(id, sizePx) {
-  return CLASS_LOOKS[id] ? characterSpriteFor(id, sizePx) : spriteSvg(id, sizePx);
+function anyCharacterSvg(id, sizePx, weaponSlot) {
+  return CLASS_LOOKS[id] ? characterSpriteFor(id, sizePx, weaponSlot) : spriteSvg(id, sizePx);
 }
 
 // Composes the character together with whatever it currently has equipped as
@@ -1535,20 +1620,31 @@ function anyCharacterSvg(id, sizePx) {
 // combat portrait) - both render as a simple bottom-aligned flex row, laid
 // out by .companion-row in styles.css. The Sanctuary's own small icons (HUD,
 // class picker) stay plain since there's no room there for a whole group.
-function renderCompanionRig(classId, sizePx) {
+// `companionAnim` (only passed from the combat portrait - see
+// Combat.resolveCompanionAttacks and renderCombatScreen) is
+// {pet: role|'attack', mount: role|'attack'} for whichever companion just
+// landed a hit this round - drives a lunge animation glowing the color of
+// its role (COMPANION_ROLE_GLOW in data.js), or the default accent gold for
+// a plain non-role pet/mount.
+function renderCompanionRig(classId, sizePx, companionAnim, weaponSlot) {
   const rec = Persistent.getCharacter(classId);
   const mountId = rec.equipped.mount;
   const petId = rec.equipped.pet;
-  const riderSvg = anyCharacterSvg(classId, sizePx);
+  const riderSvg = anyCharacterSvg(classId, sizePx, weaponSlot);
   const mountSvg = mountId ? anyCharacterSvg(mountId, Math.round(sizePx * 0.8)) : '';
   const petSvg = petId ? anyCharacterSvg(petId, Math.round(sizePx * 0.5)) : '';
   // A WoW-style floating nameplate above the character's head, if the player
   // named them in the Sanctuary Character tab.
   const name = rec.customization && rec.customization.name;
   const nameplate = name ? `<span class="nameplate">${escapeHtml(name)}</span>` : '';
+  const actingClass = (kind) => (companionAnim && companionAnim[kind]) ? 'companion-acting' : '';
+  const actingStyle = (kind) => {
+    const acting = companionAnim && companionAnim[kind];
+    return acting ? ` style="--companion-glow:${COMPANION_ROLE_GLOW[acting] || 'var(--accent)'}"` : '';
+  };
   return `<span class="companion-row">` +
-    (mountSvg ? `<span class="companion-mount">${mountSvg}</span>` : '') +
+    (mountSvg ? `<span class="companion-mount ${actingClass('mount')}"${actingStyle('mount')}>${mountSvg}</span>` : '') +
     `<span class="companion-rider">${nameplate}${riderSvg}</span>` +
-    (petSvg ? `<span class="companion-pet">${petSvg}</span>` : '') +
+    (petSvg ? `<span class="companion-pet ${actingClass('pet')}"${actingStyle('pet')}>${petSvg}</span>` : '') +
     `</span>`;
 }

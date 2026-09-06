@@ -167,9 +167,45 @@ function getAvailableNodeIds(map, currentNodeId, visited) {
 // ============================================================================
 
 const VIEW_HEIGHT = 500;
-const ROWS_AHEAD = 4;
+// Only the very next row - the one the player can actually step to right now
+// - is visible. Rows past that stay undrawn (not just fogged) until the
+// player advances far enough that a given row BECOMES the immediate next
+// row, at which point it's revealed the same way. drawRoute already only
+// draws a line when both endpoints are in `screen`, so shrinking this alone
+// also hides every line/node beyond the immediate choice with no extra code.
+const ROWS_AHEAD = 1;
 const ROWS_BEHIND = 1;
 const MIN_SCALE = 0.32;
+
+// Zones with a themed third-person scene (assets/scenes/<id>/) - a plain
+// CSS gradient sky (theme.bg) plus the zone's own ground tileset as a land
+// strip along the bottom, with three small hand-picked pixel props (sky.png
+// - a sun or moon, cloud.png - a drifting atmosphere wisp, fg.png - a
+// swaying foreground silhouette) layered on top. Zones not in this set fall
+// back to the tiled ground texture + procedural skyline silhouette (see
+// renderMap). Cheaper and more consistent than painting a full unique scene
+// per zone - the land/sky is reused code, only the three small props differ.
+const ZONE_SCENE_READY = new Set(['forest', 'swamp', 'desert', 'hellfire', 'emerald', 'silvermoon', 'blacktemple', 'northrend', 'nether']);
+
+// Most fg props are tree-like and sway in the wind; a couple (a floating
+// rock shard, a jagged spire) read better bobbing gently up and down.
+const ZONE_SCENE_FG_MOTION = { blacktemple: 'bob', nether: 'bob' };
+
+// Sun/moon glow, drifting clouds, and a swaying/bobbing pair of foreground
+// props (pure CSS, see .map-scene-* in styles.css) are layered over the
+// land+sky so the scene doesn't feel like a single frozen frame.
+function renderZoneScene(theme) {
+  const fgMotion = ZONE_SCENE_FG_MOTION[theme.id] || 'sway';
+  return `<div class="map-scene">
+    <div class="map-scene-sky" style="background:${theme.bg}"></div>
+    <div class="map-scene-path" style="background-image:url('assets/tilesets/${theme.id}.png')"></div>
+    <img class="map-scene-sky-body" src="assets/scenes/${theme.id}/sky.png" alt="">
+    <img class="map-scene-cloud map-scene-cloud-1" src="assets/scenes/${theme.id}/cloud.png" alt="">
+    <img class="map-scene-cloud map-scene-cloud-2" src="assets/scenes/${theme.id}/cloud.png" alt="">
+    <img class="map-scene-fg map-scene-fg-left map-scene-fg-${fgMotion}-left" src="assets/scenes/${theme.id}/fg.png" alt="">
+    <img class="map-scene-fg map-scene-fg-right map-scene-fg-${fgMotion}-right" src="assets/scenes/${theme.id}/fg.png" alt="">
+  </div>`;
+}
 
 // Two camera profiles: a wider establishing shot for the very first choice
 // (nothing chosen yet - `currentRow` is -1), and a tighter, closer-in
@@ -177,11 +213,14 @@ const MIN_SCALE = 0.32;
 // path. The close profile anchors lower in the frame, spaces rows further
 // apart, and falls off scale faster - all of which read as the camera having
 // pulled in right behind the character rather than watching from a distance.
-const ANCHOR_Y_START = 350;
+// Anchored close to the bottom edge of VIEW_HEIGHT (500) so the traveler's
+// feet plant near the base of the frame, like a camera trailing right behind
+// them, with just enough clearance below to not look clipped.
+const ANCHOR_Y_START = 430;
 const ROW_GAP_START = 118;
 const SCALE_STEP_START = 0.17;
 
-const ANCHOR_Y_CLOSE = 400;
+const ANCHOR_Y_CLOSE = 480;
 const ROW_GAP_CLOSE = 145;
 const SCALE_STEP_CLOSE = 0.22;
 
@@ -228,6 +267,16 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
   const closeCam = !!cur; // pulled in tight once the player has taken their first step
   const { screen, centerX, anchorY } = computeScreenPositions(map, currentRow, closeCam);
 
+  // Once you've stepped onto a node, the sibling choices you *didn't* take in
+  // that same row are just dead alternate branches - hiding them (and any
+  // line touching them) keeps the screen to just where you stand and where
+  // you can go next, instead of a full historical diagram of roads not taken.
+  const hiddenSiblingIds = new Set(
+    (map.rows[currentRow] || [])
+      .filter(node => node.id !== currentNodeId)
+      .map(node => node.id)
+  );
+
   let svgLines = '';
   let svgHitAreas = '';
   const drawRoute = (fromScreen, targetId, dimmed) => {
@@ -241,9 +290,11 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
   };
 
   Object.values(map.nodes).forEach(node => {
+    if (hiddenSiblingIds.has(node.id)) return;
     const a = screen[node.id];
     if (!a) return;
     node.connections.forEach(targetId => {
+      if (hiddenSiblingIds.has(targetId)) return;
       const dimmed = !(visitedSet.has(node.id) && (visitedSet.has(targetId) || available.has(targetId)));
       drawRoute(a, targetId, dimmed);
     });
@@ -257,6 +308,7 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
 
   let nodesHtml = '';
   Object.keys(screen).forEach(nodeId => {
+    if (hiddenSiblingIds.has(nodeId)) return;
     const node = map.nodes[nodeId];
     const pos = screen[nodeId];
     const isVisited = visitedSet.has(node.id);
@@ -278,7 +330,7 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
   // part of what sells "closer to the player" beyond just the anchor/spacing.
   // renderCompanionRig also folds in an equipped mount (rendered as a
   // rideable steed underneath) and pet (rendered alongside).
-  const travelerSprite = classId ? renderCompanionRig(classId, closeCam ? 58 : 46) : '';
+  const travelerSprite = classId ? renderCompanionRig(classId, closeCam ? 100 : 78) : '';
   // The traveler rests at the CURRENT node's own projected position - not
   // just the horizontal center - so it visibly stands on the circle you
   // actually picked rather than snapping back to the middle of the road.
@@ -298,9 +350,23 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
     return `<span class="map-particle" style="${theme.motion === 'drift-side' ? 'top' : 'left'}:${pos}%; animation-delay:${delay}s; animation-duration:${duration}s; --particle-drift:${drift}px">${theme.particle}</span>`;
   }).join('');
 
+  // The skyline is anchored to the visible viewport (a sibling of the tall
+  // scrollable .map-scroll, sitting directly in .map-container instead of
+  // inside it) so it always shows at the bottom of what's on screen, rather
+  // than the bottom of the full (much taller) scrollable map coordinate
+  // space, which the camera rarely scrolls all the way down to.
+  const skylineProgress = Math.min(1, visitedIds.length / (Object.keys(map.nodes).length || 1));
+  const backdrop = ZONE_SCENE_READY.has(theme.id)
+    ? renderZoneScene(theme)
+    : `<div class="map-ground" style="background-image:url('assets/tilesets/${theme.id}.png')"></div>
+       <div class="map-skyline">${renderZoneSkyline(theme.id, skylineProgress, 'contain', 300)}</div>`;
+  // Zones with a full painted scene already carry plenty of atmosphere
+  // (drifting clouds, swaying trees) - the small drifting-emoji particles
+  // read as clutter layered on top of real art, so they're skipped there.
   container.innerHTML = `
+    ${backdrop}
     <div class="map-scroll" style="height:${VIEW_HEIGHT}px">
-      <div class="map-particles particle-${theme.motion}">${particles}</div>
+      <div class="map-particles particle-${theme.motion}">${ZONE_SCENE_READY.has(theme.id) ? '' : particles}</div>
       <div class="map-theme-label">${theme.name} · Act ${map.act}</div>
       <svg class="map-svg" width="${MAP_WIDTH}" height="${VIEW_HEIGHT}">${svgLines}${svgHitAreas}</svg>
       ${nodesHtml}
@@ -319,6 +385,58 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
   });
 }
 
+// Sends the two big foreground trees and the ground path (see
+// renderZoneScene) down off screen and fading (.fg-leaving/.path-leaving) -
+// called the instant the player leaves their current node, so the whole
+// treeline reacts to moving forward instead of just sitting there.
+function leaveForegroundTrees(container) {
+  container.querySelectorAll('.map-scene-fg-left, .map-scene-fg-right').forEach(tree => {
+    // Clear any leftover cycle state and force a reflow before re-adding the
+    // class - without this, re-triggering while a previous cycle's classes
+    // are somehow still present would be a no-op (the animation wouldn't
+    // restart).
+    tree.classList.remove('fg-leaving', 'fg-blooming');
+    void tree.offsetWidth;
+    tree.classList.add('fg-leaving');
+  });
+  const path = container.querySelector('.map-scene-path');
+  if (path) {
+    path.classList.remove('path-leaving', 'path-blooming');
+    void path.offsetWidth;
+    path.classList.add('path-leaving');
+  }
+}
+
+// Pops a fresh tree/path up out of the ground at the same spot (.fg-blooming
+// / .path-blooming, scaling up from a bottom-anchored transform-origin so it
+// reads as sprouting rather than fading in) - called once the traveler
+// actually arrives at the chosen node, not on a fixed timer, so the "gone"
+// gap always lasts exactly as long as the walk itself. A small per-cycle
+// jitter on the trees keeps the "new" one from looking like an exact rewind
+// of the one that just left.
+function bloomForegroundTrees(container) {
+  container.querySelectorAll('.map-scene-fg-left, .map-scene-fg-right').forEach(tree => {
+    const isLeft = tree.classList.contains('map-scene-fg-left');
+    tree.classList.remove('fg-leaving');
+    const jitter = (Math.random() - 0.5) * 6; // percentage points
+    tree.style.setProperty(isLeft ? 'left' : 'right', `calc(-9% + ${jitter.toFixed(2)}%)`);
+    tree.style.width = `${(38 + Math.random() * 5).toFixed(1)}%`;
+    tree.classList.add('fg-blooming');
+    tree.addEventListener('animationend', () => tree.classList.remove('fg-blooming'), { once: true });
+  });
+  const path = container.querySelector('.map-scene-path');
+  if (path) {
+    path.classList.remove('path-leaving');
+    path.classList.add('path-blooming');
+    path.addEventListener('animationend', () => path.classList.remove('path-blooming'), { once: true });
+  }
+}
+
+// How long to hold on the map, traveler mid-jump, after arrival before
+// actually cutting to the encounter - gives the bloom-in above (0.6s) time
+// to fully play out instead of getting cut off.
+const ARRIVAL_BUFFER_MS = 650;
+
 // Walks the traveler marker from the anchor point to the chosen node's
 // perspective-projected position (shrinking as it "moves into the distance")
 // before actually resolving the encounter - picking a route reads as setting
@@ -328,6 +446,8 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
 function animateTravel(container, targetPos, nodeId, onSelect) {
   const traveler = container.querySelector('#map-traveler');
   if (!traveler || !targetPos) { onSelect(nodeId); return; }
+
+  leaveForegroundTrees(container);
 
   container.querySelectorAll('.map-node.available, .map-line-hit').forEach(el => {
     el.style.pointerEvents = 'none';
@@ -347,5 +467,13 @@ function animateTravel(container, targetPos, nodeId, onSelect) {
     traveler.style.setProperty('--traveler-scale', targetPos.scale.toFixed(3));
   });
 
-  setTimeout(() => onSelect(nodeId), duration + 80);
+  setTimeout(() => {
+    // Arrived - swap the walk-cycle for a one-shot landing jump and bring
+    // the treeline/path back in while the player actually watches it
+    // happen, instead of getting yanked straight into the next screen.
+    traveler.classList.remove('walking');
+    traveler.classList.add('jumping');
+    bloomForegroundTrees(container);
+    setTimeout(() => onSelect(nodeId), ARRIVAL_BUFFER_MS);
+  }, duration);
 }
