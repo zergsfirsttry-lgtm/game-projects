@@ -14,14 +14,21 @@ const Combat = {
 
   start(enemyTemplate) {
     // Curses like Savage Foes/Hardened Foes scale the enemy up once, right at
-    // the start of the fight, rather than hooking every damage calc.
+    // the start of the fight, rather than hooking every damage calc. The
+    // Change Difficulty enemyMult (see DIFFICULTIES in data.js) stacks on
+    // top the same way - applied once here, so it uniformly covers every
+    // encounter type (regular, elite, boss, gauntlet, raid, PvP mirror)
+    // without needing a special case at each one's own call site.
     const stats = Game.effectiveStats();
-    const hp = Math.round(enemyTemplate.hp * (1 + (stats.enemyHpMult || 0)));
-    const atk = Math.round(enemyTemplate.atk * (1 + (stats.enemyAtkMult || 0)));
+    const diffMult = currentDifficulty().enemyMult;
+    const hp = Math.round(enemyTemplate.hp * (1 + (stats.enemyHpMult || 0)) * diffMult);
+    const atk = Math.round(enemyTemplate.atk * (1 + (stats.enemyAtkMult || 0)) * diffMult);
+    const def = Math.round((enemyTemplate.def || 0) * diffMult);
     this.state = {
       enemy: {
         ...enemyTemplate,
         atk,
+        def,
         maxHp: hp,
         hp
       },

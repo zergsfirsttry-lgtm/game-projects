@@ -10,6 +10,12 @@ const RARITIES = {
   legendary: { label: 'Legendary', color: '#e8a94a', mult: 3.6 }
 };
 
+// The account's current Change Difficulty pick (see DIFFICULTIES in
+// data.js) - falls back to Normal if a save somehow has an unrecognized id.
+function currentDifficulty() {
+  return DIFFICULTIES[Persistent.load().difficulty] || DIFFICULTIES.normal;
+}
+
 // `visual` picks which sprite layer shows when this item is equipped - see
 // ARMOR_SHAPES/WEAPON_SHAPES + their _STYLE_PALETTES in sprites.js. The
 // character sprite only ever shows the CHEST armor + main-hand weapon
@@ -496,6 +502,7 @@ function rollMaterialDrop(enemy) {
     const level = rec.profession.levels[profId];
     amount = Math.round(amount * (1 + PROFESSION_PASSIVES[profId].perLevelPct * (level - 1)));
   }
+  amount = Math.max(0, Math.round(amount * currentDifficulty().resourceMult));
   return { kind, amount };
 }
 
@@ -756,19 +763,21 @@ function computeAfkProgress() {
   // level the character started this AFK stretch at) so it plays by the
   // same rules a live level-up would, carries over remainders correctly
   // across multiple level-ups, and naturally stops at MAX_LEVEL.
-  const xpGained = Math.round(AFK_LEVELS_PER_HOUR * elapsedHours * xpForLevel(startLevel));
+  const diffMult = currentDifficulty().resourceMult;
+  const xpGained = Math.round(AFK_LEVELS_PER_HOUR * elapsedHours * xpForLevel(startLevel) * diffMult);
   const levelResult = xpGained > 0 ? grantXpToCharacter(rec, xpGained) : { levelsGained: 0 };
 
   // Economy: gold/materials/items at 70% of a rough "active hour" baseline,
   // scaled up by the character's starting level (so a higher-level character
-  // earns more per hour AFK, matching how a real adventure scales with act/level).
+  // earns more per hour AFK, matching how a real adventure scales with act/level),
+  // then by the account's Change Difficulty pick same as everything else.
   const levelFactor = 1 + (startLevel - 1) * 0.15;
-  const goldGained = Math.round(250 * levelFactor * AFK_ECONOMY_RATE * elapsedHours);
+  const goldGained = Math.round(250 * levelFactor * AFK_ECONOMY_RATE * elapsedHours * diffMult);
   pdata.bankGold += goldGained;
 
   const materialsGained = {};
   ['ore', 'leather', 'essence', 'herbs', 'wood', 'fish'].forEach(kind => {
-    const amt = Math.round(8 * levelFactor * AFK_ECONOMY_RATE * elapsedHours);
+    const amt = Math.round(8 * levelFactor * AFK_ECONOMY_RATE * elapsedHours * diffMult);
     if (amt > 0) { pdata.materials[kind] += amt; materialsGained[kind] = amt; }
   });
 
@@ -1333,7 +1342,7 @@ const Persistent = {
       ownedPets: [], ownedMounts: [], activeQuestIds: [], questProgress: {}, questTiers: {}, completedQuestIds: [],
       honor: 0, honorInventory: [], honorPotionCount: 0, pvpInventory: [], randomPvpEnabled: false, recipeRarityBoost: {},
       companionLevels: { pet: {}, mount: {} }, activeBuffs: [], lastSeenAt: Date.now(), reputation: {},
-      recruitedCompanions: [], equippedCompanionIds: [], showCheats: false, tutorialSeen: false
+      recruitedCompanions: [], equippedCompanionIds: [], showCheats: false, tutorialSeen: false, difficulty: 'normal'
     };
   },
 

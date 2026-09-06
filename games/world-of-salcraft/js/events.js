@@ -29,6 +29,15 @@ function applyOutcome(outcome) {
   if (outcome.statBoost) {
     if (outcome.statBoost.atk) { Game.player.baseAtk += outcome.statBoost.atk; lines.push(`+${outcome.statBoost.atk} ATK permanently`); }
   }
+  // A moral-choice buff/debuff (see the EVENTS entries with good/evil/
+  // neutral choices) - lasts a few encounters, not real time, and vanishes
+  // with the run like a curse or relic (see Game.grantTempEffect).
+  if (outcome.tempEffect) {
+    const te = outcome.tempEffect;
+    Game.grantTempEffect(te.label, te.icon, te.effect, te.encounters);
+    const desc = Object.keys(te.effect).map(k => describeEffectLever(k, te.effect[k])).join(', ');
+    lines.push(`${te.icon} ${te.label}: ${desc} (${te.encounters} encounters)`);
+  }
   return lines;
 }
 

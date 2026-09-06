@@ -8,9 +8,9 @@
 // frame. Only combat/map portraits follow this rule - menu chrome (class
 // select cards, the Armory paperdoll portrait, HUD mini-icons) scales
 // independently since those aren't "encounters."
-const PLAYER_SPRITE_SIZE = 32;
-const EPIC_ENEMY_SPRITE_SIZE = 64;
-const REGULAR_ENEMY_SPRITE_SIZE = 32;
+const PLAYER_SPRITE_SIZE = 56;
+const EPIC_ENEMY_SPRITE_SIZE = 88;
+const REGULAR_ENEMY_SPRITE_SIZE = 56;
 function epicEnemySize(enemy) {
   return (enemy.boss || enemy.elite) ? EPIC_ENEMY_SPRITE_SIZE : REGULAR_ENEMY_SPRITE_SIZE;
 }
@@ -93,11 +93,13 @@ const App = {
         </div>
         <button class="btn-primary" id="btn-new-run">Begin Adventure</button>
         <button class="btn-secondary" id="btn-sanctuary">Sanctuary</button>
+        <button class="btn-secondary" id="btn-difficulty">🎚️ Change Difficulty (${DIFFICULTIES[pdata.difficulty].name})</button>
         <button class="btn-secondary" id="btn-settings">⚙️ Settings</button>
         <button class="btn-secondary" id="btn-how-to-play">❔ How to Play</button>
       </div>`;
     document.getElementById('btn-new-run').addEventListener('click', () => this.showClassSelect());
     document.getElementById('btn-sanctuary').addEventListener('click', () => this.showSanctuary());
+    document.getElementById('btn-difficulty').addEventListener('click', () => this.showDifficultyModal());
     document.getElementById('btn-settings').addEventListener('click', () => this.showSettingsModal());
     document.getElementById('btn-how-to-play').addEventListener('click', () => this.showTutorialModal());
     // A brand-new player (never dismissed it before) gets the walkthrough
@@ -112,13 +114,17 @@ const App = {
       const unlocked = isClassUnlocked(c.id);
       const rec = Persistent.getCharacter(c.id);
       const spell = SPELLS[rec.equipped.spell || c.defaultSpell];
+      // The character's ACTUAL current stats (level, gear, talents, relics,
+      // Gear Set Bonus, everything) - not the class's flat base numbers, so
+      // this screen reflects who that character really is right now.
+      const stats = unlocked ? previewClassStats(c.id) : null;
       return `
       <button type="button" class="class-card ${unlocked ? '' : 'locked'}" data-class="${c.id}" ${unlocked ? '' : 'disabled'}>
         <div class="class-icon">${characterSpriteFor(c.id, 64)}</div>
         <h3>${c.name} ${unlocked ? `<span class="small-text">Lv.${rec.level}</span>` : ''}</h3>
         ${unlocked ? `
           <p>${c.blurb}</p>
-          <div class="class-stats">HP ${c.maxHp} · ATK ${c.atk} · DEF ${c.def} · SPD ${c.speed}</div>
+          <div class="class-stats">HP ${stats.maxHp} · ATK ${stats.atk} · DEF ${stats.def} · SPD ${stats.speed}</div>
           <div class="class-stats">${spell.name}: ${spell.desc}</div>
         ` : `
           <p class="small-text">🔒 Locked</p>
@@ -227,19 +233,24 @@ const App = {
       const desc = Object.keys(b.effect || {}).map(k => describeEffectLever(k, b.effect[k])).join(', ');
       return `<span title="${b.label}: ${desc} (${minsLeft}m left)">${b.icon}</span>`;
     }).join('');
+    const moralEffects = (p.tempEffects || []).map(e => {
+      const desc = Object.keys(e.effect || {}).map(k => describeEffectLever(k, e.effect[k])).join(', ');
+      return `<span title="${e.label}: ${desc} (${e.encountersLeft} encounter${e.encountersLeft === 1 ? '' : 's'} left)">${e.icon}</span>`;
+    }).join('');
     return `
       <div class="hud">
         <div class="hud-player">
           <div class="sprite-mini">${characterSpriteFor(p.classId, 32)}</div>
           <div>
             <div class="hp-bar-wrap"><div class="hp-bar-fill" style="width:${hpPct}%"></div></div>
-            <div class="hp-label">${p.hp} / ${stats.maxHp} HP</div>
+            <div class="hp-label">${hpPct}% HP</div>
           </div>
         </div>
         <div class="hud-gold">${p.gold} 🪙</div>
         <div class="hud-relics">${relics || '<span class="small-text">no relics</span>'}</div>
         ${curses ? `<div class="hud-curses">${curses}</div>` : ''}
         ${buffs ? `<div class="hud-buffs">${buffs}</div>` : ''}
+        ${moralEffects ? `<div class="hud-buffs">${moralEffects}</div>` : ''}
         <div class="hud-act">Act ${Game.act} · Lv.${stats.level}</div>
         <label class="auto-toggle" title="Auto-resolves combat and, on the map, always sets out down whichever path looks hardest.">
           <input type="checkbox" id="hud-auto-toggle" ${this.autoCombat ? 'checked' : ''}> AUTO
@@ -254,6 +265,7 @@ const App = {
 
   // ---------------- Map ----------------
   showMap() {
+    Game.tickTempEffects();
     this.root.innerHTML = `
       ${this.renderHud()}
       <div class="map-container" id="map-container"></div>
@@ -293,40 +305,24 @@ const App = {
   // Sanctuary shell (no tab bar), so Shop/Crafting/Gathering/etc. stay
   // reachable only after the run actually ends and the player is back in
   // the Sanctuary proper.
+  // Mirrors the Sanctuary Inventory tab exactly (renderInventoryCategories/
+  // wireInventoryCategoryClicks) plus its own Armory and Gathering Profession
+  // categories, so gearing up and re-equipping never requires bailing out to
+  // the Sanctuary mid-run. Crafting/Shop stay Sanctuary-only by design.
   showInRunInventory() {
     const classId = Game.player.classId;
-    const pdata = Persistent.load();
-    const gearRow = (item) => this.renderGearRow(classId, item);
-    const weapons = pdata.inventory.filter(i => i.slot === 'weapon');
-    const armorSlotKeys = ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket'];
-    const armor = pdata.inventory.filter(i => armorSlotKeys.includes(i.slot));
-    const openDetailKeys = Array.from(this.root.querySelectorAll('details[open]')).map(d => d.dataset.key);
-    const scrollY = window.scrollY;
+    const extraRows = this.categoryButtonRow('inv-armory', '🎽', 'Armory', 'View and change your equipped gear')
+      + this.categoryButtonRow('inv-gathering', '⛏️', 'Gathering Profession', `Lv.1-${PROFESSION_MAX_LEVEL} - switch which one is earning XP`);
     this.root.innerHTML = `
       ${this.renderHud()}
       <div class="panel">
         <h2>Inventory</h2>
-        <details class="shop-category" data-key="weapons" open>
-          <summary>Weapons <span class="small-text">(${weapons.length} owned)</span></summary>
-          ${weapons.length ? weapons.map(gearRow).join('') : '<p class="small-text">No weapons owned.</p>'}
-        </details>
-        <details class="shop-category" data-key="armor">
-          <summary>Armor & Accessories <span class="small-text">(${armor.length} owned)</span></summary>
-          ${armor.length ? armor.map(gearRow).join('') : '<p class="small-text">None owned yet.</p>'}
-        </details>
-        <details class="shop-category" data-key="profession">
-          <summary>Gathering Profession</summary>
-          ${this.renderProfessionRows(classId)}
-        </details>
+        ${this.renderInventoryCategories(classId, extraRows)}
         <button class="btn-secondary" id="btn-inrun-inventory-back">Back to Map</button>
       </div>`;
-    openDetailKeys.forEach(key => {
-      const el = this.root.querySelector(`details[data-key="${key}"]`);
-      if (el) el.open = true;
-    });
-    window.scrollTo(0, scrollY);
-    this.wireGearEquipClicks(classId, this.root, () => this.showInRunInventory());
-    this.wireProfessionClicks(classId, this.root, () => this.showInRunInventory());
+    this.wireInventoryCategoryClicks(classId, this.root, () => this.showInRunInventory());
+    const gatheringBtn = this.root.querySelector('[data-open-category="inv-gathering"]');
+    if (gatheringBtn) gatheringBtn.addEventListener('click', () => this.showProfGatheringModal(classId, () => this.showInRunInventory()));
     document.getElementById('btn-inrun-inventory-back').addEventListener('click', () => this.showMap());
   },
 
@@ -511,6 +507,7 @@ const App = {
       pdata.ownedLegendaries.push(g.legendaryId);
       const legendaryItem = instantiateLegendary(g.legendaryId);
       pdata.inventory.push(legendaryItem);
+      if (Persistent.getCharacter(Game.player.classId).autoEquip) this.autoEquipBestGear(Game.player.classId);
       Persistent.save();
       Game.gauntlet = null;
       this.showLegendaryReward(legendaryItem, { goldReward, xpReward, levelResult });
@@ -643,12 +640,12 @@ const App = {
         </div>
         <div id="outcome-slot"></div>
       </div>`;
+    // Picking any option returns straight to the map - no separate Continue
+    // click needed. The outcome shows as a self-dismissing toast (see
+    // showAutoToast) instead of a full screen.
     const finish = (text) => {
-      document.querySelectorAll('.rest-option button').forEach(b => b.disabled = true);
-      document.getElementById('outcome-slot').innerHTML = `
-        <div class="outcome-box">${text}</div>
-        <button class="btn-primary" id="btn-continue" style="margin-top:10px">Continue</button>`;
-      document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+      this.showMap();
+      this.showAutoToast(text);
     };
     // Fishing passive: an independent chance to catch a fish whenever you
     // rest at all, regardless of which option you pick.
@@ -664,7 +661,6 @@ const App = {
       Game.heal(healAmount);
       Game.grantProfessionXp(rand(4, 9));
       const caught = tryCatchFish();
-      this.refreshHud();
       finish(`You rest by the fire. +${healAmount} HP.${caught ? ' You catch a fish while resting!' : ''}`);
     });
     document.getElementById('btn-rest-skill').addEventListener('click', () => {
@@ -680,7 +676,6 @@ const App = {
       Game.grantProfessionXp(rand(4, 9));
       grantSpecificProfessionXp(rec, 'cooking', 15);
       Persistent.save();
-      this.refreshHud();
       finish(`You cook your catch over the fire. +${cookHealAmount} HP, +15 Cooking XP.`);
     });
   },
@@ -849,7 +844,7 @@ const App = {
             <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE)}</div>
             <div class="name">${p.className}</div>
             <div class="hp-bar-wrap"><div class="hp-bar-fill" style="width:${Math.round((p.hp/stats.maxHp)*100)}%"></div></div>
-            <div class="hp-label">${p.hp} / ${stats.maxHp}</div>
+            <div class="hp-label">${Math.max(0, Math.round((p.hp/stats.maxHp)*100))}%</div>
           </div>
           <div class="combatant enemy ${s.enemy.elite ? 'elite' : ''} ${s.enemy.boss ? 'boss' : ''} ${s.enemy.spectral ? 'spectral' : ''}">
             <div class="portrait ${this.animClass(s.anim.enemy, false)}" style="${!s.enemy.spectral ? `filter:${theme.enemyTint}` : ''}">
@@ -858,7 +853,7 @@ const App = {
             </div>
             <div class="name">${s.enemy.name}</div>
             <div class="hp-bar-wrap"><div class="hp-bar-fill" style="width:${Math.round((s.enemy.hp/s.enemy.maxHp)*100)}%"></div></div>
-            <div class="hp-label">${s.enemy.hp} / ${s.enemy.maxHp}</div>
+            <div class="hp-label">${Math.max(0, Math.round((s.enemy.hp/s.enemy.maxHp)*100))}%</div>
           </div>
           ${ballColor ? `<div class="magic-ball" style="--ball-color:${ballColor}"></div>` : ''}
           ${isFireballCast ? `<div class="fireball-projectile"></div>` : ''}
@@ -1940,7 +1935,12 @@ const App = {
     return ['chest', 'head', 'neck', 'shoulders', 'back', 'shirt', 'tabard', 'wrists', 'hands', 'waist', 'legs', 'boots', 'ring', 'trinket'];
   },
 
-  renderSanctuaryInventory(classId) {
+  // Shared by the Sanctuary Inventory tab AND the mid-adventure Inventory
+  // panel (see showInRunInventory) - same categories, same modals, so
+  // viewing/equipping gear is one consistent experience whether you're at
+  // the Sanctuary or mid-run. `extraRows` lets the in-run panel tack on its
+  // own Armory category without duplicating this list.
+  renderInventoryCategories(classId, extraRows) {
     const pdata = Persistent.load();
     const cls = CLASSES[classId];
     const weapons = pdata.inventory.filter(i => i.slot === 'weapon');
@@ -1949,6 +1949,7 @@ const App = {
     const recipeItems = pdata.inventory.filter(i => i.slot === 'recipe');
     const foodItems = pdata.inventory.filter(i => i.slot === 'food');
     return `
+      ${extraRows || ''}
       ${this.categoryButtonRow('inv-bank', '🏦', 'Resource Bank', `${pdata.bankGold} gold and every material you've gathered`)}
       ${this.categoryButtonRow('inv-weapons', '⚔️', 'Weapons', `${weapons.length} owned - main hand/off hand/ranged`)}
       ${this.categoryButtonRow('inv-armor', '🛡️', 'Armor & Accessories', `${armor.length} owned - chest, helm, shoulders, cloak, rings, trinkets, and more`)}
@@ -1957,12 +1958,36 @@ const App = {
       ${this.categoryButtonRow('inv-food', '🍗', 'Food', `${foodItems.length} owned - eat for a 1-hour buff, or feed to a pet/mount at the House`)}
       ${this.categoryButtonRow('inv-spells', '🔮', 'Spells', `for ${cls.name}`)}
       ${this.categoryButtonRow('inv-relics', '💠', 'Permanent Relics', `${pdata.permanentRelics.length} owned - always active, every run, every class`)}
-      ${this.categoryButtonRow('inv-pets', '🐾', 'Pets', `${pdata.ownedPets.length} tamed - persistent, equip one per character`)}
-      ${this.categoryButtonRow('inv-mounts', '🐎', 'Mounts', `${pdata.ownedMounts.length} tamed - persistent, equip one per character`)}
     `;
   },
 
-  showInvBankModal(classId, tab) {
+  renderSanctuaryInventory(classId) {
+    return this.renderInventoryCategories(classId);
+  },
+
+  // Dispatches every [data-open-category] button rendered by
+  // renderInventoryCategories to its modal - shared by the Sanctuary
+  // Inventory tab and the in-run Inventory panel, which only differ in what
+  // `onClose` does afterward (redraw the Sanctuary tab vs. the in-run panel).
+  wireInventoryCategoryClicks(classId, root, onClose) {
+    const modals = {
+      'inv-bank': () => this.showInvBankModal(classId, onClose),
+      'inv-weapons': () => this.showInvWeaponsModal(classId, onClose),
+      'inv-armor': () => this.showInvArmorModal(classId, onClose),
+      'inv-containers': () => this.showInvContainersModal(classId, onClose),
+      'inv-recipes': () => this.showInvRecipesModal(classId, onClose),
+      'inv-food': () => this.showInvFoodModal(classId, onClose),
+      'inv-spells': () => this.showInvSpellsModal(classId, onClose),
+      'inv-relics': () => this.showInvRelicsModal(classId, onClose),
+      'inv-armory': () => this.showInvArmoryModal(classId, onClose)
+    };
+    root.querySelectorAll('[data-open-category]').forEach(btn => {
+      const fn = modals[btn.dataset.openCategory];
+      if (fn) btn.addEventListener('click', fn);
+    });
+  },
+
+  showInvBankModal(classId, onClose) {
     this.showListModal('🏦 Resource Bank', () => {
       const pdata = Persistent.load();
       const rows = [
@@ -1971,24 +1996,24 @@ const App = {
         ['🐟', 'Fish', pdata.materials.fish], ['✨', 'Dust', pdata.materials.dust], ['🔹', 'Shard', pdata.materials.shard], ['💠', 'Crystal', pdata.materials.crystal]
       ];
       return rows.map(([icon, label, amount]) => `<div class="gear-row"><div class="desc"><span>${icon}</span><div><strong>${label}</strong></div></div><div class="small-text">${amount}</div></div>`).join('');
-    }, () => {}, () => this.showSanctuary(classId, tab));
+    }, () => {}, onClose);
   },
 
-  showInvWeaponsModal(classId, tab) {
+  showInvWeaponsModal(classId, onClose) {
     this.showListModal('⚔️ Weapons', () => {
       const weapons = Persistent.load().inventory.filter(i => i.slot === 'weapon');
       return weapons.length ? weapons.map(item => this.renderGearRow(classId, item)).join('') : '<p class="small-text">No weapons owned. Craft or buy one.</p>';
-    }, (container, refresh) => this.wireGearEquipClicks(classId, container, refresh), () => this.showSanctuary(classId, tab));
+    }, (container, refresh) => this.wireGearEquipClicks(classId, container, refresh), onClose);
   },
 
-  showInvArmorModal(classId, tab) {
+  showInvArmorModal(classId, onClose) {
     this.showListModal('🛡️ Armor & Accessories', () => {
       const armor = Persistent.load().inventory.filter(i => this.armorSlotKeys().includes(i.slot));
       return armor.length ? armor.map(item => this.renderGearRow(classId, item)).join('') : '<p class="small-text">None owned yet - find them on your adventures.</p>';
-    }, (container, refresh) => this.wireGearEquipClicks(classId, container, refresh), () => this.showSanctuary(classId, tab));
+    }, (container, refresh) => this.wireGearEquipClicks(classId, container, refresh), onClose);
   },
 
-  showInvContainersModal(classId, tab) {
+  showInvContainersModal(classId, onClose) {
     this.showListModal('🎁 Containers', () => {
       const pdata = Persistent.load();
       const containers = pdata.inventory.filter(i => i.slot === 'container');
@@ -2008,22 +2033,23 @@ const App = {
           pdata.inventory.splice(idx, 1);
           const result = openContainer(c.containerId);
           if (result.pvpOnly) pdata.pvpInventory.push(result); else pdata.inventory.push(result);
+          if (!result.pvpOnly && Persistent.getCharacter(classId).autoEquip) this.autoEquipBestGear(classId);
           Persistent.save();
           this.lastContainerResult = `${c.name} contained: ${result.icon} ${result.name} (${result.pvpUnique ? 'Unique' : RARITIES[result.rarity].label})`;
           refresh();
         });
       });
-    }, () => this.showSanctuary(classId, tab));
+    }, onClose);
   },
 
-  showInvRecipesModal(classId, tab) {
+  showInvRecipesModal(classId, onClose) {
     this.showListModal('📜 Recipes', () => {
       const recipeItems = Persistent.load().inventory.filter(i => i.slot === 'recipe');
       return recipeItems.length ? recipeItems.map(r => `<div class="gear-row"><div class="desc"><span>${r.icon}</span><div><strong>${r.name}</strong><div class="small-text">${r.desc || 'Consume in Crafting to upgrade the matching recipe one rarity tier.'}</div></div></div></div>`).join('') : '<p class="small-text">None owned yet - recipes have a small chance to drop from encounters.</p>';
-    }, () => {}, () => this.showSanctuary(classId, tab));
+    }, () => {}, onClose);
   },
 
-  showInvFoodModal(classId, tab) {
+  showInvFoodModal(classId, onClose) {
     this.showListModal('🍗 Food', () => {
       const foodItems = Persistent.load().inventory.filter(i => i.slot === 'food');
       return foodItems.length ? foodItems.map(f => `<div class="gear-row" style="border-left:3px solid ${RARITIES[f.rarity].color}"><div class="desc"><span>${f.icon}</span><div><strong style="color:${RARITIES[f.rarity].color}">${f.name}</strong><div class="small-text">${RARITIES[f.rarity].label} · ${this.describeItemStats(f)}</div></div></div>
@@ -2041,10 +2067,10 @@ const App = {
           refresh();
         });
       });
-    }, () => this.showSanctuary(classId, tab));
+    }, onClose);
   },
 
-  showInvSpellsModal(classId, tab) {
+  showInvSpellsModal(classId, onClose) {
     this.showListModal(`🔮 Spells for ${CLASSES[classId].name}`, () => {
       const pdata = Persistent.load();
       const rec = Persistent.getCharacter(classId);
@@ -2066,42 +2092,52 @@ const App = {
           refresh();
         });
       });
-    }, () => this.showSanctuary(classId, tab));
+    }, onClose);
   },
 
-  showInvRelicsModal(classId, tab) {
+  showInvRelicsModal(classId, onClose) {
     this.showListModal('💠 Permanent Relics', () => {
       const pdata = Persistent.load();
       return pdata.permanentRelics.length
         ? pdata.permanentRelics.map(id => `<div class="gear-row"><div class="desc"><span>${RELICS[id].icon}</span><div><strong>${RELICS[id].name}</strong><div class="small-text">${RELICS[id].desc}</div></div></div></div>`).join('')
         : '<p class="small-text">None yet - buy some from the Shop.</p>';
-    }, () => {}, () => this.showSanctuary(classId, tab));
+    }, () => {}, onClose);
   },
 
-  showInvCompanionModal(classId, tab, kind, pool, title) {
-    this.showListModal(title, () => {
-      const pdata = Persistent.load();
-      const rec = Persistent.getCharacter(classId);
-      const ownedIds = kind === 'pet' ? pdata.ownedPets : pdata.ownedMounts;
-      if (!ownedIds.length) return `<p class="small-text">No ${kind}s tamed yet - find one on a Wild Creature encounter.</p>`;
-      return ownedIds.map(id => {
-        const def = pool[id];
-        const equipped = rec.equipped[kind] === id;
-        return `<div class="gear-row"><div class="desc"><span>${def.icon}</span><div><strong>${def.name}</strong><div class="small-text">${def.universe} · ${def.desc}</div></div></div>
-          <button class="btn-secondary" data-companion-kind="${kind}" data-companion-id="${id}">${equipped ? 'Unequip' : 'Equip'}</button>
-        </div>`;
-      }).join('');
+  // The Armory paperdoll, reachable mid-adventure (not just the Sanctuary
+  // Character tab) - same renderArmoryPaperdoll/renderSlotPicker this class
+  // uses everywhere else, just inside a popup instead of a full tab.
+  showInvArmoryModal(classId, onClose) {
+    let selectedSlot = null;
+    this.showListModal('🎽 Armory', () => {
+      return this.renderArmoryPaperdoll(classId) + (selectedSlot ? this.renderSlotPicker(classId, selectedSlot) : '');
     }, (container, refresh) => {
-      container.querySelectorAll('[data-companion-kind]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const rec = Persistent.getCharacter(classId);
-          const k = btn.dataset.companionKind, id = btn.dataset.companionId;
-          rec.equipped[k] = rec.equipped[k] === id ? null : id;
-          Persistent.save();
+      const rec = Persistent.getCharacter(classId);
+      container.querySelectorAll('[data-slot-key]').forEach(el => {
+        el.addEventListener('click', () => {
+          selectedSlot = selectedSlot === el.dataset.slotKey ? null : el.dataset.slotKey;
           refresh();
         });
       });
-    }, () => this.showSanctuary(classId, tab));
+      container.querySelectorAll('[data-picker-uid]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const uid = btn.dataset.pickerUid, key = btn.dataset.pickerKey;
+          if (rec.equipped[key] === uid) {
+            unequipItemEverywhereOnRecord(rec, uid);
+          } else {
+            const item = Persistent.findItem(uid);
+            if (!item) return;
+            Persistent.unequipEverywhere(uid);
+            equipItemToSlot(rec, item, key);
+          }
+          Persistent.save();
+          selectedSlot = null;
+          refresh();
+        });
+      });
+      const closePickerBtn = container.querySelector('#btn-close-slot-picker');
+      if (closePickerBtn) closePickerBtn.addEventListener('click', () => { selectedSlot = null; refresh(); });
+    }, onClose);
   },
 
   // Smelting's passive discounts the GOLD half of a recipe's cost (materials
@@ -2188,28 +2224,28 @@ const App = {
     `;
   },
 
-  showProfWeaponsModal(classId, tab) {
+  showProfWeaponsModal(classId, onClose) {
     this.showListModal('⚔️ Weapons', () => RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot === 'weapon').map(r => this.renderRecipeRow(classId, r)).join(''),
       (container, refresh) => this.wireRecipeCategoryClicks(classId, container, refresh),
-      () => this.showSanctuary(classId, tab));
+      onClose);
   },
 
-  showProfArmorModal(classId, tab) {
+  showProfArmorModal(classId, onClose) {
     this.showListModal('🛡️ Armor & Accessories', () => RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot !== 'weapon').map(r => this.renderRecipeRow(classId, r)).join(''),
       (container, refresh) => this.wireRecipeCategoryClicks(classId, container, refresh),
-      () => this.showSanctuary(classId, tab));
+      onClose);
   },
 
-  showProfCookingModal(classId, tab) {
+  showProfCookingModal(classId, onClose) {
     this.showListModal('🍳 Cooking', () => COOKING_RECIPES.map(r => this.renderFoodRecipeRow(classId, r)).join(''),
       (container, refresh) => this.wireRecipeCategoryClicks(classId, container, refresh),
-      () => this.showSanctuary(classId, tab));
+      onClose);
   },
 
-  showProfGatheringModal(classId, tab) {
+  showProfGatheringModal(classId, onClose) {
     this.showListModal('⛏️ Gathering Professions', () => this.renderProfessionRows(classId),
       (container, refresh) => this.wireProfessionClicks(classId, container, refresh),
-      () => this.showSanctuary(classId, tab));
+      onClose);
   },
 
   // Shared by all three recipe-category modals (Weapons/Armor/Cooking) -
@@ -2286,8 +2322,13 @@ const App = {
 
   renderSanctuaryHouse(classId) {
     const pdata = Persistent.load();
+    const rec = Persistent.getCharacter(classId);
     const foodItems = pdata.inventory.filter(i => i.slot === 'food');
 
+    // Feed AND Equip live together here now - previously Equip/Unequip was
+    // its own separate popup under the Inventory tab, which meant managing
+    // one pet meant bouncing between two tabs. One per character, same as
+    // any other equip slot.
     const companionSection = (kind, pool, ownedIds) => {
       if (!ownedIds.length) return `<p class="small-text">No ${kind}s tamed yet - find one on a Wild Creature encounter.</p>`;
       return ownedIds.map(id => {
@@ -2297,14 +2338,16 @@ const App = {
         const xpNeed = maxed ? 0 : professionXpForLevel(progress.level);
         const pct = maxed ? 100 : Math.min(100, Math.round((progress.xp / xpNeed) * 100));
         const buffDesc = Object.keys(def.effect).map(k => describeEffectLever(k, def.effect[k])).join(', ');
-        return `<div class="gear-row house-row">
+        const equipped = rec.equipped[kind] === id;
+        return `<div class="gear-row house-row ${equipped ? 'profession-active' : ''}">
           <div class="desc"><span>${def.icon}</span><div>
-            <strong>${def.name}</strong> <span class="small-text">Lv.${progress.level}${maxed ? ' (max)' : ''}</span>
+            <strong>${def.name}</strong> <span class="small-text">Lv.${progress.level}${maxed ? ' (max)' : ''}${equipped ? ' - Equipped' : ''}</span>
             <div class="small-text">${def.universe} · ${def.desc}</div>
             <div class="xp-bar-wrap" style="margin-top:4px;width:180px"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
             <div class="small-text">${maxed ? 'Max level' : `${progress.xp} / ${xpNeed} XP`}</div>
           </div></div>
           <div class="house-feed">
+            <button class="btn-secondary" data-companion-kind="${kind}" data-companion-id="${id}">${equipped ? 'Unequip' : 'Equip'}</button>
             <button class="btn-secondary" data-feed-kind="${kind}" data-feed-id="${id}" ${foodItems.length ? '' : 'disabled'} title="Grants ${def.name}'s own bonus (${buffDesc}) to you for 1 hour, plus experience to ${def.name}.">Feed</button>
           </div>
         </div>`;
@@ -3028,6 +3071,46 @@ const App = {
     overlay.querySelector('#tutorial-close').addEventListener('click', close);
   },
 
+  // Account-wide, not per-character (see DIFFICULTIES in data.js and
+  // currentDifficulty in progression.js) - takes effect immediately on
+  // whatever's happening next (gold/XP/materials gained, and any fight
+  // started after this point), not retroactively on the current HP/loot.
+  showDifficultyModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const close = () => { overlay.remove(); this.showTitle(); };
+    const render = () => {
+      const pdata = Persistent.load();
+      const rows = Object.values(DIFFICULTIES).map(d => {
+        const active = pdata.difficulty === d.id;
+        return `<div class="gear-row ${active ? 'profession-active' : ''}">
+          <div class="desc"><div>
+            <strong>${d.name}</strong>${active ? ' <span class="small-text">(current)</span>' : ''}
+            <div class="small-text">${d.desc}</div>
+          </div></div>
+          <button class="btn-secondary" data-set-difficulty="${d.id}" ${active ? 'disabled' : ''}>${active ? 'Active' : 'Select'}</button>
+        </div>`;
+      }).join('');
+      overlay.innerHTML = `
+        <div class="panel modal-panel">
+          <h4>🎚️ Change Difficulty</h4>
+          ${rows}
+          <button class="btn-secondary" id="btn-close-difficulty" style="margin-top:14px">Close</button>
+        </div>`;
+      overlay.querySelectorAll('[data-set-difficulty]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          Persistent.load().difficulty = btn.dataset.setDifficulty;
+          Persistent.save();
+          render();
+        });
+      });
+      overlay.querySelector('#btn-close-difficulty').addEventListener('click', close);
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.body.appendChild(overlay);
+    render();
+  },
+
   showSettingsModal() {
     const pdata = Persistent.load();
     const overlay = document.createElement('div');
@@ -3284,21 +3367,7 @@ const App = {
         this.showSanctuary(classId, tab);
       });
     } else if (tab === 'inventory') {
-      const invModals = {
-        'inv-bank': () => this.showInvBankModal(classId, tab),
-        'inv-weapons': () => this.showInvWeaponsModal(classId, tab),
-        'inv-armor': () => this.showInvArmorModal(classId, tab),
-        'inv-containers': () => this.showInvContainersModal(classId, tab),
-        'inv-recipes': () => this.showInvRecipesModal(classId, tab),
-        'inv-food': () => this.showInvFoodModal(classId, tab),
-        'inv-spells': () => this.showInvSpellsModal(classId, tab),
-        'inv-relics': () => this.showInvRelicsModal(classId, tab),
-        'inv-pets': () => this.showInvCompanionModal(classId, tab, 'pet', PETS, '🐾 Pets'),
-        'inv-mounts': () => this.showInvCompanionModal(classId, tab, 'mount', MOUNTS, '🐎 Mounts')
-      };
-      this.root.querySelectorAll('[data-open-category]').forEach(btn => {
-        btn.addEventListener('click', () => invModals[btn.dataset.openCategory]());
-      });
+      this.wireInventoryCategoryClicks(classId, this.root, () => this.showSanctuary(classId, tab));
     } else if (tab === 'professions') {
       const disenchantBtn = document.getElementById('btn-open-disenchant');
       if (disenchantBtn) disenchantBtn.addEventListener('click', () => this.showDisenchantModal(classId));
@@ -3306,7 +3375,7 @@ const App = {
       if (enchantBtn) enchantBtn.addEventListener('click', () => this.showEnchantModal(classId));
       const profModals = { 'prof-weapons': 'showProfWeaponsModal', 'prof-armor': 'showProfArmorModal', 'prof-cooking': 'showProfCookingModal', 'prof-gathering': 'showProfGatheringModal' };
       this.root.querySelectorAll('[data-open-category]').forEach(btn => {
-        btn.addEventListener('click', () => this[profModals[btn.dataset.openCategory]](classId, tab));
+        btn.addEventListener('click', () => this[profModals[btn.dataset.openCategory]](classId, () => this.showSanctuary(classId, tab)));
       });
     } else if (tab === 'shop') {
       const shopModals = { 'shop-relics': 'showShopRelicsModal', 'shop-spells': 'showShopSpellsModal', 'shop-gear': 'showShopGearModal', 'shop-sell': 'showShopSellModal' };
@@ -3323,6 +3392,7 @@ const App = {
       this.root.querySelectorAll('[data-claim-quest]').forEach(btn => {
         btn.addEventListener('click', () => {
           claimQuest(btn.dataset.claimQuest, classId);
+          if (Persistent.getCharacter(classId).autoEquip) this.autoEquipBestGear(classId);
           this.showSanctuary(classId, tab);
         });
       });
@@ -3387,6 +3457,14 @@ const App = {
       this.root.querySelectorAll('[data-feed-kind]').forEach(btn => {
         btn.addEventListener('click', () => {
           this.showFoodPickerModal(classId, btn.dataset.feedKind, btn.dataset.feedId);
+        });
+      });
+      this.root.querySelectorAll('[data-companion-kind]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const k = btn.dataset.companionKind, id = btn.dataset.companionId;
+          rec.equipped[k] = rec.equipped[k] === id ? null : id;
+          Persistent.save();
+          this.showSanctuary(classId, tab);
         });
       });
       this.root.querySelectorAll('[data-toggle-companion]').forEach(btn => {

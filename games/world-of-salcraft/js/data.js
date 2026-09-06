@@ -1,5 +1,21 @@
 // Static game content: classes, enemies, events, items, relics, shop.
 
+// Account-wide (not per-character) - set from the title screen's Change
+// Difficulty popup, persists until changed again. `resourceMult` scales
+// gold/XP/materials gained (Game.addGold/grantXp in state.js,
+// rollMaterialDrop/computeAfkProgress in progression.js); `enemyMult` scales
+// every enemy's hp/atk/def at the moment a fight starts (Combat.start in
+// combat.js, so it applies uniformly to every encounter type - regular,
+// elite, boss, gauntlet, raid, PvP mirror - rather than special-casing
+// each); `playerStatMult` (only Extreme touches this) scales the player's
+// own final atk/def/maxHp/speed down (see the end of effectiveStats()).
+const DIFFICULTIES = {
+  easy: { id: 'easy', name: 'Easy', resourceMult: 1.5, enemyMult: 1, playerStatMult: 1, desc: '+50% resources, experience, and gold gained.' },
+  normal: { id: 'normal', name: 'Normal', resourceMult: 1, enemyMult: 1, playerStatMult: 1, desc: 'The game as designed - no modifiers.' },
+  hard: { id: 'hard', name: 'Hard', resourceMult: 0.5, enemyMult: 1.5, playerStatMult: 1, desc: '-50% resources, experience, and gold gained. Enemies get +50% health, damage, and defense.' },
+  extreme: { id: 'extreme', name: 'Extreme', resourceMult: 0.25, enemyMult: 2, playerStatMult: 0.85, desc: '-75% resources, experience, and gold gained. Your stats are reduced by 15%. Enemies get +100% health, damage, and defense.' }
+};
+
 // Spell catalog. `type` drives the generic damage-resolution formula in combat.js:
 //  - flat:       fixed magic damage, ignores ATK/DEF entirely
 //  - cleave:     (ATK - DEF, with `power` DEF ignored) + power bonus damage
@@ -619,6 +635,59 @@ const EVENTS = [
         }
       },
       { label: 'Leave it be', outcome: () => ({ text: 'You quietly back away.', hp: 0 }) }
+    ]
+  },
+  // Moral-choice encounters: a good/evil/neutral option each, deliberately
+  // NOT about which choice is "correct" numerically - each grants its own
+  // small buff or debuff (see Game.grantTempEffect) lasting a few
+  // encounters, so a run can pick up a short streak of consequences from
+  // the character's own choices rather than every event resolving the same
+  // stat-optimal way.
+  {
+    id: 'cornered-child',
+    title: 'Cornered',
+    text: 'A starving beast has a terrified child backed into a dead end. The beast is thin, scarred, and clearly desperate - not cruel, just hungry.',
+    choices: [
+      { label: 'Drive off the beast, save the child (Good)', outcome: (p) => ({
+          text: 'The child scrambles free. The beast flees, snarling but unharmed.',
+          hp: -6,
+          tempEffect: { label: 'Clear Conscience', icon: '🕊️', effect: { def: 2, hpRegen: 1 }, encounters: 3 }
+        })
+      },
+      { label: 'Let the beast eat, take the child\'s coin purse (Evil)', outcome: () => ({
+          text: 'You slip away with coin while the child screams behind you.',
+          gold: rand(15, 25),
+          tempEffect: { label: 'Guilty Conscience', icon: '🩸', effect: { atk: 3, def: -2 }, encounters: 3 }
+        })
+      },
+      { label: 'Walk away - not your problem (Neutral)', outcome: () => ({
+          text: 'You keep moving. Whatever happens next, happens without you.',
+          hp: 0
+        })
+      }
+    ]
+  },
+  {
+    id: 'hunted-cub',
+    title: 'The Hunted',
+    text: 'A mob of villagers with torches surrounds a den, calling the creature inside a monster. Through the entrance you can see it\'s just a cub, alone and shaking.',
+    choices: [
+      { label: 'Hide the den, mislead the mob (Good)', outcome: () => ({
+          text: 'You point the mob down the wrong trail. The cub lives to see another day.',
+          tempEffect: { label: 'Kindred Spirit', icon: '🐾', effect: { hpRegen: 2, potionHealBonus: 0.05 }, encounters: 3 }
+        })
+      },
+      { label: 'Reveal the den for a reward (Evil)', outcome: () => ({
+          text: 'The mob pays well for the tip. You don\'t look back to see what happens.',
+          gold: rand(20, 30),
+          tempEffect: { label: 'Cold-Blooded', icon: '⚔️', effect: { atk: 3, potionHealBonus: -0.05 }, encounters: 3 }
+        })
+      },
+      { label: 'Slip away before either side notices (Neutral)', outcome: () => ({
+          text: 'You leave the mob and the den behind, uninvolved.',
+          hp: 0
+        })
+      }
     ]
   }
 ];

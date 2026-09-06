@@ -49,7 +49,12 @@ const Game = {
       gold: 20,
       items: [...cls.startItems],
       relics: [],
-      curses: []
+      curses: [],
+      // Short-lived buffs/debuffs from moral-choice encounters (see the
+      // EVENTS entries with a `moralChoice` field and applyOutcome in
+      // events.js) - counts down by encounters played, not real time, and
+      // vanishes with the run like curses/relics do. See tickTempEffects.
+      tempEffects: []
     };
     this.goldEarnedThisRun = 0;
     this.act = startingAct || 1;
@@ -112,6 +117,19 @@ const Game = {
     this.visitedNodes = [];
   },
 
+  // Sums every active moral-choice buff/debuff (see grantTempEffect) - kept
+  // as its own source (not boosted by the Gear Set Bonus, which only covers
+  // items/relics/food/pets/mounts) so a narrative choice's effect stays a
+  // flat, predictable size regardless of how geared up the character is.
+  moralEffectStatBonus() {
+    const base = {};
+    RELIC_EFFECT_KEYS.forEach(k => { base[k] = 0; });
+    if (this.player) this.player.tempEffects.forEach(e => {
+      Object.keys(e.effect || {}).forEach(key => { base[key] = (base[key] || 0) + e.effect[key]; });
+    });
+    return base;
+  },
+
   // Combines: class base stats, persistent character level (+10% HP/ATK per level,
   // linear rather than compounding - see progression.js), equipped gear from the
   // Sanctuary, this run's found relics, and permanently-purchased bank relics.
@@ -150,6 +168,10 @@ const Game = {
     // progression.js). Separate from `companion` above, which is this
     // character's own equipped PET/MOUNT.
     const party = companionGroupStatBonus();
+    // Moral-choice buffs/debuffs (see grantTempEffect/tickTempEffects) - a
+    // flat, run-scoped source like curses/talents, untouched by the Gear
+    // Set Bonus below.
+    const moral = this.moralEffectStatBonus();
     const lvlMult = levelStatMultiplier(charRecord.level);
     // The Gear Set Bonus (see gearSetBonusPct in progression.js) multiplies
     // every stat contribution from items/relics/food/pets-mounts together -
@@ -157,20 +179,25 @@ const Game = {
     // companion party bonus are deliberately untouched by it.
     const setBonusPct = gearSetBonusPct(charRecord);
     const boost = (v) => v * (1 + setBonusPct);
+    // Change Difficulty's playerStatMult (only Extreme sets this below 1) -
+    // a final across-the-board haircut on top of everything else, applied
+    // last so it scales the character's true fully-built stats rather than
+    // any one contributing source.
+    const diffStatMult = currentDifficulty().playerStatMult;
 
     return {
-      atk: Math.max(0, Math.round((p.baseAtk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + curse.atk + ghost.atk + talent.atk + pvpGear.atk + party.atk),
-      def: Math.max(0, p.baseDef + boost(gear.def + bonus.def + companion.def + buff.def) + curse.def + ghost.def + talent.def + pvpGear.def + party.def),
-      maxHp: Math.max(1, Math.round((p.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + curse.maxHp + ghost.maxHp + talent.maxHp + pvpGear.maxHp + party.maxHp),
-      speed: Math.max(1, p.baseSpeed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + curse.speed + talent.speed),
-      critBonus: boost(gear.critBonus + bonus.critBonus + companion.critBonus + buff.critBonus) + curse.critBonus + talent.critBonus + pvpGear.critBonus,
-      goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + curse.goldBonus + talent.goldBonus + reputation.goldBonus,
-      lifesteal: boost(gear.lifesteal + bonus.lifesteal + companion.lifesteal + buff.lifesteal) + curse.lifesteal + talent.lifesteal + pvpGear.lifesteal,
-      hpRegen: boost(gear.hpRegen + bonus.hpRegen + companion.hpRegen + buff.hpRegen) + curse.hpRegen + talent.hpRegen,
-      executeBonus: boost(gear.executeBonus + bonus.executeBonus + companion.executeBonus + buff.executeBonus) + curse.executeBonus + talent.executeBonus,
-      eliteSlayerAtk: boost(gear.eliteSlayerAtk + bonus.eliteSlayerAtk + companion.eliteSlayerAtk + buff.eliteSlayerAtk) + curse.eliteSlayerAtk + talent.eliteSlayerAtk,
-      potionHealBonus: boost(gear.potionHealBonus + bonus.potionHealBonus + companion.potionHealBonus + buff.potionHealBonus) + curse.potionHealBonus + talent.potionHealBonus + profession.potionHealBonus,
-      spellPower: boost(gear.spellPower + bonus.spellPower + companion.spellPower + buff.spellPower) + curse.spellPower + talent.spellPower,
+      atk: Math.round(Math.max(0, Math.round((p.baseAtk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + curse.atk + ghost.atk + talent.atk + pvpGear.atk + party.atk + moral.atk) * diffStatMult),
+      def: Math.round(Math.max(0, p.baseDef + boost(gear.def + bonus.def + companion.def + buff.def) + curse.def + ghost.def + talent.def + pvpGear.def + party.def + moral.def) * diffStatMult),
+      maxHp: Math.max(1, Math.round((Math.round((p.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + curse.maxHp + ghost.maxHp + talent.maxHp + pvpGear.maxHp + party.maxHp + moral.maxHp) * diffStatMult)),
+      speed: Math.max(1, Math.round(Math.max(1, p.baseSpeed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + curse.speed + talent.speed + moral.speed) * diffStatMult)),
+      critBonus: boost(gear.critBonus + bonus.critBonus + companion.critBonus + buff.critBonus) + curse.critBonus + talent.critBonus + pvpGear.critBonus + moral.critBonus,
+      goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + curse.goldBonus + talent.goldBonus + reputation.goldBonus + moral.goldBonus,
+      lifesteal: boost(gear.lifesteal + bonus.lifesteal + companion.lifesteal + buff.lifesteal) + curse.lifesteal + talent.lifesteal + pvpGear.lifesteal + moral.lifesteal,
+      hpRegen: boost(gear.hpRegen + bonus.hpRegen + companion.hpRegen + buff.hpRegen) + curse.hpRegen + talent.hpRegen + moral.hpRegen,
+      executeBonus: boost(gear.executeBonus + bonus.executeBonus + companion.executeBonus + buff.executeBonus) + curse.executeBonus + talent.executeBonus + moral.executeBonus,
+      eliteSlayerAtk: boost(gear.eliteSlayerAtk + bonus.eliteSlayerAtk + companion.eliteSlayerAtk + buff.eliteSlayerAtk) + curse.eliteSlayerAtk + talent.eliteSlayerAtk + moral.eliteSlayerAtk,
+      potionHealBonus: boost(gear.potionHealBonus + bonus.potionHealBonus + companion.potionHealBonus + buff.potionHealBonus) + curse.potionHealBonus + talent.potionHealBonus + profession.potionHealBonus + moral.potionHealBonus,
+      spellPower: boost(gear.spellPower + bonus.spellPower + companion.spellPower + buff.spellPower) + curse.spellPower + talent.spellPower + moral.spellPower,
       // Gear-enchant only for now (see Combat.comboChanceFor, ENCHANTS.savageMomentum) -
       // stacks on top of the speed-derived combo chance every class already has.
       comboChance: boost(gear.comboChance || 0),
@@ -186,7 +213,7 @@ const Game = {
   addGold(amount) {
     if (amount <= 0) { this.player.gold = Math.max(0, this.player.gold + amount); return amount; }
     const bonus = this.effectiveStats().goldBonus + groupBonusPct();
-    const total = Math.max(0, Math.round(amount * (1 + bonus)));
+    const total = Math.max(0, Math.round(amount * (1 + bonus) * currentDifficulty().resourceMult));
     this.player.gold += total;
     this.goldEarnedThisRun += total;
     recordQuestProgress('goldEarned', total);
@@ -197,9 +224,10 @@ const Game = {
   // persistent storage, so it survives permadeath even mid-run. Scaled up
   // by groupBonusPct (+5% per equipped companion) before it ever reaches the
   // level-up curve, so a full party of 4 companions is a real +20% boost.
+  // Also scaled by the account's Change Difficulty pick (see DIFFICULTIES).
   grantXp(amount) {
     const charRecord = Persistent.getCharacter(this.player.classId);
-    const scaled = Math.round(amount * (1 + groupBonusPct()));
+    const scaled = Math.round(amount * (1 + groupBonusPct()) * currentDifficulty().resourceMult);
     const result = grantXpToCharacter(charRecord, scaled);
     // Whichever pet/mount is equipped rides along on the player's own
     // leveling - it gains the same XP amount, on top of anything separately
@@ -219,6 +247,24 @@ const Game = {
     const result = grantProfessionXpToCharacter(charRecord, amount);
     Persistent.save();
     return result;
+  },
+
+  // Grants a moral-choice buff/debuff that lasts `encounters` more resolved
+  // encounters (not real time - see tickTempEffects) rather than a fixed
+  // duration, so a slow explorer and a fast one get the same number of
+  // fights out of it either way.
+  grantTempEffect(label, icon, effect, encounters) {
+    if (!this.player) return;
+    this.player.tempEffects.push({ id: 'tmp' + Math.random().toString(36).slice(2, 10), label, icon, effect, encountersLeft: encounters });
+  },
+
+  // Ticks every active moral-choice effect down by one encounter, dropping
+  // any that expire - called once per resolved encounter (see showMap in
+  // main.js, the common return-to-path point after every encounter type).
+  tickTempEffects() {
+    if (!this.player) return;
+    this.player.tempEffects.forEach(e => { e.encountersLeft -= 1; });
+    this.player.tempEffects = this.player.tempEffects.filter(e => e.encountersLeft > 0);
   },
 
   heal(amount) {
