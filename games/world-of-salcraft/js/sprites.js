@@ -402,7 +402,12 @@ const BOSS_ART = Object.fromEntries([
   _bossArt('sunwellPlateau', 'Radiant Malvexis'),
   _bossArt('ulduar', 'The Forgewarden Prime'),
   _bossArt('burningThrone', "Xoth'rath, the Void King"),
-  _bossArt('ahnQiraj', "Queen Anub'khepra")
+  _bossArt('ahnQiraj', "Queen Anub'khepra"),
+  // Jakesteel isn't a dungeon/raid boss - he's the signature duel encounter
+  // (see enterJakesteelEncounter in main.js) - but reuses this exact same
+  // registry since combat's attack-animation trigger and anyCharacterSvg's
+  // BOSS_ART lookup both key off it identically either way.
+  _bossArt('jakesteel', 'Jakesteel')
 ]);
 
 // Player weapon-swing / spell-cast animations - same PixelLab treatment as
@@ -421,6 +426,20 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'rogue_bow', 'rogue_dagger', 'rogue_mace', 'rogue_sword',
   'mage_dagger', 'mage_mace', 'mage_staff', 'mage_sword', 'mage_cast'
 ].map(_weaponAttackAnim));
+
+// World Event scene art (see WORLD_EVENTS in data.js) - a wide illustration
+// plus a subtle ambient animation loop (see playLoopingAnimation in
+// main.js), same PixelLab pipeline as BOSS_ART but for a scene rather than
+// a character portrait.
+function _worldEventArt(zoneId) {
+  return [zoneId, {
+    idle: `assets/sprites/events/${zoneId}_idle.png`,
+    frames: [0, 1, 2, 3, 4, 5].map(i => `assets/sprites/events/${zoneId}_anim_${i}.png`)
+  }];
+}
+const WORLD_EVENT_ART = Object.fromEntries([
+  'forest', 'swamp', 'desert', 'hellfire', 'emerald', 'silvermoon', 'blacktemple', 'northrend', 'nether'
+].map(_worldEventArt));
 
 // The boss's idle portrait - anyCharacterSvg (progression.js) checks BOSS_ART
 // before falling through to spriteSvg, so this is what shows outside of the

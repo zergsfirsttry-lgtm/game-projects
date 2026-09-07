@@ -13,6 +13,8 @@ const NODE_TYPES = {
   witchJess: { icon: '🐈', label: 'Glowing Witch' },
   rareNpc: { icon: '🎭', label: 'Rare Encounter' },
   legendaryTaming: { icon: '🐕', label: 'Legendary Creature' },
+  jakesteel: { icon: '🐂', label: 'Jakesteel' },
+  worldEvent: { icon: '🌋', label: 'World Event' },
   boss: { icon: '☠️', label: 'Boss' }
 };
 
@@ -20,7 +22,7 @@ const NODE_TYPES = {
 // pick (see autoPickPath in main.js) - purely a UI-facing ranking, no
 // gameplay effect of its own; ties just keep whichever came first.
 const NODE_RESISTANCE_RANK = {
-  boss: 8, legendary: 7, elite: 6, classTrial: 5, witchJess: 5, rareNpc: 5, legendaryTaming: 5, taming: 4,
+  boss: 8, legendary: 7, jakesteel: 7, worldEvent: 6, elite: 6, classTrial: 5, witchJess: 5, rareNpc: 5, legendaryTaming: 5, taming: 4,
   combat: 3, event: 2, treasure: 1, shop: 0, rest: 0
 };
 
@@ -45,6 +47,7 @@ function pickType(rowIndex) {
   if (roll < 0.39) return 'combat';
   if (roll < 0.49) return 'elite';
   if (roll < 0.66) return 'event';
+  if (roll < 0.70) return 'worldEvent'; // capped to 1 per act in generateMap regardless of how many nodes roll this
   if (roll < 0.78) return 'rest';
   if (roll < 0.86) return 'shop';
   if (roll < 0.94) return 'treasure';
@@ -53,12 +56,18 @@ function pickType(rowIndex) {
   if (roll < 0.988) return 'witchJess'; // very rare - Jess sells rare cat/kitten pets for temporary relics
   if (roll < 0.995) return 'rareNpc'; // very rare - meet a named NPC, claim their signature reward
   if (roll < 0.999) return 'legendaryTaming'; // very rare - guaranteed Robin/Monkey/Chopper
+  if (roll < 0.9995) return 'jakesteel'; // extremely rare - the Jakesteel duel-or-sacrifice encounter, once per run
   return 'legendary'; // very rare - a multi-wave gauntlet guarding a named legendary item
 }
 
 function generateMap(act) {
   const rows = [];
   let idCounter = 0;
+  // At most one World Event node per act (see WORLD_EVENTS in data.js) -
+  // capped here at generation time (the whole map's nodes all get their
+  // type rolled up front, unlike Jakesteel's once-per-run cap, which has to
+  // resolve at visit time since only one branch of the map is ever walked).
+  let worldEventPlaced = false;
 
   for (let r = 0; r < REGULAR_ROWS; r++) {
     const count = r === REGULAR_ROWS - 1 ? 2 : rand(3, 4);
@@ -66,13 +75,18 @@ function generateMap(act) {
     for (let i = 0; i < count; i++) {
       const baseX = (MAP_WIDTH / (count + 1)) * (i + 1);
       const jitter = rand(-18, 18);
+      let type = pickType(r);
+      if (type === 'worldEvent') {
+        if (worldEventPlaced) type = 'event';
+        else worldEventPlaced = true;
+      }
       nodes.push({
         id: `n${idCounter++}`,
         row: r,
         slot: i,
         x: Math.max(30, Math.min(MAP_WIDTH - 30, baseX + jitter)),
         y: r * ROW_HEIGHT + 60,
-        type: pickType(r),
+        type,
         connections: [],
         visited: false
       });

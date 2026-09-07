@@ -1577,6 +1577,14 @@ const Persistent = {
       // Rare NPCs already met (see RARE_NPCS/enterRareNpc) - one-time-ever,
       // account-wide, same idea as ownedLegendaries/unlockedClasses.
       metRareNpcs: [],
+      // Jakesteel, once bested in his duel, joins as a permanent companion
+      // and never appears as a map encounter again - see
+      // enterJakesteelEncounter/recruitJakesteel in main.js.
+      metJakesteel: false,
+      // Zone ids whose World Event has been let play out (see WORLD_EVENTS
+      // in data.js and resolveWorldEventAllow in main.js) - each zone's
+      // we_<zoneId> title (data.js) checks against this, one-time-ever.
+      worldEventTitlesEarned: [],
       // Spell leveling (see grantSpellUsageXp/scaledSpellDef) - account-wide
       // per spell id, same idea as companionLevels above.
       spellLevels: {},

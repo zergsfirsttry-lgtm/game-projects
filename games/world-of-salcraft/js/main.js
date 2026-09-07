@@ -437,6 +437,8 @@ const App = {
     else if (node.type === 'witchJess') this.enterWitchJess(node);
     else if (node.type === 'rareNpc') this.enterRareNpc(node);
     else if (node.type === 'legendaryTaming') this.enterLegendaryTaming(node);
+    else if (node.type === 'jakesteel') this.enterJakesteelEncounter(node);
+    else if (node.type === 'worldEvent') this.enterWorldEvent(node);
   },
 
   // ---------------- Taming (pet/mount) ----------------
@@ -654,6 +656,179 @@ const App = {
     node.tamingStep = 0;
     node.tamingWrong = 0;
     this.showTamingStep(node);
+  },
+
+  // ---------------- Jakesteel ----------------
+  // A one-off, account-wide signature encounter (see NODE_TYPES.jakesteel in
+  // map.js): once offered in a run (win, lose, or sacrifice), it never
+  // appears again THAT run (Game.jakesteelOfferedThisRun); once actually
+  // bested in the duel, he joins as a permanent companion and the encounter
+  // never appears in ANY future run either (pdata.metJakesteel). Falls back
+  // to a plain elite fight once he's already been recruited, same
+  // exhaustion convention as rareNpc/legendaryTaming above.
+  enterJakesteelEncounter(node) {
+    const pdata = Persistent.load();
+    if (pdata.metJakesteel || Game.jakesteelOfferedThisRun) {
+      this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
+      return;
+    }
+    Game.jakesteelOfferedThisRun = true;
+    this.renderJakesteelScreen(node);
+  },
+
+  renderJakesteelScreen(node) {
+    const relicCount = Game.player.relics.length;
+    this.root.innerHTML = `
+      ${this.renderHud()}
+      ${this.renderZoneBanner()}
+      <div class="panel rare-npc-encounter">
+        <div class="npc-portrait-wrap">${bossSpriteSvg('jakesteel', 140) || ''}</div>
+        <h2>Jakesteel</h2>
+        <p class="flavor">A massive Tauren warrior plants his greataxe in the dirt, chainmail straining across a frame built for war. Twin bull horns curve from his skull, and a red bloodfury aura pulses off him in slow, heavy waves - nearby wildlife has already fled. "Two ways through," he rumbles. "Duel me, one on one. Or pay the toll." He nods at your relics. "All of them. Every last one."</p>
+        <div class="choice-list" id="choice-list">
+          <button class="choice-btn" id="btn-jakesteel-duel">⚔️ Duel Jakesteel, 1v1</button>
+          <button class="choice-btn" id="btn-jakesteel-sacrifice" ${relicCount ? '' : 'disabled'}>🩸 Sacrifice all ${relicCount} Relic${relicCount === 1 ? '' : 's'} to pass</button>
+        </div>
+      </div>`;
+    document.getElementById('btn-jakesteel-duel').addEventListener('click', () => this.startJakesteelDuel(node));
+    document.getElementById('btn-jakesteel-sacrifice').addEventListener('click', () => this.sacrificeToJakesteel(node));
+  },
+
+  // Jakesteel's stats mirror the PLAYER'S OWN current effectiveStats (same
+  // idea as the PvP mirror ghost in enterPvpMatch - "automatically scale to
+  // the player's level") with a flat +500% (6x) multiplier on top of
+  // atk/def/maxHp, per the user's spec - a deliberately brutal, likely
+  // unfair fight unless the character is heavily built up.
+  startJakesteelDuel(node) {
+    const stats = Game.effectiveStats();
+    node.jakesteelDuel = true;
+    this.enterCombat(node, {
+      id: 'jakesteel', name: 'Jakesteel',
+      hp: Math.round(stats.maxHp * 6), atk: Math.round(stats.atk * 6), def: Math.round(stats.def * 6), speed: stats.speed,
+      gold: [200, 320], boss: true
+    });
+  },
+
+  sacrificeToJakesteel(node) {
+    Game.player.relics = [];
+    this.root.innerHTML = `
+      ${this.renderHud()}
+      ${this.renderZoneBanner()}
+      <div class="panel">
+        <h2>Jakesteel</h2>
+        <div class="outcome-box">Jakesteel steps aside without a word, hefting his axe back onto his shoulder as you pass. Every relic you carried is gone - the toll's been paid.</div>
+        <button class="btn-primary" id="btn-continue">Continue</button>
+      </div>`;
+    document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+  },
+
+  // Mirrors the account's own strongest character ("champion") at the
+  // moment of recruitment - not necessarily the one on this run - same
+  // {atk,def,maxHp,speed} companion shape as recruitCompanionFromSave, with
+  // spriteOverride so he shows his own BOSS_ART portrait (see
+  // renderRecruitedCompanionRig) instead of a generic Warrior look.
+  recruitJakesteel() {
+    const pdata = Persistent.load();
+    if (pdata.metJakesteel) return;
+    pdata.metJakesteel = true;
+    let bestClassId = null, bestScore = -1, bestStats = null;
+    Object.keys(pdata.characters).forEach(classId => {
+      const stats = previewClassStats(classId);
+      const score = stats.atk + stats.def + stats.maxHp + stats.speed;
+      if (score > bestScore) { bestScore = score; bestClassId = classId; bestStats = stats; }
+    });
+    if (!bestClassId) { bestClassId = Game.player.classId; bestStats = Game.effectiveStats(); }
+    pdata.recruitedCompanions.push({
+      id: 'jakesteel', name: 'Jakesteel', classId: 'warrior', spriteOverride: 'jakesteel',
+      level: Persistent.getCharacter(bestClassId).level,
+      stats: { atk: bestStats.atk, def: bestStats.def, maxHp: bestStats.maxHp, speed: bestStats.speed },
+      petId: null, mountId: null, spellId: 'cleave'
+    });
+    Persistent.save();
+  },
+
+  // ---------------- World Events ----------------
+  // A single big decision, not a fight - see WORLD_EVENTS in data.js. At
+  // most one can appear per act (capped in generateMap, map.js), and always
+  // matches the CURRENT zone theme rather than being chosen at map-gen
+  // time, so it never goes stale if the player is mid-zone-transition.
+  enterWorldEvent(node) {
+    node.worldEventZoneId = getActTheme(Game.act).id;
+    this.renderWorldEventScreen(node);
+  },
+
+  renderWorldEventScreen(node) {
+    const zoneId = node.worldEventZoneId;
+    const we = WORLD_EVENTS[zoneId];
+    const art = WORLD_EVENT_ART[zoneId];
+    this.root.innerHTML = `
+      ${this.renderHud()}
+      ${this.renderZoneBanner()}
+      <div class="panel rare-npc-encounter">
+        <div class="npc-portrait-wrap">${art ? `<img class="npc-portrait world-event-sprite" src="${art.idle}" alt="${we.name}" style="width:min(280px,90%)">` : ''}</div>
+        <h2>🌋 ${we.name}</h2>
+        <p class="flavor">${we.flavor}</p>
+        <div class="choice-list" id="choice-list">
+          <button class="choice-btn" id="btn-we-prevent">🛡️ ${we.preventLabel}</button>
+          <button class="choice-btn" id="btn-we-allow">🔥 ${we.allowLabel}</button>
+        </div>
+      </div>`;
+    const img = this.root.querySelector('.world-event-sprite');
+    if (img && art) this.playLoopingAnimation(img, art.frames, 220);
+    document.getElementById('btn-we-prevent').addEventListener('click', () => this.resolveWorldEventPrevent(node));
+    document.getElementById('btn-we-allow').addEventListener('click', () => this.resolveWorldEventAllow(node));
+  },
+
+  // Stopping the event only ever grants reputation, deliberately more than
+  // a normal event/rest/shop node's flat +8 (see selectNode) since this is
+  // a much bigger set-piece - no loot, matching the user's spec exactly.
+  resolveWorldEventPrevent(node) {
+    const zoneId = node.worldEventZoneId;
+    const theme = ACT_THEMES.find(t => t.id === zoneId);
+    grantReputation(zoneId, 60);
+    this.root.innerHTML = `
+      ${this.renderHud()}
+      ${this.renderZoneBanner()}
+      <div class="panel">
+        <h2>${WORLD_EVENTS[zoneId].name}</h2>
+        <div class="outcome-box">You step in and stop it before it can finish. Word spreads fast - your standing with ${theme.name} grows.<br>+60 Reputation.</div>
+        <button class="btn-primary" id="btn-continue">Continue</button>
+      </div>`;
+    document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+  },
+
+  // Letting the event play out grants no reputation - instead a unique,
+  // never-randomly-found pet or mount, plus that zone's own title
+  // (we_<zoneId> in TITLES) the FIRST time only; a second run's version of
+  // the same event still plays out narratively but doesn't re-grant either
+  // (both are one-time-ever, tracked separately: ownedPets/ownedMounts and
+  // worldEventTitlesEarned).
+  resolveWorldEventAllow(node) {
+    const zoneId = node.worldEventZoneId;
+    const we = WORLD_EVENTS[zoneId];
+    const pdata = Persistent.load();
+    const titleIsNew = !pdata.worldEventTitlesEarned.includes(zoneId);
+    if (titleIsNew) pdata.worldEventTitlesEarned.push(zoneId);
+    const owned = we.rewardKind === 'pet' ? pdata.ownedPets : pdata.ownedMounts;
+    const rewardIsNew = !owned.includes(we.rewardId);
+    if (rewardIsNew) owned.push(we.rewardId);
+    Persistent.save();
+    const rewardDef = (we.rewardKind === 'pet' ? PETS : MOUNTS)[we.rewardId];
+    const rewardLine = rewardIsNew
+      ? `${rewardDef.icon} <strong>${rewardDef.name}</strong> joins your Sanctuary - visit the House tab.`
+      : `${rewardDef.icon} ${rewardDef.name} is already yours.`;
+    const titleLine = titleIsNew
+      ? `Title earned: <strong>${TITLES['we_' + zoneId].name}</strong> - equip it from the Character tab.`
+      : '';
+    this.root.innerHTML = `
+      ${this.renderHud()}
+      ${this.renderZoneBanner()}
+      <div class="panel">
+        <h2>${we.name}</h2>
+        <div class="outcome-box">${we.allowFlavor}<br>${rewardLine}${titleLine ? `<br>${titleLine}` : ''}</div>
+        <button class="btn-primary" id="btn-continue">Continue</button>
+      </div>`;
+    document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
   },
 
   // A rare map encounter that offers to permanently unlock a bonus class. The
@@ -977,7 +1152,11 @@ const App = {
   // but takes explicit ids instead of reading Persistent.getCharacter(),
   // since a companion's pet/mount come from someone else's save, not ours.
   renderRecruitedCompanionRig(companion, sizePx, pulsing) {
-    const riderSvg = anyCharacterSvg(companion.classId, sizePx);
+    // spriteOverride (Jakesteel only, for now - see JAKESTEEL_ID/
+    // enterJakesteelEncounter) lets a one-off signature companion show its
+    // own BOSS_ART portrait instead of its `classId`'s generic look, while
+    // still using a real classId everywhere else (stat display, etc.).
+    const riderSvg = anyCharacterSvg(companion.spriteOverride || companion.classId, sizePx);
     const mountSvg = companion.mountId ? anyCharacterSvg(companion.mountId, Math.round(sizePx * 0.8)) : '';
     const petSvg = companion.petId ? anyCharacterSvg(companion.petId, Math.round(sizePx * 0.5)) : '';
     const nameplate = `<span class="nameplate">${escapeHtml(companion.name)}</span>`;
@@ -1212,6 +1391,21 @@ const App = {
     step();
   },
 
+  // Same idea as playAttackAnimation but loops forever (until the element
+  // is torn out of the DOM) - used for World Event scene art, which sits on
+  // screen for as long as the player takes to pick a decision rather than
+  // firing once like a combat attack.
+  playLoopingAnimation(imgEl, frames, intervalMs) {
+    let i = 0;
+    const step = () => {
+      if (!imgEl.isConnected) return;
+      imgEl.src = frames[i % frames.length];
+      i++;
+      setTimeout(step, intervalMs || 200);
+    };
+    step();
+  },
+
   continueAutoIfEnabled(node) {
     if (this.autoCombat && Combat.state && !Combat.state.over) {
       setTimeout(() => this.performAutoAction(node), 500);
@@ -1357,6 +1551,14 @@ const App = {
         this.grantTamingReward(node, false, { goldReward, xpReward, levelResult });
         return;
       }
+      if (node.jakesteelDuel) {
+        const goldReward = Game.addGold(rand(s.enemy.gold[0], s.enemy.gold[1]));
+        const xpReward = Math.max(30, Math.round(s.enemy.maxHp * 0.15));
+        const levelResult = Game.grantXp(xpReward);
+        this.recruitJakesteel();
+        this.showCombatReward({ goldReward, xpReward, levelResult, jakesteelRecruited: true }, s.enemy);
+        return;
+      }
       if (node.rivalGhost) {
         Game.grantProfessionXp(rand(4, 9));
         const goldReward = Game.addGold(rand(s.enemy.gold[0], s.enemy.gold[1]));
@@ -1463,6 +1665,7 @@ const App = {
     if (reward.honor) lines.push(`+${reward.honor} Honor.`);
     if (reward.recipeItem) lines.push(`Found a recipe: <span style="color:${RARITIES[reward.recipeItem.rarity]?.color || 'var(--accent)'}">${reward.recipeItem.name}</span>.`);
     if (reward.bloodyBagAwarded) lines.push(`Looted a ${CONTAINERS.bloodyBag.icon} Bloody Bag - open it from the Inventory tab.`);
+    if (reward.jakesteelRecruited) lines.push(`Jakesteel kneels, then rises at your side. He's with you now - equip him from the House tab.`);
     return lines;
   },
 
@@ -1766,6 +1969,7 @@ const App = {
       { label: 'Dungeon Titles', prefix: 'd_' },
       { label: 'Raid Titles', prefix: 'r_' },
       { label: 'Reputation Titles', prefix: 'rep_' },
+      { label: 'World Event Titles', prefix: 'we_' },
       { label: 'Special Titles', prefix: 'misc_' },
       { label: 'PvP Rank', prefix: 'pvp_' }
     ];
@@ -2849,7 +3053,7 @@ const App = {
       const mountDef = c.mountId ? MOUNTS[c.mountId] : null;
       const groupFull = pdata.equippedCompanionIds.length >= COMPANION_MAX_EQUIPPED;
       return `<div class="gear-row house-row ${equipped ? 'profession-active' : ''}">
-        <div class="desc"><span class="sprite-mini">${characterSpriteFor(c.classId, 30)}</span><div>
+        <div class="desc"><span class="sprite-mini">${anyCharacterSvg(c.spriteOverride || c.classId, 30)}</span><div>
           <strong>${c.name}</strong> <span class="small-text">Lv.${c.level} ${cls.name}${equipped ? ' - In Group' : ''}</span>
           <div class="small-text">ATK ${c.stats.atk} · DEF ${c.stats.def} · HP ${c.stats.maxHp}${petDef ? ` · ${petDef.icon} ${petDef.name}` : ''}${mountDef ? ` · ${mountDef.icon} ${mountDef.name}` : ''}</div>
         </div></div>

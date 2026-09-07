@@ -349,7 +349,14 @@ const PETS = {
   ryker: { id: 'ryker', name: 'Ryker', icon: '🐕‍🦺', universe: 'Original', desc: "George's giant black dog - as ruthless in a fight as his owner. +4 ATK. In battle: strikes noticeably harder than an ordinary pet.", effect: { atk: 4 }, role: 'dps' },
   landryDuckling: { id: 'landryDuckling', name: "Landry's Deputy", icon: '🦆', universe: 'Original', desc: "Sheriff Landry's giant yellow duckling - tougher than it looks. +3 DEF, +4 Max HP.", effect: { def: 3, maxHp: 4 } },
   monkey: { id: 'monkey', name: 'Monkey', icon: '🐱', universe: 'Original', desc: 'A giant grey cat in a strawhat, captain of the largest pirate gang in the world. +6% gold from all sources, +1 Speed.', effect: { goldBonus: 0.06, speed: 1 } },
-  chopper: { id: 'chopper', name: 'Chopper', icon: '🐱', universe: 'Original', desc: "A giant grey cat and a renowned doctor. +5% healing from items. In battle: mends a little HP each round it acts.", effect: { potionHealBonus: 0.05 }, role: 'healer' }
+  chopper: { id: 'chopper', name: 'Chopper', icon: '🐱', universe: 'Original', desc: "A giant grey cat and a renowned doctor. +5% healing from items. In battle: mends a little HP each round it acts.", effect: { potionHealBonus: 0.05 }, role: 'healer' },
+  // World Event rewards (see WORLD_EVENTS below) - one-time-ever, account-
+  // wide, same idea as the RARE_NPCS/LEGENDARY_TAMINGS signature companions
+  // above, just earned by letting an event play out instead of a fight.
+  witherbarkSprite: { id: 'witherbarkSprite', name: 'Witherbark Sprite', icon: '🍂', universe: 'Original', desc: "Born from a dying tree's last breath. +5% critical hit chance, +2 ATK.", effect: { critBonus: 0.05, atk: 2 } },
+  cinderWhelp: { id: 'cinderWhelp', name: 'Cinder Whelp', icon: '🥚', universe: 'Original', desc: "Hatched from a volcano's own ember. +5% spell damage, +1 ATK.", effect: { spellPower: 0.05, atk: 1 } },
+  emeraldSapling: { id: 'emeraldSapling', name: 'Emerald Sapling', icon: '🌱', universe: 'Original', desc: 'A living seedling from a vale left to overgrow. +2 hp regen per round, +4 Max HP.', effect: { hpRegen: 2, maxHp: 4 } },
+  frostwyrmling: { id: 'frostwyrmling', name: 'Frostwyrmling', icon: '🥶', universe: 'Original', desc: 'A wyrm hatchling, woken early from centuries of ice. +2 DEF, +5 Max HP.', effect: { def: 2, maxHp: 5 } }
 };
 
 // The 3 cats (5 relics each) and 2 kittens (10 relics each) only Jess sells -
@@ -362,8 +369,8 @@ const JESS_PET_PRICE = { cat: 5, kitten: 10 };
 // Every pet/mount id that's a signature reward of ONE specific rare
 // encounter rather than a random wild find - excluded from both
 // pickTamingReward()'s pool and, for the pets, Jess's stock.
-const SIGNATURE_PET_IDS = new Set(['ryker', 'landryDuckling', 'monkey', 'chopper']);
-const SIGNATURE_MOUNT_IDS = new Set(['izzoCorvette', 'robin']);
+const SIGNATURE_PET_IDS = new Set(['ryker', 'landryDuckling', 'monkey', 'chopper', 'witherbarkSprite', 'cinderWhelp', 'emeraldSapling', 'frostwyrmling']);
+const SIGNATURE_MOUNT_IDS = new Set(['izzoCorvette', 'robin', 'murkfenDireleech', 'felstrider', 'starlitHawkstrider', 'shadowmaneCharger', 'voidstrider']);
 
 const MOUNTS = {
   netherdrake: { id: 'netherdrake', name: 'Netherdrake', icon: '🐉', universe: 'WoW', desc: 'A drake bred in the Twisting Nether. +4 ATK, +5 Max HP.', effect: { atk: 4, maxHp: 5 } },
@@ -376,7 +383,13 @@ const MOUNTS = {
   spectralTiger: { id: 'spectralTiger', name: 'Spectral Tiger', icon: '🐯', universe: 'WoW', desc: 'A ghostly, impossibly fast hunting cat. +3 Speed, +6% critical hit chance.', effect: { speed: 3, critBonus: 0.06 } },
   // Signature mounts - see SIGNATURE_MOUNT_IDS above.
   izzoCorvette: { id: 'izzoCorvette', name: "Izzo's Corvette", icon: '🏎️', universe: 'Original', desc: 'Race King Izzo\'s own racecar, keys and all. +4 Speed, +2 ATK.', effect: { speed: 4, atk: 2 } },
-  robin: { id: 'robin', name: 'Robin', icon: '🐕', universe: 'Original', desc: 'A giant brindle pitbull, sweet as often as vicious. +3 ATK, +3 DEF.', effect: { atk: 3, def: 3 } }
+  robin: { id: 'robin', name: 'Robin', icon: '🐕', universe: 'Original', desc: 'A giant brindle pitbull, sweet as often as vicious. +3 ATK, +3 DEF.', effect: { atk: 3, def: 3 } },
+  // World Event rewards - see the note above PETS' equivalent entries.
+  murkfenDireleech: { id: 'murkfenDireleech', name: 'Murkfen Direleech', icon: '🪱', universe: 'Original', desc: 'A bloated swamp leech grown mount-sized, gorged on old magic. Heal 2 HP whenever you deal damage, +6 Max HP.', effect: { lifesteal: 2, maxHp: 6 } },
+  felstrider: { id: 'felstrider', name: 'Felstrider', icon: '🐐', universe: 'Original', desc: 'A demonic steed pulled through a widening rift. +4 ATK, +1 Speed.', effect: { atk: 4, speed: 1 } },
+  starlitHawkstrider: { id: 'starlitHawkstrider', name: 'Starlit Hawkstrider', icon: '🦩', universe: 'Original', desc: 'A hawkstrider touched by wild arcane overflow. +3 Speed, +3% critical hit chance.', effect: { speed: 3, critBonus: 0.03 } },
+  shadowmaneCharger: { id: 'shadowmaneCharger', name: 'Shadowmane Charger', icon: '🐴', universe: 'Original', desc: 'A warhorse bound by a completed dark ritual. +3 ATK, +2 DEF.', effect: { atk: 3, def: 2 } },
+  voidstrider: { id: 'voidstrider', name: 'Voidstrider', icon: '🦑', universe: 'Original', desc: 'A creature of the Twisting Nether, given form by a widening tear. +2 ATK, +2 DEF, +1 Speed.', effect: { atk: 2, def: 2, speed: 1 } }
 };
 
 // An equipped pet/mount doesn't just grant a passive stat (see
@@ -418,6 +431,91 @@ const ACT_THEMES = [
   { id: 'northrend', name: 'Northrend Wastes', bg: 'linear-gradient(180deg, #1a2e3d 0%, #14212c 55%, #0a1218 100%)', particle: '❄️', motion: 'drift-down', accent: '#8fd8f0', enemyTint: 'saturate(0.95) hue-rotate(8deg) brightness(1.08)' },
   { id: 'nether', name: 'The Twisting Nether', bg: 'linear-gradient(180deg, #1a1030 0%, #100a20 55%, #050310 100%)', particle: '⭐', motion: 'drift-up', accent: '#7a5cff', enemyTint: 'saturate(1.3) hue-rotate(15deg) brightness(0.95)' }
 ];
+
+// --- World Events ---
+// A one-per-act, zone-themed encounter (see NODE_TYPES.worldEvent in
+// map.js and enterWorldEvent in main.js) - a single large decision, not a
+// fight. `prevent` stops the event and only grants reputation, no loot;
+// `allow` lets it play out and grants a unique, never-randomly-found
+// title (see the matching we_<zoneId> TITLES entry below) plus a
+// signature pet or mount (see PETS/MOUNTS above). Art lives at
+// assets/sprites/events/<zoneId>_idle.png (+ _attack_0..N frames reused as
+// an ambient loop, same PixelLab pipeline as BOSS_ART) - see
+// WORLD_EVENT_ART in sprites.js.
+const WORLD_EVENTS = {
+  forest: {
+    name: 'The Withering Elder',
+    flavor: "Elderglen's oldest tree - vast enough to have its own weather - has begun to blacken and wither from the inside out, as if something ancient within it is finally dying. The forest around it has gone completely silent.",
+    preventLabel: 'Perform the old rite to save it',
+    allowLabel: 'Let the old tree fall',
+    allowFlavor: 'The tree groans and comes down like a mountain collapsing, root-hollows exhaling centuries of dust. Something small and withered crawls free of the wreckage and looks up at you.',
+    rewardKind: 'pet', rewardId: 'witherbarkSprite'
+  },
+  swamp: {
+    name: 'The Sunken Idol',
+    flavor: "A bloated, half-sunk idol in the deepest part of the Murkfen has begun to glow a sick green, and every creature in the swamp has gone still, gathering around it in a silence that feels deliberate.",
+    preventLabel: 'Shatter the idol',
+    allowLabel: 'Let the ritual complete',
+    allowFlavor: 'The glow collapses inward with a sound like a held breath finally released. The muck around the idol churns, and something enormous and leech-like surfaces, docile, and looks to you as if waiting for orders.',
+    rewardKind: 'mount', rewardId: 'murkfenDireleech'
+  },
+  desert: {
+    name: 'The Rumbling Peak',
+    flavor: 'A volcano at the edge of the Sunscar Wastes has started rumbling, ash sifting down over a village built too close to its base. The villagers are already arguing about whether to run.',
+    preventLabel: 'Climb up and stop the eruption',
+    allowLabel: 'Let it erupt',
+    allowFlavor: 'The mountain splits open in a column of fire and ash, the village below gone within minutes. In the cooling black rock at the crater\'s lip, something small stirs and cracks its way out of a heat-blackened egg.',
+    rewardKind: 'pet', rewardId: 'cinderWhelp'
+  },
+  hellfire: {
+    name: 'The Widening Rift',
+    flavor: 'A tear to the Shattered Hellscape\'s demonic depths has torn open beside a refugee camp, fel-green light spilling across the sand and something enormous breathing on the other side.',
+    preventLabel: 'Seal the rift',
+    allowLabel: 'Let it widen',
+    allowFlavor: "The rift tears open fully, and the refugees scatter into the dunes. From the widening dark, something four-legged and burning steps through, and - unexpectedly - kneels.",
+    rewardKind: 'mount', rewardId: 'felstrider'
+  },
+  emerald: {
+    name: 'The Overgrowing Vale',
+    flavor: "A single seedling in the Emerald Dream has begun blooming at an impossible speed, vines already swallowing the vale around it whole, threatening to bury it entirely by nightfall.",
+    preventLabel: "Contain the seedling's growth",
+    allowLabel: 'Let the vale be consumed',
+    allowFlavor: "By morning the vale is gone entirely, replaced by a forest that shouldn't exist yet. At its heart, one small sapling pulls its roots free of the ground to walk alongside you.",
+    rewardKind: 'pet', rewardId: 'emeraldSapling'
+  },
+  silvermoon: {
+    name: 'The Unstable Spire',
+    flavor: "One of Silvermoon's arcane spires has gone unstable, arcing raw magic into the sky in wild, colorful bursts that are starting to draw a very nervous crowd below.",
+    preventLabel: 'Stabilize the spire',
+    allowLabel: 'Let it overload',
+    allowFlavor: 'The spire discharges everything at once in a silent, blinding flash, arcane fire raining harmlessly down as light rather than flame. Something feathered and glowing drifts down out of it and lands near your feet, waiting.',
+    rewardKind: 'mount', rewardId: 'starlitHawkstrider'
+  },
+  blacktemple: {
+    name: 'The Forbidden Circle',
+    flavor: 'A ritual circle beneath the Black Bastion has been uncovered mid-ceremony, still humming with the kind of power that makes torches gutter and shadows stretch the wrong direction.',
+    preventLabel: 'Destroy the circle',
+    allowLabel: 'Let the ritual complete',
+    allowFlavor: 'The circle flares black, then goes dark and cold all at once. Where its center burned brightest, a warhorse stands wreathed in shadow, utterly silent, utterly yours.',
+    rewardKind: 'mount', rewardId: 'shadowmaneCharger'
+  },
+  northrend: {
+    name: 'The Cracking Glacier',
+    flavor: "An ancient wyrm frozen deep in Northrend's ice has begun to stir, spiderweb cracks spreading across the glacier above it with every slow, freezing breath.",
+    preventLabel: 'Re-freeze the glacier',
+    allowLabel: 'Let it wake',
+    allowFlavor: 'The glacier shatters outward in a wave of frost. What claws its way free is far smaller than the cracks suggested - barely more than a hatchling, blinking up at the sun for the first time in centuries.',
+    rewardKind: 'pet', rewardId: 'frostwyrmling'
+  },
+  nether: {
+    name: 'The Tear in Reality',
+    flavor: 'A tear in the Twisting Nether itself has opened without warning, void-touched shapes drifting through the gap and dissolving into the air like ink in water.',
+    preventLabel: 'Close the tear',
+    allowLabel: 'Let it widen',
+    allowFlavor: 'The tear yawns fully open, and for one long moment the sky itself seems to hold its breath. Then it snaps shut - and something that was never quite there to begin with remains behind, waiting on you.',
+    rewardKind: 'mount', rewardId: 'voidstrider'
+  }
+};
 
 // Per-zone procedural backdrop art (see renderZoneSkyline in sprites.js) - a
 // silhouette skyline shown in a themed banner above every encounter screen
@@ -598,7 +696,21 @@ const TITLES = {
   pvp_knightCaptain: { name: 'Knight-Captain', position: 'prefix', source: 'Win 15 PvP matches', effect: { atk: 2, def: 1 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 15 },
   pvp_champion: { name: 'Champion', position: 'prefix', source: 'Win 25 PvP matches', effect: { atk: 2, def: 2 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 25 },
   pvp_marshal: { name: 'Marshal', position: 'prefix', source: 'Win 40 PvP matches', effect: { atk: 3, def: 2, critBonus: 0.02 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 40 },
-  pvp_grandMarshal: { name: 'Grand Marshal', position: 'prefix', source: 'Win 60 PvP matches', effect: { atk: 4, def: 3, critBonus: 0.03 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 60 }
+  pvp_grandMarshal: { name: 'Grand Marshal', position: 'prefix', source: 'Win 60 PvP matches', effect: { atk: 4, def: 3, critBonus: 0.03 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 60 },
+
+  // World Event titles - granted the moment its zone's event is let play
+  // out (see resolveWorldEventAllow in main.js, which pushes the zone id
+  // into pdata.worldEventTitlesEarned). Never re-earnable if declined or
+  // prevented - each zone's event only offers this once, ever.
+  we_forest: { name: 'the Elderfallen', position: 'suffix', source: 'Let the Withering Elder fall (Elderglen Forest World Event)', effect: { hpRegen: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('forest') },
+  we_swamp: { name: 'the Bogsworn', position: 'suffix', source: 'Let the Sunken Idol\'s ritual complete (Murkfen Swamp World Event)', effect: { lifesteal: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('swamp') },
+  we_desert: { name: 'the Ashbringer', position: 'suffix', source: 'Let the Rumbling Peak erupt (Sunscar Wastes World Event)', effect: { spellPower: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('desert') },
+  we_hellfire: { name: 'the Doomherald', position: 'suffix', source: 'Let the Widening Rift tear open (Shattered Hellscape World Event)', effect: { atk: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('hellfire') },
+  we_emerald: { name: 'the Wildsower', position: 'suffix', source: 'Let the Overgrowing Vale be consumed (Emerald Dream World Event)', effect: { maxHp: 6 }, check: () => Persistent.load().worldEventTitlesEarned.includes('emerald') },
+  we_silvermoon: { name: 'the Spireshatterer', position: 'suffix', source: 'Let the Unstable Spire overload (Silvermoon Spires World Event)', effect: { critBonus: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('silvermoon') },
+  we_blacktemple: { name: 'the Ritualbound', position: 'suffix', source: 'Let the Forbidden Circle complete (The Black Bastion World Event)', effect: { def: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('blacktemple') },
+  we_northrend: { name: 'the Glacierwaker', position: 'suffix', source: 'Let the Cracking Glacier wake (Northrend Wastes World Event)', effect: { def: 1, maxHp: 3 }, check: () => Persistent.load().worldEventTitlesEarned.includes('northrend') },
+  we_nether: { name: 'the Voidtouched', position: 'suffix', source: 'Let the Tear in Reality widen (The Twisting Nether World Event)', effect: { speed: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('nether') }
 };
 
 // --- Curses ---

@@ -58,6 +58,9 @@ const Game = {
     this.goldEarnedThisRun = 0;
     this.act = startingAct || 1;
     this.log = [];
+    // Jakesteel (see enterJakesteelEncounter in main.js) can only be offered
+    // once per run, win/lose/sacrifice - reset fresh on every new run.
+    this.jakesteelOfferedThisRun = false;
     this.player.hp = this.effectiveStats().maxHp;
     // Persistent side-effects (XP/levels, loot, materials, tamed pets/mounts,
     // trial unlocks, quest progress) all save immediately as they happen
