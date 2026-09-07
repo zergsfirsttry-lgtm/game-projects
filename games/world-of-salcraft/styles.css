@@ -407,16 +407,52 @@ button {
 .map-node.fogged .map-node-icon { opacity: 0.55; font-weight: bold; font-family: Georgia, serif; }
 .map-node.fogged.available { animation: fogPulse 2.2s ease-in-out infinite; }
 /* The actual creature/theme art (see nodePreviewArt, map.js) replacing the
-   generic icon+circle wherever it's known - sized to fill most of the same
-   circular frame the emoji icon used, clipped to it so a non-square sprite
-   never pokes past the node's own border. */
-.map-node.has-art { background: var(--bg-panel); }
+   generic icon+circle wherever it's known - sized closer to the traveler's
+   own on-map sprite (renderCompanionRig, 78-100px) rather than shrunk into
+   the small type-icon circle. The node's own circle becomes a ground plate
+   at the art's feet (the ::after below) instead of a porthole clipping the
+   whole sprite, so a tall/wide creature can stand on it rather than being
+   masked into a coin portrait. */
+.map-node.has-art {
+  width: 56px;
+  height: 56px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+}
+/* The ground plate itself - a flattened ellipse at the sprite's feet rather
+   than a ring around its whole body. Still carries the available/current/
+   visited color cues the plain circle used to (see the modifiers below),
+   just as a floor glow instead of a full border. */
+.map-node.has-art::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 82%;
+  height: 26%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(20,15,10,0.55) 0%, rgba(20,15,10,0.3) 55%, transparent 80%);
+  border: 2px solid var(--border);
+  z-index: -1;
+}
+.map-node.has-art.available::after { border-color: var(--accent-2); box-shadow: 0 0 8px rgba(138,95,214,0.5); }
+.map-node.has-art.current::after { border-color: var(--accent); box-shadow: 0 0 10px rgba(212,175,90,0.6); }
+.map-node.has-art.visited::after { border-color: var(--good); opacity: 0.7; }
 .map-node-art {
-  width: 92%;
-  height: 92%;
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  transform: translateX(-50%);
+  width: auto;
+  height: 140%;
+  max-width: 200%;
   object-fit: contain;
   image-rendering: pixelated;
-  border-radius: 50%;
+  filter: drop-shadow(0 3px 2px rgba(0,0,0,0.5));
+  pointer-events: none;
 }
 @keyframes fogPulse {
   0%, 100% { box-shadow: 0 0 8px rgba(138,95,214,0.5); }
