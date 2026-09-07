@@ -1850,75 +1850,75 @@ const CONTAINERS = {
 const TUTORIALS = {
   map: {
     lines: [
-      "Tap a glowing node to move. Battles, camps, shops, and stranger encounters wait down different paths.",
-      "Watch your HP, gold, and Relics up top - or flip AUTO to let the game fight and walk for you."
+      "Tap a glowing node to wander off - battles, campfires, shops, and stranger things all wait down different roads.",
+      "Keep an eye on your HP, gold, and Relics up top - or flip AUTO and let the game do the walking. Adventuring by proxy. I respect it."
     ]
   },
   combat: {
     lines: [
-      "Attack swings your weapon; your Skill hits harder but needs a cooldown between uses.",
-      "Watch your HP - an item can save you, and fleeing is always an option except against a boss."
+      "Attack swings whatever you're holding; your Skill hits harder but needs a breather between uses - like me after a long set.",
+      "Mind your HP - a potion can bail you out, and fleeing's always on the table. Except against a boss. They lock the door."
     ]
   },
   relic: {
-    lines: ["A relic boosts you for this adventure only - lost the moment you fall. Pick one, or skip."]
+    lines: ["A relic sweetens this run only - gone the second you go down, like applause after the last song. Pick one, or walk on."]
   },
   shop: {
-    lines: ["Spend gold here - none of it comes home if you don't. Prices rise the deeper you go."]
+    lines: ["Spend it while you've got it - none of this gold makes it home if you don't. Prices climb the deeper you wander, same as my fees."]
   },
   rest: {
-    lines: ["Rest to heal, meditate to permanently shave a round off your Skill's cooldown, or cook a fish for HP and Cooking XP. Pick one."]
+    lines: ["Rest to heal, meditate to permanently shave a round off your Skill's cooldown, or cook a fish for HP and Cooking XP. One per fire - I don't make the rules. Well, maybe I do."]
   },
   event: {
-    lines: ["Every choice here leads somewhere different - there's no wrong pick, just different outcomes."]
+    lines: ["Every choice here goes somewhere different - there's no wrong pick, just a different verse of the same song."]
   },
   worldEvent: {
-    lines: ["A rare, one-per-run set-piece. Stop it for reputation, or let it play out for a unique title plus a pet or mount."]
+    lines: ["A rare, one-per-run showstopper. Step in for reputation, or let it play out for a one-of-a-kind title plus a pet or mount."]
   },
   rareNpc: {
-    lines: ["A named NPC with a guaranteed signature reward - no luck involved, just claim it."]
+    lines: ["A named face with a guaranteed reward waiting - no dice roll, no luck, just walk up and take it."]
   },
   witchJess: {
-    lines: ["Jess trades rare cats and kittens for Relics, not gold - prices rise with rarity."]
+    lines: ["Jess deals in rare cats and kittens, and she only takes Relics, never gold - prices climb with rarity. She knows exactly what she's got."]
   },
   taming: {
-    lines: ["Answer right to tame it on the spot. Get one wrong and you'll have to fight for it instead."]
+    lines: ["Answer right and it's yours, no fuss. Answer wrong and you're fighting for it the hard way."]
   },
   jakesteel: {
-    lines: ["A one-time signature duel. Beat him to recruit him permanently, or sacrifice every Relic you're carrying to pass unharmed."]
+    lines: ["A one-time signature duel. Win, and he's yours for good - or hand over every Relic you're carrying and walk past unscathed."]
   },
   legendaryEncounter: {
-    lines: ["A multi-wave gauntlet guarding a named Legendary item - no fleeing, a small heal between waves."]
+    lines: ["A multi-wave gauntlet guarding a named Legendary - no fleeing allowed, just a small heal between waves to catch your breath."]
   },
   // ---------------- Sanctuary tabs ----------------
   // Same one-time-ever convention as the in-run screens above, just keyed
   // 'sanctuary_<tab>' (see maybeShowTutorial's call at the end of
   // showSanctuary in main.js) so every tab gets its own first-visit intro.
   sanctuary_character: {
-    lines: ["Gear, stats, talents, and your equipped title - earn titles from encounters, dungeons, PvP, and reputation."]
+    lines: ["Gear, stats, talents, and whatever title you're flying - earn titles from encounters, dungeons, PvP, and reputation. Mine's just 'Kyle.' Working on it."]
   },
   sanctuary_pvp: {
-    lines: ["Fight a mirror copy of yourself for Honor and rank. Honor buys gear here too."]
+    lines: ["Queue up against a random rival of similar power - not a mirror of you, an actual stranger with their own gear. Fight for Honor and rank; Honor buys gear here too."]
   },
   sanctuary_inventory: {
-    lines: ["Everything you own, sorted by category - weapons, armor, food, relics, recipes."]
+    lines: ["Everything you own, sorted by category - weapons, armor, food, relics, and spells. Recipes moved to the Resource Bank, if you go looking."]
   },
   sanctuary_professions: {
-    lines: ["Gathering, cooking, crafting, and disenchanting - level them up over time for passive bonuses."]
+    lines: ["Gathering, cooking, crafting, disenchanting - level them up over time for passive bonuses. Slow work, but so is songwriting."]
   },
   sanctuary_shop: {
-    lines: ["Permanent gear, relics, and spells bought with banked gold - nothing here vanishes on death."]
+    lines: ["Permanent gear, relics, and spells, all bought with banked gold - none of it vanishes when you do."]
   },
   sanctuary_quests: {
-    lines: ["Accept a quest, complete it, come back and claim the reward. Most repeat, a bit harder each time."]
+    lines: ["Accept a quest, go do the thing, come back and collect. Most repeat, a little tougher each round - like an encore nobody asked for."]
   },
   sanctuary_journal: {
-    lines: ["Everything you've seen or are missing, plus your reputation with every zone - get friendly enough and a zone's own shop unlocks."]
+    lines: ["Everything you've found or are still missing, plus your standing with every zone - get friendly enough and their shop opens up to you."]
   },
   sanctuary_raids: {
-    lines: ["Dungeons for a solo run, raids for a full party - each ends in a named boss fight."]
+    lines: ["Dungeons for a solo run, raids for a full party - both end with a named boss and a bad attitude."]
   },
   sanctuary_house: {
-    lines: ["Feed and rename your pets and mounts here, and equip up to four recruited companions to fight alongside you."]
+    lines: ["Feed and rename your pets and mounts here, and field up to four recruited companions to fight at your side. My band, basically."]
   }
 };
