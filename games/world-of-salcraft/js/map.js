@@ -21,8 +21,7 @@ const NODE_TYPES = {
 // What a revealed node should actually show instead of NODE_TYPES' generic
 // icon+circle, for every type where a specific creature/theme is already
 // known (see the resolution pass at the end of generateMap) or always fixed
-// (jakesteel/witchJess). Returns null for every other type (event/rest/shop/
-// treasure/legendary), which keeps the plain icon. `kind` drives how
+// (jakesteel/witchJess/rest/shop/treasure/legendary). `kind` drives how
 // renderMap/animateTravel use the art: 'attack' (combat/elite/boss) stays on
 // its static idle portrait until the player's approach actually reaches the
 // node, then plays the attack swing once as a flourish; 'ambient' (every
@@ -61,6 +60,15 @@ function nodePreviewArt(node, act) {
   }
   if (node.type === 'jakesteel') {
     return { idle: BOSS_ART.jakesteel.idle, frames: BOSS_ART.jakesteel.attackFrames, kind: 'ambient' };
+  }
+  if (node.type === 'event' && node.eventRef) {
+    const art = EVENT_ART[node.eventRef.id];
+    if (!art) return null;
+    return { idle: art.idle, frames: art.frames, kind: 'ambient' };
+  }
+  if (NODE_TYPE_ART[node.type]) {
+    const art = NODE_TYPE_ART[node.type];
+    return { idle: art.idle, frames: art.frames, kind: 'ambient' };
   }
   return null;
 }
@@ -271,13 +279,15 @@ function generateMap(act) {
   // legendaryTaming - each re-validates its own stored pick at visit time
   // and falls back to a plain elite fight exactly as before if it's gone
   // stale, same as when their pool was simply empty). rest/shop/treasure/
-  // event/legendary/jakesteel/witchJess are untouched - either a generic
+  // legendary/jakesteel/witchJess are untouched - either a generic
   // node type with no single "specific content" to preview, or (jakesteel/
   // witchJess) already a fixed, always-known identity.
   Object.values(allNodes).forEach(node => {
     if (node.type === 'combat') node.enemyId = ENEMIES[rand(0, ENEMIES.length - 1)].id;
     else if (node.type === 'elite') node.enemyId = ELITES[rand(0, ELITES.length - 1)].id;
-    else if (node.type === 'worldEvent') {
+    else if (node.type === 'event') {
+      node.eventRef = EVENTS[rand(0, EVENTS.length - 1)];
+    } else if (node.type === 'worldEvent') {
       const options = WORLD_EVENTS[getActTheme(act).id];
       node.worldEvent = options[rand(0, options.length - 1)];
     } else if (node.type === 'taming') {

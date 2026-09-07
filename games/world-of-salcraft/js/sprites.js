@@ -482,6 +482,26 @@ const ENCOUNTER_AMBIENT_ANIM = Object.fromEntries([
   'george', 'landry', 'william', 'mcclures', 'izzo', 'dylinator', 'tina', 'witchJess'
 ].map(_encounterAmbientAnim));
 
+// Map-node preview art for the 14 generic EVENTS entries (data.js, keyed by
+// event id) and the 4 generic node types with no per-instance content
+// (rest/shop/treasure/legendary) - see nodePreviewArt in map.js. Small
+// transparent single-subject icons (matches the companion/monster convention,
+// not WORLD_EVENT_ART's wide scene convention) since these render inside a
+// small circular map node rather than a full encounter screen.
+function _eventNodeArt(key) {
+  return [key, {
+    idle: `assets/sprites/events2/${key}_idle.png`,
+    frames: [0, 1, 2, 3, 4, 5].map(i => `assets/sprites/events2/anim/${key}_ambient_${i}.png`)
+  }];
+}
+const EVENT_ART = Object.fromEntries([
+  'shrine', 'peddler', 'chest', 'campfire', 'gambler', 'altar', 'traveler', 'mirror',
+  'hermit', 'puzzle', 'crossroads', 'wyrmling', 'cornered-child', 'hunted-cub'
+].map(_eventNodeArt));
+const NODE_TYPE_ART = Object.fromEntries([
+  'rest', 'shop', 'treasure', 'legendary'
+].map(_eventNodeArt));
+
 // Attack animations for every pet/mount with real PixelLab art (CREATURE_ART_IDS
 // above) - same treatment as BOSS_ART/WEAPON_ATTACK_ANIM, triggered whenever
 // the player's own equipped pet/mount lands a hit (see

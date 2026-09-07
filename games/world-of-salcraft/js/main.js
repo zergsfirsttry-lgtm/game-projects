@@ -873,7 +873,7 @@ const App = {
 
   // ---------------- Event ----------------
   showEvent(node) {
-    const event = pickRandomEvent();
+    const event = node.eventRef || pickRandomEvent();
     node.eventRef = event;
     this.root.innerHTML = `
       ${this.renderHud()}
