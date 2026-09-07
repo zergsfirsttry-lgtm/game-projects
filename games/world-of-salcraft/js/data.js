@@ -1897,6 +1897,9 @@ const TUTORIALS = {
   sanctuary_character: {
     lines: ["Gear, stats, talents, and whatever title you're flying - earn titles from encounters, dungeons, PvP, and reputation. Mine's just 'Kyle.' Working on it."]
   },
+  sanctuary_spellbook: {
+    lines: ["Every spell you've ever learned, one page, click one to see it up close. Star means always active; the rest fill your open slots - more open up at level 10, 30, 60, and max."]
+  },
   sanctuary_pvp: {
     lines: ["Queue up against a random rival of similar power - not a mirror of you, an actual stranger with their own gear. Fight for Honor and rank; Honor buys gear here too."]
   },

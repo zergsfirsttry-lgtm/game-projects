@@ -358,7 +358,7 @@ const App = {
       ${this.renderHud()}
       <div class="panel">
         <h2>Inventory</h2>
-        ${this.renderInventoryCategories(classId, extraRows)}
+        ${this.renderInventoryCategories(classId, extraRows, true)}
         <button class="btn-secondary" id="btn-inrun-inventory-back">Back to Map</button>
       </div>`;
     this.wireInventoryCategoryClicks(classId, this.root, () => this.showInRunInventory());
@@ -1828,6 +1828,7 @@ const App = {
     // AFK/idle system (computeAfkProgress) advances next time the game opens.
     Persistent.load().lastPlayedClassId = classId;
     if (tab !== 'character') this.selectedArmorySlot = null;
+    if (tab !== 'spellbook') this.selectedSpellbookId = null;
     // Collapsible <details> sections (see the .shop-category convention)
     // re-render from scratch on every interaction, which would otherwise
     // reset them all to closed - capture which ones (by their data-key) are
@@ -1872,6 +1873,7 @@ const App = {
 
     let body = '';
     if (tab === 'character') body = this.renderSanctuaryCharacter(classId) + this.renderSanctuaryTalents(classId);
+    else if (tab === 'spellbook') body = this.renderSanctuarySpellbook(classId);
     else if (tab === 'inventory') body = this.renderSanctuaryInventory(classId);
     else if (tab === 'professions') body = this.renderSanctuaryProfessions(classId);
     else if (tab === 'shop') body = this.renderSanctuaryShop();
@@ -1891,6 +1893,7 @@ const App = {
         ${xpBar}
         <div class="sanctuary-tabs">
           <button type="button" class="tab-btn ${tab === 'character' ? 'active' : ''}" data-tab="character">Character</button>
+          <button type="button" class="tab-btn ${tab === 'spellbook' ? 'active' : ''}" data-tab="spellbook">📖 Spellbook</button>
           <button type="button" class="tab-btn ${tab === 'pvp' ? 'active' : ''}" data-tab="pvp">PvP</button>
           <button type="button" class="tab-btn ${tab === 'inventory' ? 'active' : ''}" data-tab="inventory">Inventory</button>
           <button type="button" class="tab-btn ${tab === 'professions' ? 'active' : ''}" data-tab="professions">Professions</button>
@@ -2739,7 +2742,11 @@ const App = {
   // viewing/equipping gear is one consistent experience whether you're at
   // the Sanctuary or mid-run. `extraRows` lets the in-run panel tack on its
   // own Armory category without duplicating this list.
-  renderInventoryCategories(classId, extraRows) {
+  // `includeSpells` is false from the Sanctuary Inventory tab (spells have
+  // their own Spellbook tab there - see renderSanctuarySpellbook) but stays
+  // true for the mid-run Inventory panel (showInRunInventory), which has no
+  // separate Spellbook screen to send the player to instead.
+  renderInventoryCategories(classId, extraRows, includeSpells) {
     const pdata = Persistent.load();
     const cls = CLASSES[classId];
     const weapons = pdata.inventory.filter(i => i.slot === 'weapon');
@@ -2753,13 +2760,13 @@ const App = {
       ${this.categoryButtonRow('inv-armor', '🛡️', 'Armor & Accessories', `${armor.length} owned - chest, helm, shoulders, cloak, rings, trinkets, and more`)}
       ${this.categoryButtonRow('inv-containers', '🎁', 'Containers', `${containers.length} owned`)}
       ${this.categoryButtonRow('inv-food', '🍗', 'Food', `${foodItems.length} owned - eat for a 1-hour buff, or feed to a pet/mount at the House`)}
-      ${this.categoryButtonRow('inv-spells', '🔮', 'Spells', `for ${cls.name}`)}
+      ${includeSpells ? this.categoryButtonRow('inv-spells', '📖', 'Spellbook', `for ${cls.name}`) : ''}
       ${this.categoryButtonRow('inv-relics', '💠', 'Permanent Relics', `${pdata.permanentRelics.length} owned - always active, every run, every class`)}
     `;
   },
 
   renderSanctuaryInventory(classId) {
-    return this.renderInventoryCategories(classId);
+    return this.renderInventoryCategories(classId, null, false);
   },
 
   // Dispatches every [data-open-category] button rendered by
@@ -2871,44 +2878,94 @@ const App = {
     }, onClose);
   },
 
+  // WoW-spellbook-style page: every known spell as a big icon in a grid
+  // (the innate default spell always first, starred) rather than a plain
+  // vertical list - click one to see its full details and equip/unequip it
+  // in a detail strip below the grid instead of an inline row button.
+  // Shared by the Sanctuary Spellbook tab (renderSanctuarySpellbook) and the
+  // in-run Inventory panel's Spells category (showInvSpellsModal) so both
+  // look and behave identically. `selectedId` is remembered by the caller
+  // across re-renders (this.selectedSpellbookId for the tab, a closure
+  // variable for the modal) since a click here re-renders just this markup.
+  renderSpellbookPage(classId, selectedId) {
+    const pdata = Persistent.load();
+    const rec = Persistent.getCharacter(classId);
+    const cls = CLASSES[classId];
+    const maxSlots = maxEquippedSpells(rec.level);
+    const equipped = equippedSpellIds(rec, cls);
+    const spellOptions = [cls.defaultSpell, ...pdata.unlockedSpells].filter((v, i, a) => a.indexOf(v) === i);
+    const selected = selectedId && spellOptions.includes(selectedId) ? selectedId : spellOptions[0];
+    const sp = SPELLS[selected];
+    const isDefault = selected === cls.defaultSpell;
+    const active = equipped.includes(selected);
+    const slotsFull = equipped.length >= maxSlots;
+    const disabled = isDefault || (!active && slotsFull);
+    const label = isDefault ? 'Always Active' : (active ? 'Unequip' : (slotsFull ? 'Slots Full' : 'Equip'));
+    const level = getSpellLevel(selected).level;
+
+    const grid = spellOptions.map(id => {
+      const s = SPELLS[id];
+      const isD = id === cls.defaultSpell;
+      const isActive = equipped.includes(id);
+      const lvl = getSpellLevel(id).level;
+      return `<button type="button" class="spellbook-slot ${id === selected ? 'spellbook-slot-selected' : ''} ${isActive ? 'spellbook-slot-active' : ''}" data-select-spell="${id}" title="${escapeHtml(s.name)}">
+        <img src="${s.icon}" width="40" height="40" alt="">
+        <span class="spellbook-slot-level">${lvl}</span>
+        ${isD ? '<span class="spellbook-slot-innate" title="Always active">★</span>' : ''}
+      </button>`;
+    }).join('');
+
+    return `
+      <div class="spellbook-page">
+        <p class="small-text">${equipped.length} / ${maxSlots} active slots - more unlock at level 10, 30, 60, and ${MAX_LEVEL}.</p>
+        <div class="spellbook-grid">${grid}</div>
+        <div class="spellbook-detail">
+          <img src="${sp.icon}" width="56" height="56" alt="" class="spellbook-detail-icon">
+          <div class="spellbook-detail-text">
+            <h4>${escapeHtml(sp.name)} <span class="small-text">Lv.${level}/${SPELL_MAX_LEVEL}</span></h4>
+            <p class="small-text">${escapeHtml(sp.desc)}</p>
+          </div>
+          <button class="btn-secondary" data-equip-spell="${selected}" ${disabled ? 'disabled' : ''}>${label}</button>
+        </div>
+      </div>`;
+  },
+
+  // Wires a rendered renderSpellbookPage: clicking a grid slot calls
+  // `onSelect` with that spell's id (to update whichever selection state
+  // the caller owns and re-render), clicking Equip/Unequip calls `onEquip`.
+  wireSpellbookPage(container, onSelect, onEquip) {
+    container.querySelectorAll('[data-select-spell]').forEach(btn => {
+      btn.addEventListener('click', () => onSelect(btn.dataset.selectSpell));
+    });
+    const equipBtn = container.querySelector('[data-equip-spell]');
+    if (equipBtn) equipBtn.addEventListener('click', () => onEquip(equipBtn.dataset.equipSpell));
+  },
+
+  // The Spellbook Sanctuary tab - just renderSpellbookPage with
+  // this.selectedSpellbookId as the remembered selection (reset to null
+  // whenever showSanctuary switches to a different tab).
+  renderSanctuarySpellbook(classId) {
+    return this.renderSpellbookPage(classId, this.selectedSpellbookId);
+  },
+
+  // Mid-run Inventory panel's Spells category - same page, in a popup.
   showInvSpellsModal(classId, onClose) {
-    this.showListModal(`🔮 Spells for ${CLASSES[classId].name}`, () => {
-      const pdata = Persistent.load();
-      const rec = Persistent.getCharacter(classId);
-      const cls = CLASSES[classId];
-      const maxSlots = maxEquippedSpells(rec.level);
-      const equipped = equippedSpellIds(rec, cls);
-      const spellOptions = [cls.defaultSpell, ...pdata.unlockedSpells].filter((v, i, a) => a.indexOf(v) === i);
-      const slotsFull = equipped.length >= maxSlots;
-      return `<p class="small-text">${equipped.length} / ${maxSlots} slots filled - more slots unlock at level 10, 30, 60, and ${MAX_LEVEL}.</p>` +
-        spellOptions.map(id => {
-        const sp = SPELLS[id];
-        const level = getSpellLevel(id).level;
-        const isDefault = id === cls.defaultSpell;
-        const active = equipped.includes(id);
-        const disabled = isDefault || (!active && slotsFull);
-        const label = isDefault ? 'Always Active' : (active ? 'Unequip' : (slotsFull ? 'Slots Full' : 'Equip'));
-        return `<div class="gear-row"><div class="desc"><span class="spell-icon"><img src="${sp.icon}" width="28" height="28" alt=""></span><div><strong>${sp.name}</strong> <span class="small-text">Lv.${level}/${SPELL_MAX_LEVEL}</span><div class="small-text">${sp.desc}</div></div></div>
-          <button class="btn-secondary" data-spell="${id}" ${disabled ? 'disabled' : ''}>${label}</button></div>`;
-      }).join('');
-    }, (container, refresh) => {
-      container.querySelectorAll('[data-spell]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const rec = Persistent.getCharacter(classId);
-          const cls = CLASSES[classId];
-          const id = btn.dataset.spell;
-          if (id === cls.defaultSpell) return;
-          const idx = rec.equipped.spells.indexOf(id);
-          if (idx !== -1) {
-            rec.equipped.spells.splice(idx, 1);
-          } else if (equippedSpellIds(rec, cls).length < maxEquippedSpells(rec.level)) {
-            rec.equipped.spells.push(id);
-          } else {
-            return;
-          }
-          Persistent.save();
-          refresh();
-        });
+    let selectedId = null;
+    this.showListModal(`📖 Spellbook`, () => this.renderSpellbookPage(classId, selectedId), (container, refresh) => {
+      this.wireSpellbookPage(container, (id) => { selectedId = id; refresh(); }, (id) => {
+        const rec = Persistent.getCharacter(classId);
+        const cls = CLASSES[classId];
+        if (id === cls.defaultSpell) return;
+        const idx = rec.equipped.spells.indexOf(id);
+        if (idx !== -1) {
+          rec.equipped.spells.splice(idx, 1);
+        } else if (equippedSpellIds(rec, cls).length < maxEquippedSpells(rec.level)) {
+          rec.equipped.spells.push(id);
+        } else {
+          return;
+        }
+        Persistent.save();
+        refresh();
       });
     }, onClose);
   },
@@ -4251,6 +4308,21 @@ const App = {
         if (pdata.bankGold < 50) { this.showInsufficientResourcesAlert('You need 50 🪙 to reset your talents.'); return; }
         pdata.bankGold -= 50;
         resetTalents(rec);
+        Persistent.save();
+        this.showSanctuary(classId, tab);
+      });
+    } else if (tab === 'spellbook') {
+      this.wireSpellbookPage(this.root, (id) => { this.selectedSpellbookId = id; this.showSanctuary(classId, tab); }, (id) => {
+        const cls = CLASSES[classId];
+        if (id === cls.defaultSpell) return;
+        const idx = rec.equipped.spells.indexOf(id);
+        if (idx !== -1) {
+          rec.equipped.spells.splice(idx, 1);
+        } else if (equippedSpellIds(rec, cls).length < maxEquippedSpells(rec.level)) {
+          rec.equipped.spells.push(id);
+        } else {
+          return;
+        }
         Persistent.save();
         this.showSanctuary(classId, tab);
       });

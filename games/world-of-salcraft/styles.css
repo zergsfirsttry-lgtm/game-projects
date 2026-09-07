@@ -1573,6 +1573,66 @@ button {
 }
 .discovery-popup .btn-primary { margin-top: 8px; }
 
+/* ---------- Spellbook (WoW-style page, see renderSpellbookPage) ---------- */
+.spellbook-page {
+  background: radial-gradient(ellipse at 50% 0%, rgba(212,175,90,0.06) 0%, transparent 60%), var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.spellbook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+.spellbook-slot {
+  position: relative;
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 4px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.spellbook-slot:hover { transform: translateY(-2px); border-color: var(--accent-2); }
+.spellbook-slot img { image-rendering: pixelated; }
+.spellbook-slot-selected { border-color: var(--accent); box-shadow: 0 0 8px rgba(212,175,90,0.5); }
+.spellbook-slot-active { background: rgba(212,175,90,0.1); }
+.spellbook-slot-level {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.spellbook-slot-innate {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  font-size: 0.75rem;
+  color: var(--accent);
+  text-shadow: 0 1px 2px #000;
+}
+.spellbook-detail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.spellbook-detail-icon { image-rendering: pixelated; flex-shrink: 0; border-radius: 6px; border: 2px solid var(--border); }
+.spellbook-detail-text { flex: 1; min-width: 0; }
+.spellbook-detail-text h4 { margin: 0 0 2px; }
+.spellbook-detail-text p { margin: 0; }
+@media (max-width: 480px) {
+  .spellbook-detail { flex-wrap: wrap; }
+  .spellbook-detail .btn-secondary { width: 100%; }
+}
+
 .tutorial-steps { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
 .tutorial-step { display: flex; gap: 10px; align-items: flex-start; }
 .tutorial-step-icon { font-size: 1.4rem; flex-shrink: 0; line-height: 1.3; }
