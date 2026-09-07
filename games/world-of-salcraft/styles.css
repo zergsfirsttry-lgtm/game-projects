@@ -1466,11 +1466,13 @@ button {
   padding: 8px;
 }
 .armory-portrait svg, .armory-portrait img { image-rendering: pixelated; max-width: 100%; height: auto; }
-/* Wraps independently of the outer .armory-layout (which is nowrap) - on a
-   very narrow screen the 3 weapon slots fold to 2-then-1 under the
-   portrait instead of forcing the whole paperdoll to overflow or reflow. */
-.armory-weapon-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 100%; }
-.armory-weapon-row .armory-slot { width: clamp(64px, 20vw, 90px); }
+/* Always a single row, main hand/off hand/ranged side by side, on every
+   viewport - a phone-width .armory-center only has ~130px to give it (the
+   two equipment columns on either side eat the rest), so the per-slot floor
+   here is deliberately much smaller than the equipment slots' own floor
+   rather than letting the row wrap onto its own stacked column. */
+.armory-weapon-row { display: flex; flex-wrap: nowrap; justify-content: center; gap: 4px; max-width: 100%; }
+.armory-weapon-row .armory-slot { width: clamp(36px, 18vw, 90px); flex-shrink: 1; }
 .armory-slot {
   background: var(--bg-panel-2);
   border: 2px solid var(--border);

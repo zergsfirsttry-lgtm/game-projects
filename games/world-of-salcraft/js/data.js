@@ -84,69 +84,74 @@ const SPELLS = {
 
 const CLASSES = {
   // --- Starter classes (always available) ---
+  // Base stats are deliberately archetype-driven rather than flat/even -
+  // see the per-class comment for the lore reasoning. Rogue carries the
+  // single highest base ATK in the game (fast, precise, glass-cannon);
+  // Warrior is a tank first, not the hardest hitter, so its ATK sits in the
+  // middle of the pack even though its HP/DEF lead the starter trio.
   warrior: {
     id: 'warrior', name: 'Warrior', icon: '⚔️', starter: true,
-    maxHp: 32, atk: 6, def: 3, speed: 4,
+    maxHp: 34, atk: 5, def: 4, speed: 3,
     defaultSpell: 'cleave',
     startItems: ['potion'],
-    blurb: 'Tough and simple. High HP, strong melee hits.'
+    blurb: 'Tough and simple. High HP and defense, dependable melee hits.'
   },
   rogue: {
     id: 'rogue', name: 'Rogue', icon: '🗡️', starter: true,
-    maxHp: 24, atk: 5, def: 1, speed: 8,
+    maxHp: 20, atk: 8, def: 1, speed: 9,
     defaultSpell: 'backstab',
     startItems: ['potion', 'bomb'],
-    blurb: 'Fragile but fast. Finds more gold, hits hard when it counts.'
+    blurb: 'Fragile but fast, with the sharpest attack of any class. Finds more gold too.'
   },
   mage: {
     id: 'mage', name: 'Mage', icon: '🧙', starter: true,
-    maxHp: 20, atk: 4, def: 0, speed: 5,
+    maxHp: 20, atk: 3, def: 0, speed: 5,
     defaultSpell: 'fireball',
     startItems: ['potion', 'potion'],
-    blurb: 'Low HP, low defense, but the strongest burst damage.'
+    blurb: 'Lowest HP and defense in the game, weak in a straight fight - but its spells burst hardest of all.'
   },
 
   // --- Unlockable classes (WoW-flavored) - won via a rare Class Trial encounter ---
   paladin: {
     id: 'paladin', name: 'Paladin', icon: '🛡️',
-    maxHp: 30, atk: 5, def: 3, speed: 4,
+    maxHp: 32, atk: 4, def: 4, speed: 4,
     defaultSpell: 'holyStrike',
     startItems: ['potion'],
-    blurb: 'Holy warrior who heals as he fights. Unlocked via Class Trial.'
+    blurb: 'Holy warrior who heals as he fights - tanky and steady rather than hard-hitting. Unlocked via Class Trial.'
   },
   hunter: {
     id: 'hunter', name: 'Hunter', icon: '🏹',
-    maxHp: 26, atk: 6, def: 1, speed: 7,
+    maxHp: 24, atk: 6, def: 2, speed: 7,
     defaultSpell: 'aimedShot',
     startItems: ['potion', 'bomb'],
     blurb: 'Precise ranged damage that pierces armor. Unlocked via Class Trial.'
   },
   warlock: {
     id: 'warlock', name: 'Warlock', icon: '😈',
-    maxHp: 22, atk: 5, def: 0, speed: 5,
+    maxHp: 30, atk: 5, def: 0, speed: 5,
     defaultSpell: 'lifeDrain',
     startItems: ['potion', 'potion'],
-    blurb: 'Trades safety for damage that heals itself. Unlocked via Class Trial.'
+    blurb: 'Dark pacts grant surprisingly high HP, but no defense to speak of. Damage that heals itself. Unlocked via Class Trial.'
   },
 
   // --- Unlockable classes (D&D-flavored) - won via a rare Class Trial encounter ---
   barbarian: {
     id: 'barbarian', name: 'Barbarian', icon: '🪓',
-    maxHp: 36, atk: 7, def: 2, speed: 4,
+    maxHp: 38, atk: 7, def: 1, speed: 4,
     defaultSpell: 'recklessRage',
     startItems: ['potion'],
-    blurb: 'Reckless melee fury, hits hardest when wounded. Unlocked via Class Trial.'
+    blurb: 'The most HP in the game and reckless melee fury, but no armor to lean on. Hits hardest when wounded. Unlocked via Class Trial.'
   },
   cleric: {
     id: 'cleric', name: 'Cleric', icon: '✝️',
-    maxHp: 26, atk: 4, def: 2, speed: 4,
+    maxHp: 27, atk: 3, def: 5, speed: 3,
     defaultSpell: 'divineLight',
     startItems: ['potion', 'potion'],
-    blurb: 'Devoted healer, sturdy and self-sustaining. Unlocked via Class Trial.'
+    blurb: 'Devoted healer with the best defense in the game and medium HP, but soft-hitting. Unlocked via Class Trial.'
   },
   bard: {
     id: 'bard', name: 'Bard', icon: '🎻',
-    maxHp: 24, atk: 5, def: 1, speed: 8,
+    maxHp: 22, atk: 4, def: 1, speed: 8,
     defaultSpell: 'viciousMockery',
     startItems: ['potion'],
     blurb: 'Quick and cutting, more gold-savvy than most. Unlocked via Class Trial.'
