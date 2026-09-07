@@ -250,7 +250,7 @@ const App = {
       const stackedDesc = relic.effect
         ? Object.keys(relic.effect).map(k => describeEffectLever(k, relic.effect[k] * count)).join(', ')
         : relic.desc;
-      return `<div class="gear-row"><div class="desc"><span>${relic.icon}</span><div>
+      return `<div class="gear-row"><div class="desc"><span>${this.renderIcon(relic.icon)}</span><div>
         <strong>${relic.name}</strong>${count > 1 ? ` <span class="small-text">×${count}</span>` : ''}
         <div class="small-text">${stackedDesc}</div>
       </div></div></div>`;
@@ -1006,7 +1006,7 @@ const App = {
       const owned = entry.bought;
       return `
         <div class="shop-item">
-          <div class="desc"><span>${info.icon}</span><div><strong>${info.name}</strong><div class="small-text">${info.desc}</div></div></div>
+          <div class="desc"><span>${this.renderIcon(info.icon)}</span><div><strong>${info.name}</strong><div class="small-text">${info.desc}</div></div></div>
           <div>
             <span class="price">${entry.price} 🪙</span>
             <button class="btn-secondary" data-idx="${idx}" ${owned ? 'disabled' : ''}>${owned ? 'Bought' : 'Buy'}</button>
@@ -1223,7 +1223,7 @@ const App = {
             ${usableItems.length === 0 ? '<span class="small-text">No items</span>' : usableItems.map(id => {
               const info = ITEMS[id] || (id === 'honorPotion' ? HONOR_SHOP.potion : null);
               if (!info) return '';
-              return `<button class="item-chip" data-item="${id}" ${inputLocked ? 'disabled' : ''}>${info.icon} ${info.name} (${p.items.filter(i=>i===id).length})</button>`;
+              return `<button class="item-chip" data-item="${id}" ${inputLocked ? 'disabled' : ''}>${this.renderIcon(info.icon, 16)} ${info.name} (${p.items.filter(i=>i===id).length})</button>`;
             }).join('')}
           </div>
         `}
@@ -1578,7 +1578,7 @@ const App = {
         <div class="relic-choice-grid">
           ${choices.map(r => `
             <button type="button" class="relic-card" data-relic="${r.id}">
-              <div class="relic-icon">${r.icon}</div>
+              <div class="relic-icon">${this.renderIcon(r.icon, 32)}</div>
               <div class="relic-name">${r.name}</div>
               <div class="small-text">${r.desc}</div>
             </button>`).join('')}
@@ -2426,6 +2426,19 @@ const App = {
     document.getElementById('btn-pvp-continue').addEventListener('click', () => this.showSanctuary(classId, 'pvp'));
   },
 
+  // Renders an `icon` field that's either a plain emoji (most item types
+  // still are) or a real PixelLab image path (RELICS/ITEMS - see data.js) -
+  // every icon-display call site that touches RELICS or ITEMS should route
+  // through this instead of interpolating icon directly, so both kinds
+  // render correctly from the exact same template code.
+  renderIcon(icon, sizePx) {
+    if (typeof icon === 'string' && icon.startsWith('assets/')) {
+      const px = sizePx || 20;
+      return `<img src="${icon}" width="${px}" height="${px}" alt="" style="vertical-align:middle;image-rendering:pixelated">`;
+    }
+    return icon;
+  },
+
   // Describes an item's stat contribution generically - flat atk/def/hp/gold
   // for weapons/armor, or its effect{} lever(s) for jewelry/trinkets - since
   // there's no longer just "weapon vs armor" now that there are 18 slots.
@@ -2684,7 +2697,7 @@ const App = {
     this.showListModal('💠 Permanent Relics', () => {
       const pdata = Persistent.load();
       return pdata.permanentRelics.length
-        ? pdata.permanentRelics.map(id => `<div class="gear-row"><div class="desc"><span>${RELICS[id].icon}</span><div><strong>${RELICS[id].name}</strong><div class="small-text">${RELICS[id].desc}</div></div></div></div>`).join('')
+        ? pdata.permanentRelics.map(id => `<div class="gear-row"><div class="desc"><span>${this.renderIcon(RELICS[id].icon)}</span><div><strong>${RELICS[id].name}</strong><div class="small-text">${RELICS[id].desc}</div></div></div></div>`).join('')
         : '<p class="small-text">None yet - buy some from the Shop.</p>';
     }, () => {}, onClose);
   },
@@ -3012,7 +3025,7 @@ const App = {
       const unpurchasedRelics = BANK_SHOP.relics.filter(entry => !pdata.permanentRelics.includes(entry.id));
       return unpurchasedRelics.length ? unpurchasedRelics.map(entry => {
         const r = RELICS[entry.id];
-        return `<div class="gear-row"><div class="desc"><span>${r.icon}</span><div><strong>${r.name}</strong><div class="small-text">${r.desc}</div></div></div>
+        return `<div class="gear-row"><div class="desc"><span>${this.renderIcon(r.icon)}</span><div><strong>${r.name}</strong><div class="small-text">${r.desc}</div></div></div>
           <button class="btn-secondary" data-buy-relic="${entry.id}" ${pdata.bankGold < entry.price ? 'disabled' : ''}>${entry.price} 🪙</button></div>`;
       }).join('') : '<p class="small-text">All permanent relics purchased.</p>';
     }, (container, refresh) => {
@@ -3283,7 +3296,7 @@ const App = {
       if (reward.xp) parts.push(`${reward.xp} XP`);
       if (reward.honor) parts.push(`${reward.honor} Honor`);
       if (reward.item) parts.push(`${RARITIES[reward.item.rarity].label} ${GEAR_TEMPLATES[reward.item.defId].name}`);
-      if (reward.relic) parts.push(`${RELICS[reward.relic].icon} ${RELICS[reward.relic].name} (permanent)`);
+      if (reward.relic) parts.push(`${this.renderIcon(RELICS[reward.relic].icon)} ${RELICS[reward.relic].name} (permanent)`);
       if (reward.resourceChance) parts.push('a random resource');
       if (reward.epicItem) parts.push('1 random Epic item');
       return parts.join(', ');
