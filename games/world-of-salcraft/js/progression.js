@@ -1350,6 +1350,51 @@ function reputationStatBonus() {
   return base;
 }
 
+// --- Titles ---
+// See TITLES in data.js for the full catalog. Unlock state is never cached -
+// each title's `check` reads live Persistent/Meta state, so equipping one
+// the moment it becomes available never needs any extra bookkeeping (and a
+// stale equip on some future save-format change just silently stops
+// contributing its bonus rather than crashing).
+function isTitleUnlocked(titleId) {
+  const title = TITLES[titleId];
+  return !!(title && title.check());
+}
+
+// A title's passive bonus, folded into effectiveStats/previewClassStats the
+// same way a talent's is - flat, not boosted by the Gear Set Bonus, since
+// it's a narrative reward rather than gear.
+function titleStatBonus(rec) {
+  const base = {};
+  RELIC_EFFECT_KEYS.forEach(k => { base[k] = 0; });
+  const titleId = rec.customization && rec.customization.titleId;
+  if (titleId && isTitleUnlocked(titleId)) {
+    Object.keys(TITLES[titleId].effect).forEach(key => { base[key] = (base[key] || 0) + TITLES[titleId].effect[key]; });
+  }
+  return base;
+}
+
+// Renders a title (see TITLES in data.js) onto a base name - prefix
+// ("the Ambassador Aldric") or suffix ("Aldric the Hollowbane") per the
+// title's own `position`. Falls through to the plain name with no title
+// equipped, or an unequipped/no-longer-unlocked one.
+function renderedTitleName(baseName, titleId) {
+  const title = titleId && isTitleUnlocked(titleId) ? TITLES[titleId] : null;
+  if (!title) return baseName;
+  return title.position === 'prefix' ? `${title.name} ${baseName}` : `${baseName} ${title.name}`;
+}
+
+// The single source of truth for "what does this character's name read as
+// right now" - custom name (or class name) plus their equipped title, if
+// any. Used everywhere a character's name is displayed: combat nameplates
+// (renderCompanionRig), the Character tab, a PvP mirror ghost, a recruited
+// companion's card.
+function displayCharacterName(classId) {
+  const rec = Persistent.getCharacter(classId);
+  const base = (rec.customization && rec.customization.name) || CLASSES[classId].name;
+  return renderedTitleName(base, rec.customization && rec.customization.titleId);
+}
+
 // --- Recruited companions ---
 // A companion is a frozen SNAPSHOT of another player's character (imported
 // from their exported save - see performSaveGame/importSaveFile in main.js),
@@ -1407,7 +1452,7 @@ function recruitCompanionFromSave(importedData) {
   const stats = previewClassStats(classId);
   const companion = {
     id: 'comp' + Math.random().toString(36).slice(2, 10),
-    name: (rec.customization && rec.customization.name) || CLASSES[classId].name,
+    name: displayCharacterName(classId),
     classId, level: rec.level,
     stats: { atk: stats.atk, def: stats.def, maxHp: stats.maxHp, speed: stats.speed },
     petId: rec.equipped.pet || null,
@@ -1534,7 +1579,12 @@ const Persistent = {
       metRareNpcs: [],
       // Spell leveling (see grantSpellUsageXp/scaledSpellDef) - account-wide
       // per spell id, same idea as companionLevels above.
-      spellLevels: {}
+      spellLevels: {},
+      // Permanent PvP win counter for the title ladder (see TITLES'
+      // pvp_* entries in data.js) - unlike the pvpWins quest's questProgress
+      // entry, this is never deleted when a quest is claimed, so a title
+      // earned once stays earned.
+      pvpWinsTotal: 0
     };
   },
 
@@ -1583,6 +1633,7 @@ const Persistent = {
     if (eq.spell !== undefined) { eq.spells = eq.spell ? [eq.spell] : []; delete eq.spell; }
     if (!Array.isArray(eq.spells)) eq.spells = [];
     if (!rec.customization) rec.customization = { name: '' };
+    if (rec.customization.titleId === undefined) rec.customization.titleId = null;
     if (!rec.profession) rec.profession = { active: null, levels: {}, xp: {} };
     Object.keys(PROFESSIONS).forEach(id => {
       if (rec.profession.levels[id] === undefined) rec.profession.levels[id] = 1;
@@ -1624,6 +1675,7 @@ function previewClassStats(classId) {
   const bonus = applyRelicEffects(Persistent.load().permanentRelics);
   const companion = companionStatBonus(rec);
   const talent = talentStatBonus(classId, rec);
+  const title = titleStatBonus(rec);
   const buff = activeBuffStatBonus();
   const reputation = reputationStatBonus();
   const lvlMult = levelStatMultiplier(rec.level);
@@ -1636,11 +1688,11 @@ function previewClassStats(classId) {
   // so without this a geared-up character would show a stat like 226.345...
   // instead of a clean 226.
   return {
-    atk: Math.round(Math.round((cls.atk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + talent.atk),
-    def: Math.round(cls.def + boost(gear.def + bonus.def + companion.def + buff.def) + talent.def),
-    maxHp: Math.round(Math.round((cls.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + talent.maxHp),
-    speed: Math.round(cls.speed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + talent.speed),
-    goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + talent.goldBonus + reputation.goldBonus,
+    atk: Math.round(Math.round((cls.atk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + talent.atk + title.atk),
+    def: Math.round(cls.def + boost(gear.def + bonus.def + companion.def + buff.def) + talent.def + title.def),
+    maxHp: Math.round(Math.round((cls.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + talent.maxHp + title.maxHp),
+    speed: Math.round(cls.speed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + talent.speed + title.speed),
+    goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + talent.goldBonus + title.goldBonus + reputation.goldBonus,
     setBonusPct
   };
 }
@@ -1790,11 +1842,12 @@ function renderCompanionRig(classId, sizePx, companionAnim, weaponSlot) {
   const riderSvg = anyCharacterSvg(classId, sizePx, weaponSlot);
   const mountSvg = mountId ? anyCharacterSvg(mountId, Math.round(sizePx * 0.8)) : '';
   const petSvg = petId ? anyCharacterSvg(petId, Math.round(sizePx * 0.5)) : '';
-  // A WoW-style floating nameplate above the character's head, if the player
-  // named them in the Sanctuary Character tab - and the same for a renamed
-  // mount/pet (see the rename input in renderSanctuaryHouse), just smaller
-  // to match their smaller sprite.
-  const name = (rec.customization && rec.customization.name) || CLASSES[classId].name;
+  // A WoW-style floating nameplate above the character's head - custom name
+  // (or class name) plus their equipped title, if any (see
+  // displayCharacterName) - and the same for a renamed mount/pet (see the
+  // rename input in renderSanctuaryHouse), just smaller to match their
+  // smaller sprite.
+  const name = displayCharacterName(classId);
   const nameplate = `<span class="nameplate">${escapeHtml(name)}</span>`;
   const mountName = mountId ? getCompanionProgress('mount', mountId).name : '';
   const petName = petId ? getCompanionProgress('pet', petId).name : '';

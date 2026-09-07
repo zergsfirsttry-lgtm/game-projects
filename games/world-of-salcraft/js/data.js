@@ -461,6 +461,79 @@ const REPUTATION_TIERS = [
 ];
 const REPUTATION_GOLD_BONUS_PER_TIER = 0.005; // +0.5% gold per tier, per zone
 
+// --- Titles (WoW-inspired) ---
+// Account-wide unlocks, like unlockedClasses/ownedLegendaries - any
+// character can equip any title this account has earned (see
+// isTitleUnlocked/titleStatBonus in progression.js). `position` controls
+// whether it renders before ("the Undying Aldric") or after ("Aldric the
+// Undying") the character's name - see renderedTitleName in progression.js.
+// `effect` is a small flat passive bonus (same RELIC_EFFECT_KEYS shape as a
+// relic/talent) folded into effectiveStats in state.js - a thematic
+// keepsake, not a min-maxing lever, so these stay modest. `check` is
+// evaluated live (not cached) against Persistent/Meta state, so a title can
+// go from locked to unlocked mid-session without any extra bookkeeping.
+const TITLES = {
+  // Dungeon clears - one per DUNGEONS entry, named after that dungeon's own
+  // boss (see BOSS_ART in sprites.js).
+  d_deadmines: { name: 'the Shipwrecker', position: 'suffix', source: 'Clear The Deadmines', effect: { atk: 1 }, check: () => (Persistent.load().questProgress['dungeon:deadmines'] || 0) > 0 },
+  d_shadowfangKeep: { name: 'Wolfsbane', position: 'suffix', source: 'Clear Shadowfang Keep', effect: { critBonus: 0.01 }, check: () => (Persistent.load().questProgress['dungeon:shadowfangKeep'] || 0) > 0 },
+  d_blackfathomDeeps: { name: 'Tidebreaker', position: 'suffix', source: 'Clear Blackfathom Deeps', effect: { speed: 1 }, check: () => (Persistent.load().questProgress['dungeon:blackfathomDeeps'] || 0) > 0 },
+  d_razorfenDowns: { name: 'Boarbane', position: 'suffix', source: 'Clear Razorfen Downs', effect: { def: 1 }, check: () => (Persistent.load().questProgress['dungeon:razorfenDowns'] || 0) > 0 },
+  d_scarletMonastery: { name: 'the Heretic', position: 'suffix', source: 'Clear Scarlet Monastery', effect: { spellPower: 0.01 }, check: () => (Persistent.load().questProgress['dungeon:scarletMonastery'] || 0) > 0 },
+  d_zulFarrak: { name: 'Sandwalker', position: 'suffix', source: "Clear Zul'Farrak", effect: { speed: 1 }, check: () => (Persistent.load().questProgress['dungeon:zulFarrak'] || 0) > 0 },
+  d_maraudon: { name: 'Stormrender', position: 'suffix', source: 'Clear Maraudon', effect: { atk: 1 }, check: () => (Persistent.load().questProgress['dungeon:maraudon'] || 0) > 0 },
+  d_direMaul: { name: 'Kingsbane', position: 'suffix', source: 'Clear Dire Maul', effect: { def: 1 }, check: () => (Persistent.load().questProgress['dungeon:direMaul'] || 0) > 0 },
+  d_scholomance: { name: 'Gravebane', position: 'suffix', source: 'Clear Scholomance', effect: { hpRegen: 1 }, check: () => (Persistent.load().questProgress['dungeon:scholomance'] || 0) > 0 },
+  d_cullingOfStratholme: { name: 'Ashwalker', position: 'suffix', source: 'Clear The Culling of Stratholme', effect: { atk: 1, def: 1 }, check: () => (Persistent.load().questProgress['dungeon:cullingOfStratholme'] || 0) > 0 },
+
+  // Raid clears - one per RAID_BOSSES entry, stronger bonuses to match the
+  // endgame difficulty.
+  r_moltenCore: { name: 'Emberfall', position: 'suffix', source: 'Defeat Cindermaw, the Molten Titan', effect: { atk: 2 }, check: () => (Persistent.load().questProgress['raid:moltenCore'] || 0) > 0 },
+  r_blackwingLair: { name: 'Wyrmbane', position: 'suffix', source: 'Defeat Nightscale, the Black Wyrm', effect: { def: 2 }, check: () => (Persistent.load().questProgress['raid:blackwingLair'] || 0) > 0 },
+  r_ahnQiraj: { name: 'Hivebane', position: 'suffix', source: "Defeat Queen Anub'khepra", effect: { speed: 2 }, check: () => (Persistent.load().questProgress['raid:ahnQiraj'] || 0) > 0 },
+  r_naxxramas: { name: 'the Plaguebreaker', position: 'suffix', source: 'Defeat The Plaguebound Countess', effect: { hpRegen: 2 }, check: () => (Persistent.load().questProgress['raid:naxxramas'] || 0) > 0 },
+  r_karazhan: { name: 'the Curtain Call', position: 'suffix', source: 'Defeat Maestro Nightwhisper', effect: { critBonus: 0.02 }, check: () => (Persistent.load().questProgress['raid:karazhan'] || 0) > 0 },
+  r_blackTemple: { name: "the Betrayer's Bane", position: 'suffix', source: "Defeat Xal'gorath the Betrayer", effect: { atk: 2, def: 1 }, check: () => (Persistent.load().questProgress['raid:blackTemple'] || 0) > 0 },
+  r_sunwellPlateau: { name: 'Sunbound', position: 'suffix', source: 'Defeat Radiant Malvexis', effect: { spellPower: 0.02 }, check: () => (Persistent.load().questProgress['raid:sunwellPlateau'] || 0) > 0 },
+  r_icecrownCitadel: { name: 'the Hollowbane', position: 'suffix', source: 'Defeat Vaelkorath, the Hollow King', effect: { atk: 2, maxHp: 10 }, check: () => (Persistent.load().questProgress['raid:icecrownCitadel'] || 0) > 0 },
+  r_ulduar: { name: 'the Forgebreaker', position: 'suffix', source: 'Defeat The Forgewarden Prime', effect: { def: 2, maxHp: 10 }, check: () => (Persistent.load().questProgress['raid:ulduar'] || 0) > 0 },
+  r_burningThrone: { name: 'the Void-Ender', position: 'suffix', source: "Defeat Xoth'rath, the Void King", effect: { atk: 3, def: 3, maxHp: 15 }, check: () => (Persistent.load().questProgress['raid:burningThrone'] || 0) > 0 },
+
+  // Reputation - Exalted (tier index 4) with each zone.
+  rep_forest: { name: 'Warden of Elderglen', position: 'prefix', source: 'Reach Exalted with Elderglen Forest', effect: { hpRegen: 1 }, check: () => getReputationTierIndex('forest') >= 4 },
+  rep_swamp: { name: 'Murkfen-Blessed', position: 'prefix', source: 'Reach Exalted with Murkfen Swamp', effect: { potionHealBonus: 0.03 }, check: () => getReputationTierIndex('swamp') >= 4 },
+  rep_desert: { name: 'Wastewalker', position: 'prefix', source: 'Reach Exalted with Sunscar Wastes', effect: { speed: 1 }, check: () => getReputationTierIndex('desert') >= 4 },
+  rep_hellfire: { name: 'Hellforged', position: 'prefix', source: 'Reach Exalted with Shattered Hellscape', effect: { atk: 1 }, check: () => getReputationTierIndex('hellfire') >= 4 },
+  rep_emerald: { name: 'Dreamwarden', position: 'prefix', source: 'Reach Exalted with the Emerald Dream', effect: { maxHp: 8 }, check: () => getReputationTierIndex('emerald') >= 4 },
+  rep_silvermoon: { name: 'Spire-Blessed', position: 'prefix', source: 'Reach Exalted with Silvermoon Spires', effect: { spellPower: 0.01 }, check: () => getReputationTierIndex('silvermoon') >= 4 },
+  rep_blacktemple: { name: 'Bastion-Sworn', position: 'prefix', source: 'Reach Exalted with The Black Bastion', effect: { def: 1 }, check: () => getReputationTierIndex('blacktemple') >= 4 },
+  rep_northrend: { name: 'Frostbound', position: 'prefix', source: 'Reach Exalted with Northrend Wastes', effect: { critBonus: 0.01 }, check: () => getReputationTierIndex('northrend') >= 4 },
+  rep_nether: { name: 'Netherwalker', position: 'prefix', source: 'Reach Exalted with the Twisting Nether', effect: { goldBonus: 0.02 }, check: () => getReputationTierIndex('nether') >= 4 },
+
+  // Misc - broad account-wide milestones.
+  misc_dungeoneer: { name: 'the Dungeoneer', position: 'suffix', source: 'Clear all 10 dungeons', effect: { goldBonus: 0.03 }, check: () => DUNGEONS.every(d => (Persistent.load().questProgress['dungeon:' + d.id] || 0) > 0) },
+  misc_worldRender: { name: 'the World-Render', position: 'suffix', source: 'Defeat all 10 raid bosses', effect: { atk: 3, def: 3 }, check: () => RAID_BOSSES.every(b => (Persistent.load().questProgress['raid:' + b.id] || 0) > 0) },
+  misc_ambassador: { name: 'the Ambassador', position: 'prefix', source: 'Reach Exalted with every zone', effect: { goldBonus: 0.05 }, check: () => ACT_THEMES.every(t => getReputationTierIndex(t.id) >= 4) },
+  misc_legend: { name: 'the Legend', position: 'suffix', source: 'Own 10 legendary items', effect: { atk: 2, def: 2 }, check: () => Persistent.load().ownedLegendaries.length >= 10 },
+  misc_adaptable: { name: 'the Adaptable', position: 'suffix', source: 'Unlock every class', effect: { speed: 2 }, check: () => Object.values(CLASSES).every(c => c.starter || Persistent.load().unlockedClasses.includes(c.id)) },
+  misc_beastmaster: { name: 'the Beastmaster', position: 'prefix', source: 'Own 5 pets and 5 mounts', effect: { maxHp: 12 }, check: () => Persistent.load().ownedPets.length >= 5 && Persistent.load().ownedMounts.length >= 5 },
+  misc_goldbound: { name: 'Goldbinder', position: 'suffix', source: 'Bank 50,000 gold', effect: { goldBonus: 0.04 }, check: () => Persistent.load().bankGold >= 50000 },
+  misc_undying: { name: 'the Undying', position: 'suffix', source: 'Reach Act 50 in a single run', effect: { maxHp: 20 }, check: () => Meta.load().bestAct >= 50 },
+
+  // PvP ladder - each rank stays equippable once earned, same as real WoW's
+  // rank titles. Keyed off a permanent cumulative win counter (see
+  // pdata.pvpWinsTotal, incremented in main.js next to the existing
+  // pvpWins quest progress).
+  pvp_private: { name: 'Private', position: 'prefix', source: 'Win 1 PvP match', effect: { critBonus: 0.005 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 1 },
+  pvp_corporal: { name: 'Corporal', position: 'prefix', source: 'Win 3 PvP matches', effect: { critBonus: 0.01 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 3 },
+  pvp_sergeant: { name: 'Sergeant', position: 'prefix', source: 'Win 6 PvP matches', effect: { atk: 1 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 6 },
+  pvp_knight: { name: 'Knight', position: 'prefix', source: 'Win 10 PvP matches', effect: { atk: 1, def: 1 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 10 },
+  pvp_knightCaptain: { name: 'Knight-Captain', position: 'prefix', source: 'Win 15 PvP matches', effect: { atk: 2, def: 1 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 15 },
+  pvp_champion: { name: 'Champion', position: 'prefix', source: 'Win 25 PvP matches', effect: { atk: 2, def: 2 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 25 },
+  pvp_marshal: { name: 'Marshal', position: 'prefix', source: 'Win 40 PvP matches', effect: { atk: 3, def: 2, critBonus: 0.02 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 40 },
+  pvp_grandMarshal: { name: 'Grand Marshal', position: 'prefix', source: 'Win 60 PvP matches', effect: { atk: 4, def: 3, critBonus: 0.03 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 60 }
+};
+
 // --- Curses ---
 // The adventure is limitless - there's no final boss, only how deep you can go
 // before you die. Every 10th act completed has a CHANCE (not a guarantee) of

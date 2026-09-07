@@ -1746,6 +1746,71 @@ const App = {
     document.body.appendChild(overlay);
   },
 
+  // The Character tab's "Choose a Title" popup - every title in TITLES
+  // (data.js), grouped by how it's earned, with a live preview of how it'd
+  // read on this character's current (custom or class) name. Locked titles
+  // show their source greyed-out rather than being hidden, so there's
+  // always something to aim for. Equipping/unequipping re-renders just the
+  // modal (see showFoodPickerModal for the same pattern) - the Sanctuary
+  // behind it only needs to refresh once the modal closes.
+  showTitlePickerModal(classId, tab) {
+    const rec = Persistent.getCharacter(classId);
+    const cls = CLASSES[classId];
+    const baseName = rec.customization.name || cls.name;
+    const groups = [
+      { label: 'Dungeon Titles', prefix: 'd_' },
+      { label: 'Raid Titles', prefix: 'r_' },
+      { label: 'Reputation Titles', prefix: 'rep_' },
+      { label: 'Special Titles', prefix: 'misc_' },
+      { label: 'PvP Rank', prefix: 'pvp_' }
+    ];
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const close = () => overlay.remove();
+    const render = () => {
+      const currentTitleId = rec.customization.titleId;
+      const sections = groups.map(g => {
+        const rows = Object.keys(TITLES).filter(id => id.startsWith(g.prefix)).map(id => {
+          const title = TITLES[id];
+          const unlocked = isTitleUnlocked(id);
+          const equipped = currentTitleId === id;
+          const preview = title.position === 'prefix' ? `${title.name} ${baseName}` : `${baseName} ${title.name}`;
+          return `
+            <div class="gear-row ${equipped ? 'profession-active' : ''}" style="${unlocked ? '' : 'opacity:0.5'}">
+              <div class="desc"><span>🏆</span><div>
+                <strong>${escapeHtml(preview)}</strong>
+                <div class="small-text">${unlocked ? escapeHtml(title.source) : `🔒 ${escapeHtml(title.source)}`}</div>
+              </div></div>
+              <button class="btn-secondary" data-title-id="${id}" ${unlocked ? '' : 'disabled'}>${equipped ? 'Unequip' : 'Equip'}</button>
+            </div>`;
+        }).join('');
+        return `<h4 style="margin-top:14px">${g.label}</h4>${rows}`;
+      }).join('');
+      overlay.innerHTML = `
+        <div class="panel modal-panel">
+          <h4>Titles</h4>
+          <p class="small-text">Earned through dungeons, raids, reputation, and other feats. Equipping one changes your name everywhere it's shown, plus a small passive bonus.</p>
+          <div class="gear-row ${currentTitleId ? '' : 'profession-active'}">
+            <div class="desc"><span>🚫</span><div><strong>${escapeHtml(baseName)}</strong><div class="small-text">No title</div></div></div>
+            <button class="btn-secondary" data-title-id="" ${currentTitleId ? '' : 'disabled'}>Equip</button>
+          </div>
+          ${sections}
+          <button class="btn-secondary" id="btn-close-title-picker" style="margin-top:14px">Close</button>
+        </div>`;
+      overlay.querySelectorAll('[data-title-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          rec.customization.titleId = btn.dataset.titleId || null;
+          Persistent.save();
+          render();
+        });
+      });
+      overlay.querySelector('#btn-close-title-picker').addEventListener('click', () => { close(); this.showSanctuary(classId, tab); });
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.body.appendChild(overlay);
+    render();
+  },
+
   // The House Feed button's popup - every owned food item as a clickable
   // row, replacing the old <select> + Feed button pair. Picking one feeds it
   // immediately and closes the popup.
@@ -1807,10 +1872,11 @@ const App = {
     const maxSpellSlots = maxEquippedSpells(rec.level);
     const custom = rec.customization;
     const setBonusPct = Math.round(stats.setBonusPct * 100);
+    const titledName = displayCharacterName(classId);
     return `
       <div class="char-info-bar">
-        <h3>${custom.name ? escapeHtml(custom.name) : cls.name} <span class="small-text">Level ${rec.level}</span></h3>
-        ${custom.name ? `<div class="small-text">${cls.name}</div>` : ''}
+        <h3>${escapeHtml(titledName)} <span class="small-text">Level ${rec.level}</span></h3>
+        ${(custom.name || custom.titleId) ? `<div class="small-text">${cls.name}</div>` : ''}
         <p class="small-text">${cls.blurb}</p>
         <div class="stat-grid">
           <span>ATK ${stats.atk}</span><span>DEF ${stats.def}</span>
@@ -1938,6 +2004,7 @@ const App = {
       <div class="armory-layout">
         <div class="armory-column">${leftColumn}</div>
         <div class="armory-center">
+          ${centerExtraHtml ? `<button class="btn-secondary title-select-btn" id="btn-select-title">🏆 ${rec.customization.titleId && isTitleUnlocked(rec.customization.titleId) ? escapeHtml(TITLES[rec.customization.titleId].name) : 'Choose a Title'}</button>` : ''}
           <div class="armory-portrait">${characterSpriteFor(classId, 172)}</div>
           ${centerExtraHtml || ''}
           <div class="armory-weapon-row">${weaponRow}</div>
@@ -2206,8 +2273,7 @@ const App = {
     Game.player.items = Array(Persistent.load().honorPotionCount).fill('honorPotion');
     Game.player.hp = Game.effectiveStats().maxHp;
     const mirror = Game.effectiveStats();
-    const rec = Persistent.getCharacter(classId);
-    const displayName = (rec.customization && rec.customization.name) || CLASSES[classId].name;
+    const displayName = displayCharacterName(classId);
     const ghost = {
       id: classId,
       name: `Ghost of ${displayName}`,
@@ -2231,6 +2297,9 @@ const App = {
       const honorReward = rand(20, 40);
       pdata.honor += honorReward;
       recordQuestProgress('pvpWins', 1);
+      // Permanent, unlike the pvpWins quest counter above (which gets
+      // deleted once that quest's claimed) - see TITLES' pvp_* entries.
+      pdata.pvpWinsTotal = (pdata.pvpWinsTotal || 0) + 1;
       Persistent.save();
       lines = ['You defeated your Ghost opponent!', ...this.rewardLines({ goldReward, xpReward, levelResult }), `+${honorReward} Honor.`];
     } else {
@@ -3723,6 +3792,8 @@ const App = {
         Persistent.save();
         this.showSanctuary(classId, tab);
       });
+      const titleBtn = document.getElementById('btn-select-title');
+      if (titleBtn) titleBtn.addEventListener('click', () => this.showTitlePickerModal(classId, tab));
       // Clicking a paperdoll slot toggles the inline picker for it (see
       // renderSlotPicker); clicking the same slot again closes it.
       this.root.querySelectorAll('[data-slot-key]').forEach(el => {

@@ -1351,6 +1351,7 @@ button {
 .armory-center .char-info-bar,
 .armory-center .char-customize,
 .armory-center .customize-row { width: 100%; max-width: 340px; }
+.title-select-btn { max-width: 240px; font-size: 0.8rem; color: var(--accent); border-color: var(--accent); }
 .armory-portrait {
   width: clamp(86px, 28vw, 140px);
   min-height: 150px;
