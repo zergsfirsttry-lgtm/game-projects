@@ -1233,6 +1233,10 @@ const App = {
       const portraitImg = this.root.querySelector('.combatant.enemy .boss-portrait-sprite');
       if (portraitImg) this.playAttackAnimation(portraitImg, BOSS_ART[s.enemy.id].attackFrames);
     }
+    if (s.anim.enemy === 'attack' && MONSTER_ATTACK_ANIM[s.enemy.id]) {
+      const portraitImg = this.root.querySelector('.combatant.enemy .creature-portrait-sprite');
+      if (portraitImg) this.playAttackAnimation(portraitImg, MONSTER_ATTACK_ANIM[s.enemy.id].attackFrames);
+    }
 
     // Same treatment for the player's own basic Attack / spell cast - reuses
     // the weapon-swing frames for a melee-flavored skill (cleave/multiplier/

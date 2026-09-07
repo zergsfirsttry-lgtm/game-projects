@@ -487,6 +487,18 @@ const PET_MOUNT_ATTACK_ANIM = Object.fromEntries([
   'murkfenDireleech', 'felstrider', 'starlitHawkstrider', 'shadowmaneCharger', 'voidstrider'
 ].map(_companionAttackAnim));
 
+// Attack animations for every regular/elite/act-boss monster (ENEMIES/
+// ELITES/BOSSES in data.js - NOT the 19 dungeon/raid final bosses, which
+// have their own richer BOSS_ART treatment above) - same 8-frame reuse of
+// _companionAttackAnim's helper and download convention, triggered on the
+// enemy's turn via the .creature-portrait-sprite class (see spriteSvg
+// above) whenever the enemy id has an entry here.
+const MONSTER_ATTACK_ANIM = Object.fromEntries([
+  'slime', 'rat', 'goblin', 'wolf', 'bandit', 'skeleton', 'cultist', 'spider', 'zombie', 'imp', 'harpy', 'boar',
+  'ogre', 'darkKnight', 'witch', 'minotaur', 'vampire',
+  'rotWarden', 'banditKing', 'lich'
+].map(_companionAttackAnim));
+
 // The boss's idle portrait - anyCharacterSvg (progression.js) checks BOSS_ART
 // before falling through to spriteSvg, so this is what shows outside of the
 // brief attack-animation window.
@@ -498,7 +510,12 @@ function bossSpriteSvg(id, sizePx) {
 
 function spriteSvg(id, sizePx) {
   if (CREATURE_ART_IDS.has(id)) {
-    return `<img src="assets/sprites/${id}.png" width="${sizePx}" height="${sizePx}" style="image-rendering:pixelated" alt="${id}">`;
+    // creature-portrait-sprite: lets the combat screen's attack-animation
+    // trigger (see MONSTER_ATTACK_ANIM below and renderCombatScreen in
+    // main.js) find and swap this exact <img> during an enemy's attack -
+    // harmless for a pet/mount, which is instead found via its own
+    // .companion-<kind> img parent selector.
+    return `<img class="creature-portrait-sprite" src="assets/sprites/${id}.png" width="${sizePx}" height="${sizePx}" style="image-rendering:pixelated" alt="${id}">`;
   }
   const def = SPRITES[id];
   if (!def) return '';
