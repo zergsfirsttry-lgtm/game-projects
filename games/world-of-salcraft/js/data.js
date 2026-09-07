@@ -1577,5 +1577,63 @@ const TUTORIALS = {
       "Treasure! Gold, gear, maybe a relic if the universe is feeling generous - all yours, no strings, no fine print, no suspicious merchant lurking nearby. Suspicious of that? Good instincts.",
       "Always worth a peek before you move on. I've never once regretted checking a treasure chest. The same cannot be said for every door I've opened in my life."
     ]
+  },
+  // ---------------- Sanctuary tabs ----------------
+  // Same one-time-ever convention as the in-run screens above, just keyed
+  // 'sanctuary_<tab>' (see maybeShowTutorial's call at the end of
+  // showSanctuary in main.js) so every tab gets its own first-visit intro.
+  sanctuary_character: {
+    lines: [
+      "Home base! Gear, stats, talents, and your own face staring back at you - try not to think too hard about who's actually holding the mirror.",
+      "See that shiny button above your portrait? Titles. Earn one from a dungeon, a raid, your reputation, or some other feat of questionable sanity, then wear it like a name tag at the world's most dangerous convention. Comes with a little passive bonus, too - free swagger."
+    ]
+  },
+  sanctuary_pvp: {
+    lines: [
+      "A mirror match - you, against a ghostly copy of you, in a fight I can only describe as 'deeply confusing to referee.'",
+      "Win enough of these and you'll climb an actual rank ladder, Private up through Grand Marshal, each one an equippable title of its own. Honor buys gear here too, so don't let it just sit there looking smug."
+    ]
+  },
+  sanctuary_inventory: {
+    lines: [
+      "Everything you own, sorted so you don't have to dig through a bag that definitely violates several laws of physics.",
+      "Weapons, armor, food, relics, recipes - it's all filed away in here somewhere. Tap a category, not the whole pile at once. I learned that lesson the hard way with my own luggage."
+    ]
+  },
+  sanctuary_professions: {
+    lines: [
+      "Crafting, gathering, cooking, and disenchanting - the unglamorous work that somehow makes the glamorous work possible.",
+      "Level one gathering profession at a time, cook up a buff, or melt down old gear into something useful. Nobody writes ballads about professions. They should. I might start."
+    ]
+  },
+  sanctuary_shop: {
+    lines: [
+      "The Bank Shop - spells, relics, and a little starter gear, all bought with the gold that actually survives a run.",
+      "Unlike the traveling shop out on the road, nothing in here vanishes if you die. Permanent purchases for a permanently reckless lifestyle."
+    ]
+  },
+  sanctuary_quests: {
+    lines: [
+      "Quests! Little goals with real rewards - gold, XP, sometimes gear or a relic that sticks around for good.",
+      "Accept one, go do the thing, come back and claim it. Most repeat too, a little steeper each time, so this list never really runs dry."
+    ]
+  },
+  sanctuary_journal: {
+    lines: [
+      "A record of everything you've ever seen, owned, or are still embarrassingly missing - and down at the top, your standing with every zone you've adventured through.",
+      "Get friendly enough with a zone and it opens its own little shop - weapons, armor, a pet, even a mount, gated behind how well you're liked there. Reputation, it turns out, is worth actual gold."
+    ]
+  },
+  sanctuary_raids: {
+    lines: [
+      "Dungeons for a solo run at glory, raids for when you'd rather share the glory - and the blame - with a full party.",
+      "Each one's got a real boss waiting at the end with a name, a grudge, and considerably more health than anything you've met on the road so far."
+    ]
+  },
+  sanctuary_house: {
+    lines: [
+      "Your own little corner of the world - feed a pet or mount here to buff them up, and rename them if the name they came with doesn't suit their personality.",
+      "Recruit companions too, if you've got any saved from other adventurers - up to four can ride along and lend a hand in raids. It gets crowded. I approve."
+    ]
   }
 };

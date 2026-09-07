@@ -1656,6 +1656,11 @@ const App = {
     this.root.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => this.showSanctuary(classId, btn.dataset.tab)));
     document.getElementById('btn-sanctuary-back').addEventListener('click', () => this.showTitle());
     this.wireSanctuaryBodyEvents(classId, tab);
+    // Same one-time-ever Kyle tutorial convention as the in-run screens
+    // (see maybeShowTutorial above) - keyed 'sanctuary_<tab>' so every tab
+    // gets its own first-visit popup; a tab with no TUTORIALS entry (e.g.
+    // 'cheats') just silently does nothing.
+    this.maybeShowTutorial('sanctuary_' + tab);
   },
 
   // One row in a tab's category list - a button opening showListModal for
