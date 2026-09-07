@@ -18,6 +18,71 @@ const NODE_TYPES = {
   boss: { icon: '☠️', label: 'Boss' }
 };
 
+// What a revealed node should actually show instead of NODE_TYPES' generic
+// icon+circle, for every type where a specific creature/theme is already
+// known (see the resolution pass at the end of generateMap) or always fixed
+// (jakesteel/witchJess). Returns null for every other type (event/rest/shop/
+// treasure/legendary), which keeps the plain icon. `kind` drives how
+// renderMap/animateTravel use the art: 'attack' (combat/elite/boss) stays on
+// its static idle portrait until the player's approach actually reaches the
+// node, then plays the attack swing once as a flourish; 'ambient' (every
+// decision-based encounter) loops its own idle animation continuously the
+// whole time it's visible, same as its full encounter screen does.
+function nodePreviewArt(node, act) {
+  if (node.type === 'combat' || node.type === 'elite') {
+    const anim = node.enemyId && MONSTER_ATTACK_ANIM[node.enemyId];
+    if (!anim) return null;
+    return { idle: `assets/sprites/${node.enemyId}.png`, frames: anim.attackFrames, kind: 'attack' };
+  }
+  if (node.type === 'boss') {
+    const enemy = BOSSES[(act - 1) % BOSSES.length];
+    const anim = MONSTER_ATTACK_ANIM[enemy.id];
+    if (!anim) return null;
+    return { idle: `assets/sprites/${enemy.id}.png`, frames: anim.attackFrames, kind: 'attack' };
+  }
+  if (node.type === 'worldEvent' && node.worldEvent) {
+    const art = WORLD_EVENT_ART[node.worldEvent.artKey];
+    if (!art) return null;
+    return { idle: art.idle, frames: art.frames, kind: 'ambient' };
+  }
+  if ((node.type === 'taming' || node.type === 'legendaryTaming') && node.tamingReward) {
+    const anim = PET_MOUNT_ATTACK_ANIM[node.tamingReward.id];
+    if (!anim) return null;
+    return { idle: `assets/sprites/${node.tamingReward.id}.png`, frames: anim.attackFrames, kind: 'ambient' };
+  }
+  if (node.type === 'rareNpc' && node.rareNpcId) {
+    const npc = RARE_NPCS[node.rareNpcId];
+    const anim = ENCOUNTER_AMBIENT_ANIM[npc.portrait];
+    if (!anim) return null;
+    return { idle: `assets/sprites/${npc.portrait}.png`, frames: anim.frames, kind: 'ambient' };
+  }
+  if (node.type === 'witchJess') {
+    return { idle: 'assets/sprites/witchJess.png', frames: ENCOUNTER_AMBIENT_ANIM.witchJess.frames, kind: 'ambient' };
+  }
+  if (node.type === 'jakesteel') {
+    return { idle: BOSS_ART.jakesteel.idle, frames: BOSS_ART.jakesteel.attackFrames, kind: 'ambient' };
+  }
+  return null;
+}
+
+// Cycles an <img>'s src through `frames` - `loop:true` (every ambient-kind
+// node preview) repeats forever at `intervalMs`; `loop:false` (a combat/
+// elite/boss node's attack flourish on arrival, see animateTravel) plays
+// through once and calls `onDone`. Mirrors App.playLoopingAnimation/
+// playAttackAnimation (main.js) but kept local to map.js rather than
+// reaching across files for something this small.
+function playFrames(imgEl, frames, intervalMs, loop, onDone) {
+  let i = 0;
+  const step = () => {
+    if (!imgEl.isConnected) return;
+    imgEl.src = frames[i % frames.length];
+    i++;
+    if (!loop && i >= frames.length) { if (onDone) onDone(); return; }
+    setTimeout(step, intervalMs);
+  };
+  step();
+}
+
 // How "dangerous" each node type reads for AUTO's path-of-most-resistance
 // pick (see autoPickPath in main.js) - purely a UI-facing ranking, no
 // gameplay effect of its own; ties just keep whichever came first.
@@ -188,10 +253,50 @@ function generateMap(act) {
       if (forcedRestIds.has(toFix.id)) return; // both ends forced - leave be
       let reroll = pickType(toFix.row);
       let attempts = 0;
-      while (reroll === 'rest' && attempts < 5) { reroll = pickType(toFix.row); attempts++; }
+      while ((reroll === 'rest' || (reroll === 'worldEvent' && worldEventPlaced)) && attempts < 5) { reroll = pickType(toFix.row); attempts++; }
+      if (reroll === 'worldEvent') worldEventPlaced = true;
       toFix.type = reroll === 'rest' ? 'combat' : reroll;
     });
   }));
+
+  // Resolves each node's SPECIFIC content (which enemy, which world event,
+  // which taming reward...) at generation time instead of visit time, so the
+  // map can show that exact creature/theme art on the node itself (see
+  // renderMap) rather than a generic type icon, and so its attack/ambient
+  // animation is already known when the player's approach reaches it. Only
+  // covers types where the specific pick is either safe to fix this early
+  // (combat/elite/worldEvent/taming, whose pools never run out) or a
+  // reasonable preview despite depending on account state that could still
+  // shift before the node is actually visited (classTrial/rareNpc/
+  // legendaryTaming - each re-validates its own stored pick at visit time
+  // and falls back to a plain elite fight exactly as before if it's gone
+  // stale, same as when their pool was simply empty). rest/shop/treasure/
+  // event/legendary/jakesteel/witchJess are untouched - either a generic
+  // node type with no single "specific content" to preview, or (jakesteel/
+  // witchJess) already a fixed, always-known identity.
+  Object.values(allNodes).forEach(node => {
+    if (node.type === 'combat') node.enemyId = ENEMIES[rand(0, ENEMIES.length - 1)].id;
+    else if (node.type === 'elite') node.enemyId = ELITES[rand(0, ELITES.length - 1)].id;
+    else if (node.type === 'worldEvent') {
+      const options = WORLD_EVENTS[getActTheme(act).id];
+      node.worldEvent = options[rand(0, options.length - 1)];
+    } else if (node.type === 'taming') {
+      node.tamingReward = pickTamingReward();
+    } else if (node.type === 'classTrial') {
+      const locked = getLockedClassIds();
+      if (locked.length) node.trialClassId = locked[rand(0, locked.length - 1)];
+    } else if (node.type === 'rareNpc') {
+      const remaining = Object.keys(RARE_NPCS).filter(id => !Persistent.load().metRareNpcs.includes(id));
+      if (remaining.length) node.rareNpcId = remaining[rand(0, remaining.length - 1)];
+    } else if (node.type === 'legendaryTaming') {
+      const pdata = Persistent.load();
+      const remaining = Object.keys(LEGENDARY_TAMINGS).filter(key => {
+        const t = LEGENDARY_TAMINGS[key];
+        return !(t.kind === 'pet' ? pdata.ownedPets : pdata.ownedMounts).includes(t.id);
+      });
+      if (remaining.length) node.legendaryTamingKey = remaining[rand(0, remaining.length - 1)];
+    }
+  });
 
   return {
     act,
@@ -371,9 +476,20 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
     if (isAvailable) classes.push('available');
     if (isVisited) classes.push('visited');
     if (isCurrent) classes.push('current');
-    nodesHtml += `<div class="${classes.join(' ')}" style="left:${pos.sx}px; top:${pos.sy}px; --node-scale:${pos.scale.toFixed(3)}" data-node-id="${node.id}" title="${info.label}"
+    // Swaps the generic type icon+circle for the actual creature/theme art
+    // (see nodePreviewArt above) wherever it's known - a combat/elite/boss
+    // node shows its enemy's own idle portrait (its attack swing plays on
+    // arrival, see animateTravel), every decision-based encounter instead
+    // loops its own ambient animation continuously, same as its full
+    // encounter screen. Falls back to the plain emoji+circle for every
+    // other type, or if this specific node's art isn't resolved yet.
+    const art = revealed ? nodePreviewArt(node, map.act) : null;
+    const iconHtml = art
+      ? `<img class="map-node-art" src="${art.idle}" alt="${info.label}" data-frames-ready="${art.kind === 'ambient' ? '0' : '1'}">`
+      : `<span class="map-node-icon">${info.icon}</span>`;
+    nodesHtml += `<div class="${classes.join(' ')} ${art ? 'has-art' : ''}" style="left:${pos.sx}px; top:${pos.sy}px; --node-scale:${pos.scale.toFixed(3)}" data-node-id="${node.id}" title="${info.label}"
       ${isAvailable ? 'role="button" tabindex="0"' : ''}>
-      <span class="map-node-icon">${info.icon}</span>
+      ${iconHtml}
     </div>`;
   });
 
@@ -399,7 +515,17 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
       <div class="map-traveler" id="map-traveler" style="left:${anchorPos.sx}px; top:${anchorPos.sy}px; --traveler-scale:1">${travelerSprite}</div>
     </div>`;
 
-  const travelTo = (nodeId) => animateTravel(container, screen[nodeId], anchorPos, nodeId, onSelect);
+  // Kick off every ambient-kind node preview's own looping animation now
+  // that its <img> actually exists in the DOM (see nodePreviewArt/iconHtml
+  // above - attack-kind previews stay on their static idle frame here and
+  // only animate once, on arrival, via animateTravel below).
+  container.querySelectorAll('.map-node-art[data-frames-ready="0"]').forEach(img => {
+    const node = map.nodes[img.closest('.map-node').dataset.nodeId];
+    const art = nodePreviewArt(node, map.act);
+    if (art) playFrames(img, art.frames, 260, true);
+  });
+
+  const travelTo = (nodeId) => animateTravel(container, screen[nodeId], anchorPos, nodeId, onSelect, map);
   container.querySelectorAll('.map-node.available').forEach(el => {
     el.addEventListener('click', () => travelTo(el.dataset.nodeId));
     el.addEventListener('keydown', (e) => {
@@ -449,7 +575,7 @@ const ARRIVAL_BUFFER_MS = 650;
 // Once it reaches the player, that's "arrival": the same leave/bloom (trees,
 // path) and landing-jump cues as before, just now triggered by the road
 // coming to you rather than you walking down it.
-function animateTravel(container, targetPos, centerPos, nodeId, onSelect) {
+function animateTravel(container, targetPos, centerPos, nodeId, onSelect, map) {
   const traveler = container.querySelector('#map-traveler');
   const nodeEl = container.querySelector(`.map-node[data-node-id="${nodeId}"]`);
   if (!nodeEl || !targetPos) { onSelect(nodeId); return; }
@@ -481,9 +607,20 @@ function animateTravel(container, targetPos, centerPos, nodeId, onSelect) {
   setTimeout(() => {
     // Arrived - the path has reached the player. Play the landing jump and
     // bring the treeline/path back in while they actually watch it happen,
-    // instead of getting yanked straight into the next screen.
+    // instead of getting yanked straight into the next screen. A combat/
+    // elite/boss node also gets one playthrough of its enemy's actual attack
+    // swing right here (see nodePreviewArt) - held on for as long as
+    // needed instead of the plain ARRIVAL_BUFFER_MS, so the flourish is
+    // never cut off mid-swing before the encounter screen takes over.
     if (traveler) traveler.classList.add('jumping');
     bloomForegroundTrees(container);
-    setTimeout(() => onSelect(nodeId), ARRIVAL_BUFFER_MS);
+    const node = map && map.nodes[nodeId];
+    const art = node && nodePreviewArt(node, map.act);
+    const artImg = nodeEl.querySelector('.map-node-art');
+    if (art && art.kind === 'attack' && artImg) {
+      playFrames(artImg, art.frames, 90, false, () => onSelect(nodeId));
+    } else {
+      setTimeout(() => onSelect(nodeId), ARRIVAL_BUFFER_MS);
+    }
   }, duration);
 }

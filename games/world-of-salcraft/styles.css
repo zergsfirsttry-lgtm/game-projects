@@ -406,6 +406,18 @@ button {
 .map-node.boss { width: 48px; height: 48px; font-size: 1.4rem; }
 .map-node.fogged .map-node-icon { opacity: 0.55; font-weight: bold; font-family: Georgia, serif; }
 .map-node.fogged.available { animation: fogPulse 2.2s ease-in-out infinite; }
+/* The actual creature/theme art (see nodePreviewArt, map.js) replacing the
+   generic icon+circle wherever it's known - sized to fill most of the same
+   circular frame the emoji icon used, clipped to it so a non-square sprite
+   never pokes past the node's own border. */
+.map-node.has-art { background: var(--bg-panel); }
+.map-node-art {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: 50%;
+}
 @keyframes fogPulse {
   0%, 100% { box-shadow: 0 0 8px rgba(138,95,214,0.5); }
   50% { box-shadow: 0 0 13px rgba(138,95,214,0.8); }

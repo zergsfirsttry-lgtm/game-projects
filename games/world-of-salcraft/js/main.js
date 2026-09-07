@@ -392,15 +392,21 @@ const App = {
       // replace a normal fight - a genuinely difficult, randomly-geared
       // opponent rather than the safe mirror match from the PvP tab. Real
       // run HP/death rules still apply; only the victory reward differs
-      // (see resolveCombatEnd's node.rivalGhost branch).
+      // (see resolveCombatEnd's node.rivalGhost branch). This is the one
+      // case where the map's node.enemyId preview (see generateMap, map.js)
+      // ends up not matching who's actually fought.
       if (Persistent.load().randomPvpEnabled && Math.random() < 0.25) {
         node.rivalGhost = true;
         this.enterCombat(node, this.generateRivalGhost(Game.player.classId));
       } else {
-        this.enterCombat(node, scaleEnemy(ENEMIES[rand(0, ENEMIES.length - 1)], Game.act));
+        const enemy = ENEMIES.find(e => e.id === node.enemyId) || ENEMIES[rand(0, ENEMIES.length - 1)];
+        this.enterCombat(node, scaleEnemy(enemy, Game.act));
       }
     }
-    else if (node.type === 'elite') this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
+    else if (node.type === 'elite') {
+      const enemy = ELITES.find(e => e.id === node.enemyId) || ELITES[rand(0, ELITES.length - 1)];
+      this.enterCombat(node, scaleEnemy(enemy, Game.act));
+    }
     else if (node.type === 'boss') this.enterCombat(node, scaleEnemy(BOSSES[(Game.act - 1) % BOSSES.length], Game.act));
     else if (node.type === 'event') { grantReputation(getActTheme(Game.act).id, 8); this.showEvent(node); }
     else if (node.type === 'rest') { grantReputation(getActTheme(Game.act).id, 8); this.showRest(node); }
@@ -422,7 +428,8 @@ const App = {
   // still earn it. Pets/mounts are PERMANENT (Persistent.ownedPets/ownedMounts),
   // unlike the run-only relics from combat rewards.
   enterTaming(node) {
-    node.tamingReward = pickTamingReward();
+    // node.tamingReward is already resolved at map-generation time (see
+    // generateMap in map.js) so the map can preview this exact creature.
     node.tamingStep = 0;
     node.tamingWrong = 0;
     this.showTamingStep(node);
@@ -535,13 +542,17 @@ const App = {
   // random roll. Falls back to an elite fight, same as Class Trial/Legendary
   // Encounter, once every NPC has already been met.
   enterRareNpc(node) {
+    // node.rareNpcId is pre-rolled at map-generation time (see generateMap,
+    // map.js) so the map can preview which NPC this is - re-validated here
+    // since another rareNpc node could've been met first, same fallback as
+    // when the pool was simply empty to begin with.
     const pdata = Persistent.load();
     const remaining = Object.keys(RARE_NPCS).filter(id => !pdata.metRareNpcs.includes(id));
-    if (remaining.length === 0) {
+    if (!node.rareNpcId || !remaining.includes(node.rareNpcId)) node.rareNpcId = remaining[rand(0, remaining.length - 1)];
+    if (!node.rareNpcId) {
       this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
       return;
     }
-    node.rareNpcId = remaining[rand(0, remaining.length - 1)];
     this.renderRareNpcScreen(node);
   },
 
@@ -595,17 +606,23 @@ const App = {
   // pick. One-time-ever per creature; falls back to an elite fight once all
   // three are already owned.
   enterLegendaryTaming(node) {
+    // node.legendaryTamingKey is pre-rolled at map-generation time (see
+    // generateMap, map.js) so the map can preview which of the three this
+    // is - re-validated here since it could've been tamed via a different
+    // legendaryTaming node first, same fallback as an empty pool.
     const pdata = Persistent.load();
     const remaining = Object.keys(LEGENDARY_TAMINGS).filter(key => {
       const t = LEGENDARY_TAMINGS[key];
       const owned = t.kind === 'pet' ? pdata.ownedPets : pdata.ownedMounts;
       return !owned.includes(t.id);
     });
-    if (remaining.length === 0) {
+    let key = node.legendaryTamingKey;
+    if (!key || !remaining.includes(key)) key = remaining[rand(0, remaining.length - 1)];
+    if (!key) {
       this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
       return;
     }
-    const t = LEGENDARY_TAMINGS[remaining[rand(0, remaining.length - 1)]];
+    const t = LEGENDARY_TAMINGS[key];
     const pool = t.kind === 'pet' ? PETS : MOUNTS;
     node.tamingReward = { kind: t.kind, id: t.id, def: pool[t.id] };
     node.tamingStep = 0;
@@ -702,9 +719,9 @@ const App = {
   // gets rolled here, at VISIT time rather than map-gen time, so it always
   // matches the CURRENT zone theme even mid-zone-transition.
   enterWorldEvent(node) {
-    const zoneId = getActTheme(Game.act).id;
-    const options = WORLD_EVENTS[zoneId];
-    node.worldEvent = options[rand(0, options.length - 1)];
+    // node.worldEvent is already resolved at map-generation time (see
+    // generateMap in map.js) so the map can show this exact event's art
+    // as the node's own icon before it's even visited.
     this.renderWorldEventScreen(node);
   },
 
@@ -771,12 +788,19 @@ const App = {
   // The guardian is rendered using the target class's own sprite (tinted) since
   // it's meant to look like a spectral echo of that class.
   enterClassTrial(node) {
+    // node.trialClassId is pre-rolled at map-generation time (see generateMap,
+    // map.js) so the map can preview which class this trial targets - but the
+    // set of locked classes can still change before it's actually visited (a
+    // different class trial node completed first, say), so re-validate here
+    // and fall back exactly as before if it's since unlocked or was never set
+    // (an empty locked pool at generation time).
     const locked = getLockedClassIds();
-    if (locked.length === 0) {
+    let trialClassId = node.trialClassId;
+    if (!trialClassId || !locked.includes(trialClassId)) trialClassId = locked[rand(0, locked.length - 1)];
+    if (!trialClassId) {
       this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
       return;
     }
-    const trialClassId = locked[rand(0, locked.length - 1)];
     node.trialClassId = trialClassId;
     const trial = CLASS_TRIALS[trialClassId];
     this.enterCombat(node, { id: trialClassId, name: trial.name, hp: trial.hp, atk: trial.atk, def: trial.def, speed: trial.speed, gold: trial.gold, elite: true, spectral: true });
