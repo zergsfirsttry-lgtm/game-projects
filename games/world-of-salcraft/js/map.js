@@ -112,7 +112,7 @@ const FOG_NODE = { icon: '?', label: '???' };
 // it's a fixed window, so nothing can rely on extra width via scrolling.
 const MAP_WIDTH = 320;
 const ROW_HEIGHT = 110;
-const REGULAR_ROWS = 12; // rows 0..11, then boss row = 12
+const REGULAR_ROWS = 18; // rows 0..17, then boss row = 18
 
 function pickType(rowIndex) {
   if (rowIndex === 0) return 'combat';
