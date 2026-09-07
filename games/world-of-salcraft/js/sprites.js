@@ -365,7 +365,11 @@ const CREATURE_ART_IDS = new Set([
   'netherdrake', 'griffonMount', 'frostwolfMount', 'warKodo', 'hippogriffMount', 'nightmareSteed',
   'unicornMount', 'spectralTiger',
   'emberTabby', 'shadowPouncer', 'luckyCalico', 'starlitKitten', 'witchlightKitten',
-  'ryker', 'landryDuckling', 'monkey', 'chopper', 'izzoCorvette', 'robin'
+  'ryker', 'landryDuckling', 'monkey', 'chopper', 'izzoCorvette', 'robin',
+  // World Event rewards (see WORLD_EVENTS in data.js) - added after the
+  // initial batch above, same PixelLab treatment.
+  'witherbarkSprite', 'cinderWhelp', 'emeraldSapling', 'frostwyrmling',
+  'murkfenDireleech', 'felstrider', 'starlitHawkstrider', 'shadowmaneCharger', 'voidstrider'
 ]);
 
 // Full PixelLab character treatment (create_character v3 + a text-guided
@@ -452,13 +456,10 @@ const WORLD_EVENT_ART = Object.fromEntries([
   'forest', 'swamp', 'desert', 'hellfire', 'emerald', 'silvermoon', 'blacktemple', 'northrend', 'nether'
 ].map(_worldEventArt));
 
-// Attack animations for every pre-existing pet/mount with real PixelLab art
-// (CREATURE_ART_IDS above) - same treatment as BOSS_ART/WEAPON_ATTACK_ANIM,
-// triggered whenever the player's own equipped pet/mount lands a hit (see
-// Combat.resolveCompanionAttacks and the trigger in renderCombatScreen,
-// main.js). World Event companions (witherbarkSprite, felstrider, etc.)
-// aren't covered by this first wave - they're brand new this session and
-// have no static art of their own yet, only an emoji icon.
+// Attack animations for every pet/mount with real PixelLab art (CREATURE_ART_IDS
+// above) - same treatment as BOSS_ART/WEAPON_ATTACK_ANIM, triggered whenever
+// the player's own equipped pet/mount lands a hit (see
+// Combat.resolveCompanionAttacks and the trigger in renderCombatScreen, main.js).
 function _companionAttackAnim(id) {
   return [id, {
     attackFrames: [0, 1, 2, 3, 4, 5, 6, 7].map(i => `assets/sprites/anim/${id}_attack_${i}.png`)
@@ -470,7 +471,10 @@ const PET_MOUNT_ATTACK_ANIM = Object.fromEntries([
   'netherdrake', 'griffonMount', 'frostwolfMount', 'warKodo', 'hippogriffMount', 'nightmareSteed',
   'unicornMount', 'spectralTiger',
   'emberTabby', 'shadowPouncer', 'luckyCalico', 'starlitKitten', 'witchlightKitten',
-  'ryker', 'landryDuckling', 'monkey', 'chopper', 'izzoCorvette', 'robin'
+  'ryker', 'landryDuckling', 'monkey', 'chopper', 'izzoCorvette', 'robin',
+  // World Event rewards - added after the initial batch above.
+  'witherbarkSprite', 'cinderWhelp', 'emeraldSapling', 'frostwyrmling',
+  'murkfenDireleech', 'felstrider', 'starlitHawkstrider', 'shadowmaneCharger', 'voidstrider'
 ].map(_companionAttackAnim));
 
 // The boss's idle portrait - anyCharacterSvg (progression.js) checks BOSS_ART
