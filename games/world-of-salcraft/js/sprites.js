@@ -424,7 +424,18 @@ function _weaponAttackAnim(key) {
 const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'warrior_axe', 'warrior_bow', 'warrior_dagger', 'warrior_mace', 'warrior_sword',
   'rogue_bow', 'rogue_dagger', 'rogue_mace', 'rogue_sword',
-  'mage_dagger', 'mage_mace', 'mage_staff', 'mage_sword', 'mage_cast'
+  'mage_dagger', 'mage_mace', 'mage_staff', 'mage_sword', 'mage_cast',
+  // Wave 2 - the remaining 6 unlockable classes, completing every class's
+  // weapon-swing coverage. None of their own default spells are 'flat'-type
+  // (see SPELLS in data.js), so none need a dedicated _cast entry - a
+  // flat-type spell bought from the Bank Shop for one of these classes just
+  // falls back to the weapon-swing animation, same as any uncovered key.
+  'paladin_axe', 'paladin_dagger', 'paladin_mace', 'paladin_sword',
+  'hunter_axe', 'hunter_bow', 'hunter_dagger', 'hunter_mace', 'hunter_staff', 'hunter_sword',
+  'warlock_dagger', 'warlock_mace', 'warlock_staff', 'warlock_sword',
+  'barbarian_axe', 'barbarian_bow', 'barbarian_dagger', 'barbarian_mace', 'barbarian_staff', 'barbarian_sword',
+  'cleric_axe', 'cleric_dagger', 'cleric_mace', 'cleric_sword',
+  'bard_bow', 'bard_lute', 'bard_mace', 'bard_sword'
 ].map(_weaponAttackAnim));
 
 // World Event scene art (see WORLD_EVENTS in data.js) - a wide illustration
