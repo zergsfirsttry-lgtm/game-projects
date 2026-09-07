@@ -242,47 +242,6 @@ function renderZoneTopdownMap(theme) {
   return `<div class="map-topdown-bg" style="background-image:url('assets/zone_maps/${theme.id}.png')"></div>`;
 }
 
-// The old side-view "3rd person scene" system's per-zone landmark art
-// (assets/scenes/<id>/fg.png - a single lone tree/plant/rock formation)
-// went unused once the map backdrop became one full-zone PixelLab painting
-// (renderZoneTopdownMap above) - scattered small down the map's own left/
-// right margins here instead of just sitting orphaned, filling out the
-// zone without competing with the painted backdrop's own art. Every zone's
-// border art (a tree line, a city wall, a mushroom canopy...) runs the full
-// height of the map, not just the top quarter, and varies hugely in
-// thickness - so unlike the node graph (always clamped to [30, MAP_WIDTH-30],
-// see pickType/generateMap), a single fixed inset can't stay clear of it
-// everywhere. theme.decorationInset (ACT_THEMES, data.js) is tuned per zone
-// by sampling that zone's own zone_maps/<id>.png so decorations land on open
-// ground instead of on top of the border art - measured empirically, not
-// guessed, since border thickness ranges from ~8px (Murkfen Swamp) to ~90px+
-// (Silvermoon Spires' wall, the Emerald Dream's mushroom canopy). This can
-// put a decoration at roughly the same x as a node or path line in some
-// generated rows, which is fine: .map-decorations sits at z-index 0, well
-// under .map-svg's path lines (z-index 1) and .map-node (z-index 2, see
-// styles.css), so a node/line always paints over a decoration, never the
-// reverse, and .map-decorations is pointer-events:none, so it can never
-// intercept a click either way.
-const MAP_DECORATION_Y_STEP = 72;
-function renderZoneDecorations(theme) {
-  const src = `assets/scenes/${theme.id}/fg.png`;
-  const inset = theme.decorationInset != null ? theme.decorationInset : 4;
-  const animClass = theme.decorationKind === 'mineral' ? 'deco-mineral' : 'deco-plant';
-  let html = '';
-  let i = 0;
-  for (let y = 26; y < VIEW_HEIGHT; y += MAP_DECORATION_Y_STEP) {
-    // Staggered animation-delay (cycling through a few offsets) so a whole
-    // column of decorations doesn't sway/pulse in obvious lockstep.
-    const delayL = (i % 4) * 0.6;
-    const delayR = ((i + 2) % 4) * 0.6;
-    const glow = theme.decorationKind === 'mineral' ? ` --deco-glow:${theme.accent};` : '';
-    html += `<img class="map-decoration ${animClass}" src="${src}" style="left:${inset}px; top:${y}px; animation-delay:${delayL}s;${glow}" alt="">`;
-    html += `<img class="map-decoration ${animClass}" src="${src}" style="left:${MAP_WIDTH - inset - 24}px; top:${y + MAP_DECORATION_Y_STEP / 2}px; animation-delay:${delayR}s;${glow}" alt="">`;
-    i++;
-  }
-  return `<div class="map-decorations">${html}</div>`;
-}
-
 // Two camera profiles: a wider establishing shot for the very first choice
 // (nothing chosen yet - `currentRow` is -1), and a tighter, closer-in
 // over-the-shoulder framing once the player has actually set out down the
@@ -433,7 +392,6 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
 
   container.innerHTML = `
     ${renderZoneTopdownMap(theme)}
-    ${renderZoneDecorations(theme)}
     <div class="map-scroll" style="height:${VIEW_HEIGHT}px">
       <div class="map-theme-label">${theme.name} · Act ${map.act}</div>
       <svg class="map-svg" width="${MAP_WIDTH}" height="${VIEW_HEIGHT}">${svgLines}${svgHitAreas}</svg>
