@@ -1889,3 +1889,28 @@ function renderCompanionRig(classId, sizePx, companionAnim, weaponSlot) {
     (petSvg ? `<span class="companion-pet ${actingClass('pet')}"${actingStyle('pet')}>${petNameplate}${petSvg}</span>` : '') +
     `</span>`;
 }
+
+// Same mount/rider/pet composite as renderCompanionRig, minus every
+// nameplate - for a PvP Ghost opponent (see enterPvpMatch in main.js), whose
+// portrait already has its own single nameplate (the opponent's generated
+// name, not this class's real display name) wrapping the whole thing. Reads
+// the SAME real per-class mount/pet/appearance data renderCompanionRig does
+// (whatever that class's own Sanctuary record actually has equipped) rather
+// than anything synthesized for the match, so the opponent looks like a
+// genuine alternate character and gets the exact same weapon-swing/mount/
+// pet animation treatment the player's own side does - just without the
+// player-side CSS mirror, so it keeps its native left-facing pose (correct
+// for the enemy side, facing the player).
+function renderOpponentRig(classId, sizePx) {
+  const rec = Persistent.getCharacter(classId);
+  const mountId = rec.equipped.mount;
+  const petId = rec.equipped.pet;
+  const riderSvg = anyCharacterSvg(classId, sizePx);
+  const mountSvg = mountId ? anyCharacterSvg(mountId, Math.round(sizePx * 0.8)) : '';
+  const petSvg = petId ? anyCharacterSvg(petId, Math.round(sizePx * 0.5)) : '';
+  return `<span class="companion-row">` +
+    (mountSvg ? `<span class="companion-mount">${mountSvg}</span>` : '') +
+    `<span class="companion-rider">${riderSvg}</span>` +
+    (petSvg ? `<span class="companion-pet">${petSvg}</span>` : '') +
+    `</span>`;
+}

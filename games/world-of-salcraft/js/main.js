@@ -811,7 +811,7 @@ const App = {
     }
     node.trialClassId = trialClassId;
     const trial = CLASS_TRIALS[trialClassId];
-    this.enterCombat(node, { id: trialClassId, name: trial.name, hp: trial.hp, atk: trial.atk, def: trial.def, speed: trial.speed, gold: trial.gold, elite: true, spectral: true });
+    this.enterCombat(node, applyPlayerPowerScaling({ id: trialClassId, name: trial.name, hp: trial.hp, atk: trial.atk, def: trial.def, speed: trial.speed, gold: trial.gold, elite: true, spectral: true }));
   },
 
   // A very rare gauntlet: 5-10 waves back-to-back (small heal between waves,
@@ -1183,7 +1183,7 @@ const App = {
       ${this.renderHud()}
       <div class="panel ${inGauntlet || inRaid || inDungeon || inPvp ? 'legendary-encounter' : ''}">
         ${inGauntlet ? `<div class="gauntlet-banner">👑 Legendary Encounter - Wave ${Game.gauntlet.waveIndex} of ${Game.gauntlet.totalWaves}</div>` : ''}
-        ${inPvp ? `<div class="gauntlet-banner">⚔️ PvP Match - Mirror of Yourself</div>` : ''}
+        ${inPvp ? `<div class="gauntlet-banner">⚔️ PvP Match - ${escapeHtml(s.enemy.flavor || 'A rival of similar power.')}</div>` : ''}
         ${s.enemy.rivalGhost ? `<div class="gauntlet-banner">👻 Rival Ghost Encounter - ${s.enemy.flavor}</div>` : ''}
         ${inDungeon ? `<div class="gauntlet-banner">🗝️ Dungeon - ${DUNGEONS.find(d => d.id === Game.dungeon.dungeonId).name}</div>` : ''}
         ${inRaid ? `
@@ -1214,7 +1214,7 @@ const App = {
           <div class="combatant enemy ${s.enemy.elite ? 'elite' : ''} ${s.enemy.boss ? 'boss' : ''} ${s.enemy.spectral ? 'spectral' : ''}">
             <div class="portrait ${this.animClass(s.anim.enemy, false)}" style="${!s.enemy.spectral ? `filter:${theme.enemyTint}` : ''}">
               <span class="nameplate">${escapeHtml(s.enemy.name)}</span>
-              ${anyCharacterSvg(s.enemy.id, epicEnemySize(s.enemy))}
+              ${s.enemy.pvpGhost ? renderOpponentRig(s.enemy.id, epicEnemySize(s.enemy)) : anyCharacterSvg(s.enemy.id, epicEnemySize(s.enemy))}
             </div>
             <div class="hp-bar-container">
               <div class="hp-bar-wrap ${hpFlashClass('enemy')}"${hpFlashStyleAttr('enemy')}><div class="hp-bar-fill" style="width:${Math.round((s.enemy.hp/s.enemy.maxHp)*100)}%"></div></div>
@@ -2310,10 +2310,11 @@ const App = {
       }, onClose);
   },
 
-  // ---------------- PvP (Ghost mirror matches) ----------------
-  // The opponent is built directly from your own effectiveStats() (see
-  // enterPvpMatch) - not a separately-simulated character - so it's an exact
-  // mirror of your real level, gear, relics, and talents by construction.
+  // ---------------- PvP (Ghost matches) ----------------
+  // The opponent (see enterPvpMatch) is a random OTHER class, rendered with
+  // its own actual appearance/mount/pet (not a copy of yours), with stats
+  // drawn from your own effectiveStats() but scaled by a small random
+  // variance - "similar power", not a mirror.
   renderSanctuaryPvp(classId) {
     const pdata = Persistent.load();
     const rec = Persistent.getCharacter(classId);
@@ -2341,6 +2342,7 @@ const App = {
     return `
       <h4>PvP <span class="small-text">(${pdata.honor} Honor)</span></h4>
       <button class="btn-primary" id="btn-find-pvp-match">Find PvP Match</button>
+      <p class="small-text">Matched against a random other class of similar power - not a mirror of yourself.</p>
       <label class="customize-row" style="max-width:460px;margin-top:14px">
         <span>Enable random Rival Ghost encounters while adventuring</span>
         <input type="checkbox" id="chk-random-pvp" ${pdata.randomPvpEnabled ? 'checked' : ''}>
@@ -2404,13 +2406,15 @@ const App = {
   },
 
   // A random mid-adventure PvP encounter (see the checkbox in renderSanctuaryPvp
-  // and its selectNode hook) - unlike the mirror match, this ghost is a
-  // DIFFERENT random class with 1.2x the player's own stats, dressed up with
-  // a flavor line naming random relics/abilities it "carries" (cosmetic only -
-  // the 1.2x multiplier is what actually makes the fight harder). Fought with
-  // the player's real run HP/items, so losing is real death like any other
-  // encounter; only the reward on victory differs (Honor/Gold/Bloody Bag -
-  // see resolveCombatEnd's node.rivalGhost branch).
+  // and its selectNode hook) - deliberately harder than the ladder match
+  // (enterPvpMatch): a DIFFERENT random class at a flat 1.2x the player's
+  // own stats (on top of the account's own PvP power, not diluted by
+  // variance), dressed up with a flavor line naming random relics/abilities
+  // it "carries" (cosmetic only - the 1.2x multiplier is what actually makes
+  // the fight harder). Fought with the player's real run HP/items, so losing
+  // is real death like any other encounter; only the reward on victory
+  // differs (Honor/Gold/Bloody Bag - see resolveCombatEnd's node.rivalGhost
+  // branch).
   generateRivalGhost(classId) {
     const stats = Game.effectiveStats();
     const mult = 1.2;
@@ -2430,22 +2434,37 @@ const App = {
     };
   },
 
-  // Builds and enters a PvP match: the ghost's hp/atk/def/speed are a direct
-  // snapshot of this character's OWN effectiveStats() (computed with
-  // Game.pvp already set, so Honor gear counts for both sides equally) -
-  // this is what makes it a true mirror rather than a hand-tuned enemy.
+  // Builds and enters a PvP match. The opponent is a random OTHER class (not
+  // a copy of your own) with hp/atk/def/speed drawn from this character's
+  // OWN effectiveStats() (computed with Game.pvp already set, so Honor gear
+  // counts for both sides equally) but scaled by a small random variance -
+  // "similar power", not an exact mirror. It's rendered via
+  // renderOpponentRig using that class's own real appearance/mount/pet, so
+  // it looks like a genuine alternate character rather than your reflection,
+  // and gets the same weapon-swing/mount/pet animation treatment your own
+  // side does. The relics/ability named in its flavor line are cosmetic
+  // (same treatment as the Rival Ghost's - see generateRivalGhost) since
+  // enemies don't actually cast skills in combat.
   enterPvpMatch(classId) {
     Game.pvp = { classId };
     Game.player = Game.buildRaidPlayer(classId);
     Game.player.items = Array(Persistent.load().honorPotionCount).fill('honorPotion');
     Game.player.hp = Game.effectiveStats().maxHp;
-    const mirror = Game.effectiveStats();
-    const displayName = displayCharacterName(classId);
+    const baseline = Game.effectiveStats();
+    const pool = Object.keys(CLASSES).filter(id => id !== classId);
+    const oppClassId = pool.length ? pool[rand(0, pool.length - 1)] : classId;
+    const variance = 0.9 + Math.random() * 0.25; // 0.90x-1.15x - similar, not identical
+    const relicCount = rand(1, 3);
+    const relicNames = Array.from({ length: relicCount }, () => RELICS[randomRelic()].name);
+    const abilityId = SPELLS[CLASSES[oppClassId].defaultSpell] ? CLASSES[oppClassId].defaultSpell : null;
+    const abilityName = abilityId ? SPELLS[abilityId].name : 'an unknown technique';
     const ghost = {
-      id: classId,
-      name: `Ghost of ${displayName}`,
-      hp: mirror.maxHp, atk: mirror.atk, def: mirror.def, speed: mirror.speed,
-      gold: [40, 70], boss: true, spectral: true, pvpGhost: true // boss:true reuses the "no fleeing" gate, spectral:true the ghostly tint
+      id: oppClassId,
+      name: `${GHOST_NAME_POOL[rand(0, GHOST_NAME_POOL.length - 1)]} the ${CLASSES[oppClassId].name}`,
+      hp: Math.round(baseline.maxHp * variance), atk: Math.round(baseline.atk * variance),
+      def: Math.round(baseline.def * variance), speed: Math.max(1, Math.round(baseline.speed * variance)),
+      gold: [40, 70], boss: true, spectral: true, pvpGhost: true, // boss:true reuses the "no fleeing" gate, spectral:true the ghostly tint
+      flavor: `Wielding ${relicNames.join(', ')} and ${abilityName}.`
     };
     this.enterCombat({ type: 'pvpMatch' }, ghost);
   },
@@ -2471,7 +2490,7 @@ const App = {
       lines = ['You defeated your Ghost opponent!', ...this.rewardLines({ goldReward, xpReward, levelResult }), `+${honorReward} Honor.`];
     } else {
       Persistent.save();
-      lines = ['Your Ghost opponent bested you.', 'No rewards this time - the mirror match favored them.'];
+      lines = ['Your Ghost opponent bested you.', 'No rewards this time - the odds favored them.'];
     }
     Game.pvp = null;
     Game.player = null;
@@ -3664,7 +3683,7 @@ const App = {
     Game.player = Game.buildRaidPlayer(classId);
     Game.player.hp = Game.effectiveStats().maxHp;
     // Same location-vs-boss naming split as enterRaid above.
-    this.enterCombat({ type: 'dungeonBoss' }, { ...dungeon, name: BOSS_ART[dungeon.id] ? BOSS_ART[dungeon.id].name : dungeon.name });
+    this.enterCombat({ type: 'dungeonBoss' }, applyPlayerPowerScaling({ ...dungeon, name: BOSS_ART[dungeon.id] ? BOSS_ART[dungeon.id].name : dungeon.name }));
   },
 
   showDungeonOutcome(won) {
@@ -3713,7 +3732,7 @@ const App = {
     // gives it (e.g. "Vaelkorath, the Hollow King"), same as the dungeon
     // equivalent below - falls back to the location name for any boss that
     // doesn't have full PixelLab art yet.
-    this.enterCombat({ type: 'raidBoss' }, { ...boss, name: BOSS_ART[boss.id] ? BOSS_ART[boss.id].name : boss.name });
+    this.enterCombat({ type: 'raidBoss' }, applyPlayerPowerScaling({ ...boss, name: BOSS_ART[boss.id] ? BOSS_ART[boss.id].name : boss.name }));
   },
 
   // Win or wipe, a raid always ends back at the Sanctuary Raids tab - there's
@@ -4253,9 +4272,41 @@ const App = {
   }
 };
 
+// How much stronger the player's ACTUAL build (gear, relics, talents, gear
+// set bonus, spell power - everything effectiveStats() folds in) is than a
+// bare "class base stats at this level" baseline, same idea as the Rival
+// Ghost/PvP opponent scaling off Game.effectiveStats() rather than a fixed
+// curve. Only ever scales UP (an under-geared character never gets an
+// easier ride than the act curve already gives them) and is dampened +
+// capped so a huge power spike doesn't spiral the fight into being
+// unwinnable outright. spellPower is folded in at a rough atk-equivalent
+// weight so a caster stacking spell-damage relics/gear also toughens
+// enemies up, not just flat ATK stackers.
+function playerPowerMult() {
+  if (!Game.player) return 1;
+  const stats = Game.effectiveStats();
+  const cls = CLASSES[Game.player.classId];
+  const charRecord = Persistent.getCharacter(Game.player.classId);
+  const lvlMult = levelStatMultiplier(charRecord.level);
+  const power = (s) => s.atk + s.maxHp * 0.15 + s.spellPower * 20;
+  const baseline = power({ atk: cls.atk * lvlMult, maxHp: cls.maxHp * lvlMult, spellPower: 0 });
+  const actual = power(stats);
+  const ratio = baseline > 0 ? actual / baseline : 1;
+  return clamp(1 + Math.max(0, ratio - 1) * 0.5, 1, 3);
+}
+
+// Shared by scaleEnemy (act-based encounters) and the dungeon/raid entry
+// points below (fixed-tier encounters with no act of their own) - applies
+// just the player-power dimension to hp/atk on top of whatever base stats
+// the caller already computed.
+function applyPlayerPowerScaling(template) {
+  const mult = playerPowerMult();
+  return { ...template, hp: Math.round(template.hp * mult), atk: Math.round(template.atk * mult) };
+}
+
 function scaleEnemy(template, act) {
   const mult = 1 + (act - 1) * 0.22;
-  return { ...template, hp: Math.round(template.hp * mult), atk: Math.round(template.atk * mult) };
+  return applyPlayerPowerScaling({ ...template, hp: Math.round(template.hp * mult), atk: Math.round(template.atk * mult) });
 }
 
 window.addEventListener('DOMContentLoaded', () => App.init());
