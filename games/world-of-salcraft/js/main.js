@@ -1874,46 +1874,77 @@ const App = {
     document.body.appendChild(overlay);
   },
 
-  // The Character tab's "Choose a Title" popup - every title in TITLES
-  // (data.js), grouped by how it's earned, with a live preview of how it'd
-  // read on this character's current (custom or class) name. Locked titles
-  // show their source greyed-out rather than being hidden, so there's
-  // always something to aim for. Equipping/unequipping re-renders just the
-  // modal (see showFoodPickerModal for the same pattern) - the Sanctuary
-  // behind it only needs to refresh once the modal closes.
+  // The 6 ways a title is earned (see TITLES in data.js, keyed by id
+  // prefix) - shared by both the "available" section and the category
+  // popups below, so the two stay in sync automatically.
+  titleGroups() {
+    return [
+      { label: 'Dungeon Titles', icon: '⚔️', prefix: 'd_' },
+      { label: 'Raid Titles', icon: '🐉', prefix: 'r_' },
+      { label: 'Reputation Titles', icon: '🤝', prefix: 'rep_' },
+      { label: 'World Event Titles', icon: '🌋', prefix: 'we_' },
+      { label: 'Special Titles', icon: '✨', prefix: 'misc_' },
+      { label: 'PvP Rank', icon: '🎖️', prefix: 'pvp_' }
+    ];
+  },
+
+  // One equip/unequip row for a title, with a live preview of how it'd read
+  // on this character's current (custom or class) name.
+  renderTitleRow(id, title, baseName, currentTitleId) {
+    const unlocked = isTitleUnlocked(id);
+    const equipped = currentTitleId === id;
+    const preview = title.position === 'prefix' ? `${title.name} ${baseName}` : `${baseName} ${title.name}`;
+    return `
+      <div class="gear-row ${equipped ? 'profession-active' : ''}" style="${unlocked ? '' : 'opacity:0.5'}">
+        <div class="desc"><span>🏆</span><div>
+          <strong>${escapeHtml(preview)}</strong>
+          <div class="small-text">${unlocked ? escapeHtml(title.source) : `🔒 ${escapeHtml(title.source)}`}</div>
+        </div></div>
+        <button class="btn-secondary" data-title-id="${id}" ${unlocked ? '' : 'disabled'}>${equipped ? 'Unequip' : 'Equip'}</button>
+      </div>`;
+  },
+
+  // The Character tab's "Choose a Title" popup. Every title you've actually
+  // earned sits up top in one flat list (so equipping one you already have
+  // is never more than a scroll), followed by a category button per way a
+  // title is earned - clicking one opens the full list for that category
+  // (locked titles included, greyed out with their source shown, so
+  // there's always something to aim for) instead of dumping all 6 category
+  // headers and every title into one long scroll.
   showTitlePickerModal(classId, tab) {
     const rec = Persistent.getCharacter(classId);
     const cls = CLASSES[classId];
     const baseName = rec.customization.name || cls.name;
-    const groups = [
-      { label: 'Dungeon Titles', prefix: 'd_' },
-      { label: 'Raid Titles', prefix: 'r_' },
-      { label: 'Reputation Titles', prefix: 'rep_' },
-      { label: 'World Event Titles', prefix: 'we_' },
-      { label: 'Special Titles', prefix: 'misc_' },
-      { label: 'PvP Rank', prefix: 'pvp_' }
-    ];
+    const groups = this.titleGroups();
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const close = () => overlay.remove();
+    const openCategory = (g) => {
+      this.showListModal(`${g.icon} ${g.label}`, () => {
+        const currentTitleId = rec.customization.titleId;
+        const ids = Object.keys(TITLES).filter(id => id.startsWith(g.prefix));
+        return ids.map(id => this.renderTitleRow(id, TITLES[id], baseName, currentTitleId)).join('');
+      }, (modalOverlay, refresh) => {
+        modalOverlay.querySelectorAll('[data-title-id]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            rec.customization.titleId = btn.dataset.titleId || null;
+            Persistent.save();
+            refresh();
+            render();
+          });
+        });
+      }, null);
+    };
     const render = () => {
       const currentTitleId = rec.customization.titleId;
-      const sections = groups.map(g => {
-        const rows = Object.keys(TITLES).filter(id => id.startsWith(g.prefix)).map(id => {
-          const title = TITLES[id];
-          const unlocked = isTitleUnlocked(id);
-          const equipped = currentTitleId === id;
-          const preview = title.position === 'prefix' ? `${title.name} ${baseName}` : `${baseName} ${title.name}`;
-          return `
-            <div class="gear-row ${equipped ? 'profession-active' : ''}" style="${unlocked ? '' : 'opacity:0.5'}">
-              <div class="desc"><span>🏆</span><div>
-                <strong>${escapeHtml(preview)}</strong>
-                <div class="small-text">${unlocked ? escapeHtml(title.source) : `🔒 ${escapeHtml(title.source)}`}</div>
-              </div></div>
-              <button class="btn-secondary" data-title-id="${id}" ${unlocked ? '' : 'disabled'}>${equipped ? 'Unequip' : 'Equip'}</button>
-            </div>`;
-        }).join('');
-        return `<h4 style="margin-top:14px">${g.label}</h4>${rows}`;
+      const availableIds = Object.keys(TITLES).filter(id => isTitleUnlocked(id));
+      const availableHtml = availableIds.length
+        ? availableIds.map(id => this.renderTitleRow(id, TITLES[id], baseName, currentTitleId)).join('')
+        : '<p class="small-text">None earned yet - browse the categories below to see how to unlock one.</p>';
+      const categoryHtml = groups.map(g => {
+        const ids = Object.keys(TITLES).filter(id => id.startsWith(g.prefix));
+        const unlockedCount = ids.filter(id => isTitleUnlocked(id)).length;
+        return this.categoryButtonRow(`title-cat-${g.prefix}`, g.icon, g.label, `${unlockedCount}/${ids.length} earned`);
       }).join('');
       overlay.innerHTML = `
         <div class="panel modal-panel">
@@ -1923,7 +1954,10 @@ const App = {
             <div class="desc"><span>🚫</span><div><strong>${escapeHtml(baseName)}</strong><div class="small-text">No title</div></div></div>
             <button class="btn-secondary" data-title-id="" ${currentTitleId ? '' : 'disabled'}>Equip</button>
           </div>
-          ${sections}
+          <h4 style="margin-top:14px">Available</h4>
+          ${availableHtml}
+          <h4 style="margin-top:14px">Browse by Category</h4>
+          ${categoryHtml}
           <button class="btn-secondary" id="btn-close-title-picker" style="margin-top:14px">Close</button>
         </div>`;
       overlay.querySelectorAll('[data-title-id]').forEach(btn => {
@@ -1932,6 +1966,10 @@ const App = {
           Persistent.save();
           render();
         });
+      });
+      groups.forEach(g => {
+        const btn = overlay.querySelector(`[data-open-category="title-cat-${g.prefix}"]`);
+        if (btn) btn.addEventListener('click', () => openCategory(g));
       });
       overlay.querySelector('#btn-close-title-picker').addEventListener('click', () => { close(); this.showSanctuary(classId, tab); });
     };
