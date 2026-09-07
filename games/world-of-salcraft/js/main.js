@@ -1329,6 +1329,22 @@ const App = {
       }
     }
 
+    // Same treatment again for the player's own equipped pet/mount, on
+    // whichever round it actually landed a hit (see Combat.resolveCompanionAttacks) -
+    // PET_MOUNT_ATTACK_ANIM (sprites.js) covers every pre-existing pet/mount
+    // with real PixelLab art; anything without an entry just keeps the
+    // plain CSS lunge/glow it already had.
+    if (companionAnim) {
+      const rec = Persistent.getCharacter(p.classId);
+      ['pet', 'mount'].forEach(kind => {
+        if (!companionAnim[kind]) return;
+        const anim = PET_MOUNT_ATTACK_ANIM[rec.equipped[kind]];
+        if (!anim) return;
+        const img = this.root.querySelector(`.combatant.player .companion-${kind} img`);
+        if (img) this.playAttackAnimation(img, anim.attackFrames);
+      });
+    }
+
     if (s.over) {
       if (this.autoCombat) setTimeout(() => { if (Game.player && Combat.state === s) this.resolveCombatEnd(node); }, 500);
       else document.getElementById('btn-combat-continue').addEventListener('click', () => this.resolveCombatEnd(node));
