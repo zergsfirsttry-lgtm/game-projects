@@ -357,11 +357,9 @@ button {
 }
 .map-traveler svg, .map-traveler img { image-rendering: pixelated; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.6)); }
 .map-traveler.facing-left svg, .map-traveler.facing-left img { transform: scaleX(-1); }
-/* Played once on arrival (see animateTravel in map.js) - the player never
-   walks (they're always dead center; the chosen node travels in to meet
-   them instead), so this landing hop is the only traveler animation left,
-   buying time for the treeline/path bloom-in to actually be seen before the
-   screen cuts to the encounter. */
+/* Played once on arrival (see animateTravel in map.js) - the landing hop
+   after the walk cycle below, buying time for the treeline/path bloom-in to
+   actually be seen before the screen cuts to the encounter. */
 .map-traveler.jumping svg, .map-traveler.jumping img { animation: travelerJump 0.6s ease-out 1; }
 .map-traveler.jumping.facing-left svg, .map-traveler.jumping.facing-left img { animation: travelerJumpLeft 0.6s ease-out 1; }
 @keyframes travelerJump {
@@ -377,6 +375,44 @@ button {
   55% { transform: scaleX(-1) translateY(-24px) rotate(-3deg) scale(1.04, 0.96); }
   80% { transform: scaleX(-1) translateY(-2px) rotate(2deg) scale(0.97, 1.05); }
   100% { transform: scaleX(-1) translateY(0) rotate(0deg) scale(1, 1); }
+}
+/* Two more traveler states, both purely CSS (no per-class/weapon sprite
+   frames needed - one shared animation works on every class/armor/weapon/
+   mount/pet combo since it just transforms whatever's already rendered):
+   a marching bob+lean while a chosen node travels in to meet the player
+   (animateTravel), and a slower idle sway while just standing at the
+   current node between choices. Exactly one of idle-bob/walking/jumping is
+   ever active at a time (map.js swaps the class) so their `transform`
+   animations never fight each other. Applies to every element inside
+   .map-traveler (rider, mount, pet alike - see renderCompanionRig), so a
+   mounted/companioned traveler bobs together as one group. */
+.map-traveler.walking svg, .map-traveler.walking img { animation: travelerWalk 0.42s ease-in-out infinite; }
+.map-traveler.walking.facing-left svg, .map-traveler.walking.facing-left img { animation: travelerWalkLeft 0.42s ease-in-out infinite; }
+@keyframes travelerWalk {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-3px) rotate(-3deg); }
+  50% { transform: translateY(-0.5px) rotate(0deg); }
+  75% { transform: translateY(-3px) rotate(3deg); }
+}
+@keyframes travelerWalkLeft {
+  0%, 100% { transform: scaleX(-1) translateY(0) rotate(0deg); }
+  25% { transform: scaleX(-1) translateY(-3px) rotate(3deg); }
+  50% { transform: scaleX(-1) translateY(-0.5px) rotate(0deg); }
+  75% { transform: scaleX(-1) translateY(-3px) rotate(-3deg); }
+}
+.map-traveler.idle-bob svg, .map-traveler.idle-bob img { animation: travelerIdleBob 2.2s ease-in-out infinite; }
+.map-traveler.idle-bob.facing-left svg, .map-traveler.idle-bob.facing-left img { animation: travelerIdleBobLeft 2.2s ease-in-out infinite; }
+@keyframes travelerIdleBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-2px) rotate(0.6deg); }
+}
+@keyframes travelerIdleBobLeft {
+  0%, 100% { transform: scaleX(-1) translateY(0) rotate(0deg); }
+  50% { transform: scaleX(-1) translateY(-2px) rotate(-0.6deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-traveler.idle-bob svg, .map-traveler.idle-bob img,
+  .map-traveler.idle-bob.facing-left svg, .map-traveler.idle-bob.facing-left img { animation: none; }
 }
 
 .map-node {

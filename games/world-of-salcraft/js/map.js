@@ -522,7 +522,7 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
       <div class="map-theme-label">${theme.name} · Act ${map.act}</div>
       <svg class="map-svg" width="${MAP_WIDTH}" height="${VIEW_HEIGHT}">${svgLines}${svgHitAreas}</svg>
       ${nodesHtml}
-      <div class="map-traveler" id="map-traveler" style="left:${anchorPos.sx}px; top:${anchorPos.sy}px; --traveler-scale:1">${travelerSprite}</div>
+      <div class="map-traveler idle-bob" id="map-traveler" style="left:${anchorPos.sx}px; top:${anchorPos.sy}px; --traveler-scale:1">${travelerSprite}</div>
     </div>`;
 
   // Kick off every ambient-kind node preview's own looping animation now
@@ -605,7 +605,11 @@ function animateTravel(container, targetPos, centerPos, nodeId, onSelect, map) {
   const dist = Math.hypot(targetPos.sx - centerPos.sx, targetPos.sy - centerPos.sy);
   const duration = Math.round(clamp(dist * 2.6, 450, 1100));
 
-  if (traveler) traveler.classList.toggle('facing-left', targetPos.sx < centerPos.sx);
+  if (traveler) {
+    traveler.classList.toggle('facing-left', targetPos.sx < centerPos.sx);
+    traveler.classList.remove('idle-bob');
+    traveler.classList.add('walking');
+  }
   nodeEl.style.zIndex = '5';
   nodeEl.style.transition = `left ${duration}ms ease-in, top ${duration}ms ease-in, transform ${duration}ms ease-in`;
   requestAnimationFrame(() => {
@@ -622,7 +626,7 @@ function animateTravel(container, targetPos, centerPos, nodeId, onSelect, map) {
     // swing right here (see nodePreviewArt) - held on for as long as
     // needed instead of the plain ARRIVAL_BUFFER_MS, so the flourish is
     // never cut off mid-swing before the encounter screen takes over.
-    if (traveler) traveler.classList.add('jumping');
+    if (traveler) { traveler.classList.remove('walking'); traveler.classList.add('jumping'); }
     bloomForegroundTrees(container);
     const node = map && map.nodes[nodeId];
     const art = node && nodePreviewArt(node, map.act);
