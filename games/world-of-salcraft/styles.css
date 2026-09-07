@@ -303,9 +303,11 @@ button {
   image-rendering: pixelated;
   z-index: 0;
 }
-/* Small landmark art scattered down the map's guaranteed-node-free side
-   margins (see renderZoneDecorations, map.js) - fills out the zone without
-   ever sitting under a node or path line. */
+/* Small landmark art scattered down each zone's open ground (see
+   renderZoneDecorations, map.js, for the per-zone inset that keeps these off
+   the zone's own border art) - sits under the node graph (z-index 0, vs.
+   .map-svg's 1 and .map-node's 2) and never intercepts clicks
+   (pointer-events:none), so it's safe even where it lands near a node. */
 .map-decorations { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .map-decoration {
   position: absolute;
@@ -314,6 +316,22 @@ button {
   image-rendering: pixelated;
   filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
   opacity: 0.92;
+  transform-origin: 50% 92%;
+}
+/* CSS-only ambient motion (no PixelLab animation - see renderZoneDecorations)
+   split by what the decoration actually is: a tree/fungus gently sways from
+   its base, a crystal/rock instead pulses its own glow. Each instance gets a
+   staggered animation-delay (set inline per decoration) so a whole column
+   doesn't move in obvious lockstep. */
+.map-decoration.deco-plant { animation: decoSway 4.2s ease-in-out infinite; }
+@keyframes decoSway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+.map-decoration.deco-mineral { animation: decoPulse 3.4s ease-in-out infinite; }
+@keyframes decoPulse {
+  0%, 100% { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)) brightness(1) drop-shadow(0 0 0 transparent); }
+  50% { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)) brightness(1.35) drop-shadow(0 0 5px var(--deco-glow, #c48aff)); }
 }
 /* Brief zoom-and-fade travel cues (see leaveForegroundTrees/
    bloomForegroundTrees in map.js) standing in for the old walk animation -

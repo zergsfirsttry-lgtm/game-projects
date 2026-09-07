@@ -421,16 +421,24 @@ const COMPANION_ROLE_GLOW = { tank: '#4a8fe8', dps: '#e8522f', healer: '#5cae6e'
 // setting a mood. These are now gentle "ambient lighting" grades (mild
 // saturate/brightness/contrast, a few degrees of hue-rotate at most) that
 // still shift the same reused monster pool per zone without recoloring it.
+// decorationInset: how far in from each side edge (px, in the 320-wide map
+// viewport) the scattered landmark decorations (see renderZoneDecorations,
+// map.js) sit - tuned per zone by sampling the actual zone_maps/<id>.png art
+// so they land on open ground instead of the zone's own border art (a tree
+// line, city wall, mushroom canopy...), which varies hugely in thickness
+// from zone to zone. decorationKind picks the CSS animation (see
+// .map-decoration.deco-plant/.deco-mineral in styles.css): 'plant' for a
+// tree/fungus that gently sways, 'mineral' for a crystal/rock that pulses.
 const ACT_THEMES = [
-  { id: 'forest', name: 'Elderglen Forest', bg: 'linear-gradient(180deg, #2c4a30 0%, #1c3320 55%, #0f1f13 100%)', particle: '🍃', motion: 'drift-down', accent: '#6fbf73', enemyTint: 'saturate(1.08) brightness(1.02)' },
-  { id: 'swamp', name: 'Murkfen Swamp', bg: 'linear-gradient(180deg, #313d2c 0%, #202a1c 55%, #0d150f 100%)', particle: '🦟', motion: 'drift-side', accent: '#7a9a5a', enemyTint: 'saturate(0.85) brightness(0.92) hue-rotate(-5deg)' },
-  { id: 'desert', name: 'Sunscar Wastes', bg: 'linear-gradient(180deg, #6b4a2a 0%, #4a3018 55%, #2a1a0d 100%)', particle: '✨', motion: 'drift-side', accent: '#e0a458', enemyTint: 'sepia(0.15) saturate(1.1) brightness(1.05)' },
-  { id: 'hellfire', name: 'Shattered Hellscape', bg: 'linear-gradient(180deg, #5a1f14 0%, #3a1310 55%, #1a0a08 100%)', particle: '🔥', motion: 'drift-up', accent: '#e0522f', enemyTint: 'sepia(0.2) saturate(1.3) hue-rotate(-8deg) brightness(1.05)' },
-  { id: 'emerald', name: 'The Emerald Dream', bg: 'linear-gradient(180deg, #1f5c3f 0%, #14402c 55%, #0a2418 100%)', particle: '🌿', motion: 'drift-down', accent: '#5fe6a0', enemyTint: 'saturate(1.15) brightness(1.08) hue-rotate(6deg)' },
-  { id: 'silvermoon', name: 'Silvermoon Spires', bg: 'linear-gradient(180deg, #3a2a5c 0%, #281c40 55%, #140e24 100%)', particle: '🔮', motion: 'drift-up', accent: '#c48aff', enemyTint: 'saturate(1.1) hue-rotate(12deg) brightness(1.03)' },
-  { id: 'blacktemple', name: 'The Black Bastion', bg: 'linear-gradient(180deg, #3a1030 0%, #260a20 55%, #120410 100%)', particle: '💀', motion: 'drift-up', accent: '#a13ce0', enemyTint: 'saturate(1.2) hue-rotate(-10deg) brightness(0.92)' },
-  { id: 'northrend', name: 'Northrend Wastes', bg: 'linear-gradient(180deg, #1a2e3d 0%, #14212c 55%, #0a1218 100%)', particle: '❄️', motion: 'drift-down', accent: '#8fd8f0', enemyTint: 'saturate(0.95) hue-rotate(8deg) brightness(1.08)' },
-  { id: 'nether', name: 'The Twisting Nether', bg: 'linear-gradient(180deg, #1a1030 0%, #100a20 55%, #050310 100%)', particle: '⭐', motion: 'drift-up', accent: '#7a5cff', enemyTint: 'saturate(1.3) hue-rotate(15deg) brightness(0.95)' }
+  { id: 'forest', name: 'Elderglen Forest', bg: 'linear-gradient(180deg, #2c4a30 0%, #1c3320 55%, #0f1f13 100%)', particle: '🍃', motion: 'drift-down', accent: '#6fbf73', enemyTint: 'saturate(1.08) brightness(1.02)', decorationInset: 66, decorationKind: 'plant' },
+  { id: 'swamp', name: 'Murkfen Swamp', bg: 'linear-gradient(180deg, #313d2c 0%, #202a1c 55%, #0d150f 100%)', particle: '🦟', motion: 'drift-side', accent: '#7a9a5a', enemyTint: 'saturate(0.85) brightness(0.92) hue-rotate(-5deg)', decorationInset: 8, decorationKind: 'plant' },
+  { id: 'desert', name: 'Sunscar Wastes', bg: 'linear-gradient(180deg, #6b4a2a 0%, #4a3018 55%, #2a1a0d 100%)', particle: '✨', motion: 'drift-side', accent: '#e0a458', enemyTint: 'sepia(0.15) saturate(1.1) brightness(1.05)', decorationInset: 10, decorationKind: 'plant' },
+  { id: 'hellfire', name: 'Shattered Hellscape', bg: 'linear-gradient(180deg, #5a1f14 0%, #3a1310 55%, #1a0a08 100%)', particle: '🔥', motion: 'drift-up', accent: '#e0522f', enemyTint: 'sepia(0.2) saturate(1.3) hue-rotate(-8deg) brightness(1.05)', decorationInset: 12, decorationKind: 'plant' },
+  { id: 'emerald', name: 'The Emerald Dream', bg: 'linear-gradient(180deg, #1f5c3f 0%, #14402c 55%, #0a2418 100%)', particle: '🌿', motion: 'drift-down', accent: '#5fe6a0', enemyTint: 'saturate(1.15) brightness(1.08) hue-rotate(6deg)', decorationInset: 92, decorationKind: 'plant' },
+  { id: 'silvermoon', name: 'Silvermoon Spires', bg: 'linear-gradient(180deg, #3a2a5c 0%, #281c40 55%, #140e24 100%)', particle: '🔮', motion: 'drift-up', accent: '#c48aff', enemyTint: 'saturate(1.1) hue-rotate(12deg) brightness(1.03)', decorationInset: 92, decorationKind: 'plant' },
+  { id: 'blacktemple', name: 'The Black Bastion', bg: 'linear-gradient(180deg, #3a1030 0%, #260a20 55%, #120410 100%)', particle: '💀', motion: 'drift-up', accent: '#a13ce0', enemyTint: 'saturate(1.2) hue-rotate(-10deg) brightness(0.92)', decorationInset: 56, decorationKind: 'mineral' },
+  { id: 'northrend', name: 'Northrend Wastes', bg: 'linear-gradient(180deg, #1a2e3d 0%, #14212c 55%, #0a1218 100%)', particle: '❄️', motion: 'drift-down', accent: '#8fd8f0', enemyTint: 'saturate(0.95) hue-rotate(8deg) brightness(1.08)', decorationInset: 10, decorationKind: 'plant' },
+  { id: 'nether', name: 'The Twisting Nether', bg: 'linear-gradient(180deg, #1a1030 0%, #100a20 55%, #050310 100%)', particle: '⭐', motion: 'drift-up', accent: '#7a5cff', enemyTint: 'saturate(1.3) hue-rotate(15deg) brightness(0.95)', decorationInset: 10, decorationKind: 'mineral' }
 ];
 
 // --- World Events ---
