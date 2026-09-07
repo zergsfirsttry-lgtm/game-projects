@@ -538,6 +538,7 @@ const App = {
         ${rows}
         <button class="btn-primary" id="btn-leave-jess" style="margin-top:6px">Leave</button>
       </div>`;
+    this.playLoopingAnimation(this.root.querySelector('.jess-portrait'), ENCOUNTER_AMBIENT_ANIM.witchJess.frames, 260);
 
     this.root.querySelectorAll('[data-buy-jess-pet]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -585,6 +586,8 @@ const App = {
         <div class="outcome-box">${rewardDef.icon} <strong>${rewardDef.name}</strong><div class="small-text">${rewardDef.desc}</div></div>
         <button class="btn-primary" id="btn-claim-rare-npc">${npc.rewardKind === 'legendary' ? 'Claim Item' : 'Claim Companion'}</button>
       </div>`;
+    const anim = ENCOUNTER_AMBIENT_ANIM[npc.portrait];
+    if (anim) this.playLoopingAnimation(this.root.querySelector('.npc-portrait'), anim.frames, 260);
     document.getElementById('btn-claim-rare-npc').addEventListener('click', () => this.claimRareNpcReward(node));
     this.maybeShowTutorial('rareNpc');
   },

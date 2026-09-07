@@ -466,6 +466,22 @@ const WORLD_EVENT_ART = Object.fromEntries([
   'nether', 'nether_2', 'nether_3'
 ].map(_worldEventArt));
 
+// Ambient (non-combat) animations for the Rare NPCs (RARE_NPCS in data.js,
+// keyed by their `portrait` id) and Witch Jess - a small looping character
+// action true to who they are (George scratching Ryker's ears, Jess hugging
+// her cat...) rather than an attack, since meeting them is never a fight.
+// Reuses each one's existing static portrait as frame 0 (see renderRareNpcScreen/
+// renderWitchJessScreen in main.js, which set the <img> src to the portrait
+// PNG directly and then hand it to playLoopingAnimation once mounted).
+function _encounterAmbientAnim(id) {
+  return [id, {
+    frames: [0, 1, 2, 3, 4, 5].map(i => `assets/sprites/anim/${id}_ambient_${i}.png`)
+  }];
+}
+const ENCOUNTER_AMBIENT_ANIM = Object.fromEntries([
+  'george', 'landry', 'william', 'mcclures', 'izzo', 'dylinator', 'tina', 'witchJess'
+].map(_encounterAmbientAnim));
+
 // Attack animations for every pet/mount with real PixelLab art (CREATURE_ART_IDS
 // above) - same treatment as BOSS_ART/WEAPON_ATTACK_ANIM, triggered whenever
 // the player's own equipped pet/mount lands a hit (see
