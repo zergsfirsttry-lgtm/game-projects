@@ -721,25 +721,6 @@ const WORLD_EVENTS = {
   ]
 };
 
-// Per-zone procedural backdrop art (see renderZoneSkyline in sprites.js) - a
-// silhouette skyline shown in a themed banner above every encounter screen
-// (map, combat, campsite, shop, event, treasure...) during a run, so each
-// zone reads as an actual place instead of just a color gradient. 'units'
-// draws repeated discrete silhouettes (trees, spires...); 'ridge' draws one
-// continuous mountain/dune line. `disc` adds a moon/sun; `glow` adds a soft
-// ambient light matching the zone's danger/magic (lava, fel, starlight...).
-const ZONE_SKYLINE_STYLE = {
-  forest: { family: 'units', shape: 'tree', color: '#0b1c0d' },
-  swamp: { family: 'units', shape: 'gnarled', color: '#0a130c' },
-  desert: { family: 'ridge', shape: 'dune', color: '#3a2410' },
-  hellfire: { family: 'ridge', shape: 'jagged', color: '#200b08', glow: '#e0522f' },
-  emerald: { family: 'units', shape: 'mushroom', color: '#0c2417', glow: '#5fe6a0' },
-  silvermoon: { family: 'units', shape: 'spire', color: '#160f28', disc: '#c48aff' },
-  blacktemple: { family: 'units', shape: 'arch', color: '#170518' },
-  northrend: { family: 'ridge', shape: 'peak', color: '#0b161e', disc: '#e8f4fa' },
-  nether: { family: 'units', shape: 'asteroid', color: '#0a0618', glow: '#7a5cff' }
-};
-
 function getActTheme(act) {
   const idx = Math.floor((act - 1) / 10);
   if (idx < ACT_THEMES.length) return ACT_THEMES[idx];

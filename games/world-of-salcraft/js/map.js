@@ -398,6 +398,13 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
     const pos = screen[nodeId];
     const isVisited = visitedSet.has(node.id);
     const isAvailable = available.has(node.id) && !isVisited;
+    // A node ahead of the player that isn't actually connected to where
+    // they're standing (a sibling reachable only from a different node in
+    // the current row, not this one) can never be walked to from here -
+    // showing it as a "?" would just be inert clutter with no path leading
+    // to it. The boss is exempted, same as the fog-of-war treatment above -
+    // its position already telegraphs it regardless of the current route.
+    if (node.row > currentRow && !isAvailable && node.type !== 'boss') return;
     const revealed = isVisited || node.type === 'boss' || isAvailable;
     const info = revealed ? NODE_TYPES[node.type] : FOG_NODE;
     const isCurrent = node.id === currentNodeId;

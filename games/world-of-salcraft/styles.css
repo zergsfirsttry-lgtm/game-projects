@@ -536,38 +536,6 @@ button {
 .category-btn-icon { font-size: 1.2rem; flex-shrink: 0; }
 .category-btn-label { flex: 1; font-weight: 600; color: var(--accent); }
 
-/* Zone skyline banner - a themed strip shown above every in-run encounter
-   panel (combat, campsite, shop, event, treasure, taming...) so the current
-   act's zone (see ACT_THEMES/ZONE_SKYLINE_STYLE in data.js, renderZoneSkyline
-   in sprites.js) is felt everywhere during a run, not just on the map
-   screen. Kept as its own opaque strip (rather than layered under the
-   panel's own text) so the art always reads clearly without ever fighting
-   with text contrast. */
-.zone-banner {
-  position: relative;
-  height: 80px;
-  border: 2px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 4px;
-  box-shadow: inset 0 0 0 1px rgba(212,175,90,0.1);
-}
-.zone-banner .zone-ground {
-  position: absolute;
-  inset: 0;
-  background-repeat: repeat;
-  background-size: 32px 32px;
-  image-rendering: pixelated;
-  opacity: 0.45;
-}
-.zone-banner .zone-skyline { position: relative; z-index: 1; width: 100%; height: 100%; display: block; }
-.zone-banner .zone-banner-fade {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%);
-  pointer-events: none;
-}
 
 /* ---------- Panels (event / rest / shop / treasure / gameover) ---------- */
 .panel {
@@ -778,12 +746,15 @@ button {
 }
 .companion-mount.companion-acting, .companion-pet.companion-acting { animation: companionAttackLunge 0.5s ease; }
 
-/* Pet/mount art (see CREATURE_ART_IDS) is drawn facing left, correct for an
-   enemy on the right side of the arena facing the player - but the same art
-   on the PLAYER's side (their own equipped mount/pet) would then face away
-   from the enemy, so it's mirrored here. Applied to the img/svg itself
-   rather than the .companion-mount/.companion-pet wrapper so it doesn't
-   fight the lunge animation's own `transform` above. */
+/* Every character/creature sprite in this game (see CREATURE_ART_IDS,
+   characterSpriteFor) is drawn facing left - correct as-is for the enemy,
+   who stands on the right side of the arena facing the player, but wrong
+   for the player's own side (class body, mount, pet), which would otherwise
+   face away from the enemy instead of toward it - mirrored here so the two
+   combatants visibly face each other. Applied to the img/svg itself rather
+   than the .companion-rider/-mount/-pet wrapper so it doesn't fight the
+   lunge animation's own `transform` above. */
+.combatant.player .companion-rider img, .combatant.player .companion-rider svg,
 .combatant.player .companion-mount img, .combatant.player .companion-mount svg,
 .combatant.player .companion-pet img, .combatant.player .companion-pet svg {
   transform: scaleX(-1);

@@ -15,16 +15,6 @@ function epicEnemySize(enemy) {
   return (enemy.boss || enemy.elite) ? EPIC_ENEMY_SPRITE_SIZE : REGULAR_ENEMY_SPRITE_SIZE;
 }
 
-// How far into the current act's map the player has traveled (0-1) - drives
-// the zone skyline banner's parallax shift (see renderZoneSkyline in
-// sprites.js) so the backdrop visibly advances as the run pushes deeper into
-// a zone instead of sitting frozen behind every screen.
-function zoneProgress() {
-  if (!Game.map || !Game.map.nodes) return 0;
-  const total = Object.keys(Game.map.nodes).length || 1;
-  return Math.min(1, (Game.visitedNodes || []).length / total);
-}
-
 const App = {
   root: null,
   selectedClass: null,
@@ -299,21 +289,6 @@ const App = {
       </div>`;
   },
 
-  // A themed skyline strip shown above every in-run encounter panel (combat,
-  // campsite, shop, event, treasure, taming...) so the current act's zone
-  // (see ACT_THEMES/ZONE_SKYLINE_STYLE in data.js) is felt everywhere during
-  // a run, not just on the map screen. Returns '' outside a run (no Game.act
-  // yet) so title/Sanctuary screens are unaffected.
-  renderZoneBanner() {
-    if (!Game.act) return '';
-    const theme = getActTheme(Game.act);
-    return `<div class="zone-banner" style="background:${theme.bg}">
-      <div class="zone-ground" style="background-image:url('assets/tilesets/${theme.id}.png')"></div>
-      ${renderZoneSkyline(theme.id, zoneProgress())}
-      <div class="zone-banner-fade"></div>
-    </div>`;
-  },
-
   refreshHud() {
     const el = this.root.querySelector('.hud');
     if (el) el.outerHTML = this.renderHud();
@@ -458,7 +433,6 @@ const App = {
     const reward = node.tamingReward;
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel taming-encounter">
         <h2>${reward.def.icon} A Wild ${reward.def.name}</h2>
         <p class="small-text">Step ${node.tamingStep + 1} of ${TAMING_DECISIONS.length}</p>
@@ -530,7 +504,6 @@ const App = {
 
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel witch-jess-encounter">
         <div class="jess-portrait-wrap"><img src="assets/sprites/witchJess.png" class="jess-portrait" alt="Jess"></div>
         <h2>Jess</h2>
@@ -578,7 +551,6 @@ const App = {
       : npc.rewardKind === 'mount' ? MOUNTS[npc.rewardId] : PETS[npc.rewardId];
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel rare-npc-encounter">
         <div class="npc-portrait-wrap"><img src="assets/sprites/${npc.portrait}.png" class="npc-portrait" alt="${npc.name}"></div>
         <h2>${npc.name}</h2>
@@ -663,7 +635,6 @@ const App = {
     const relicCount = Game.player.relics.length;
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel rare-npc-encounter">
         <div class="npc-portrait-wrap">${bossSpriteSvg('jakesteel', 140) || ''}</div>
         <h2>Jakesteel</h2>
@@ -742,7 +713,6 @@ const App = {
     const art = WORLD_EVENT_ART[we.artKey];
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel rare-npc-encounter">
         <div class="npc-portrait-wrap">${art ? `<img class="npc-portrait world-event-sprite" src="${art.idle}" alt="${we.name}" style="width:min(280px,90%)">` : ''}</div>
         <h2>🌋 ${we.name}</h2>
@@ -883,7 +853,6 @@ const App = {
     node.eventRef = event;
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>${event.title}</h2>
         <p class="flavor">${event.text}</p>
@@ -935,7 +904,6 @@ const App = {
     const fishOwned = pdata.materials.fish;
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>Campfire</h2>
         <p class="flavor">You may rest here before continuing your adventure.</p>
@@ -1016,7 +984,6 @@ const App = {
 
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel">
         <h2>Traveling Shop</h2>
         <p class="flavor">Spend your gold wisely before the adventure continues.</p>
@@ -1162,7 +1129,6 @@ const App = {
     const theme = getActTheme(Game.act || 1);
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel ${inGauntlet || inRaid || inDungeon || inPvp ? 'legendary-encounter' : ''}">
         ${inGauntlet ? `<div class="gauntlet-banner">👑 Legendary Encounter - Wave ${Game.gauntlet.waveIndex} of ${Game.gauntlet.totalWaves}</div>` : ''}
         ${inPvp ? `<div class="gauntlet-banner">⚔️ PvP Match - Mirror of Yourself</div>` : ''}
@@ -1571,7 +1537,6 @@ const App = {
     const choices = choiceIds.map(id => RELICS[id]);
     this.root.innerHTML = `
       ${this.renderHud()}
-      ${this.renderZoneBanner()}
       <div class="panel relic-choice">
         <h2>Choose a Relic</h2>
         <p class="flavor">A run-bound boon - lost if you fall. Pick one, or move on.</p>
@@ -1660,7 +1625,16 @@ const App = {
   // ---------------- Sanctuary (persistent hub: character, inventory, blacksmith, shop) ----------------
   showSanctuary(classId, tab) {
     const unlockedClasses = Object.values(CLASSES).filter(c => isClassUnlocked(c.id));
-    classId = classId && isClassUnlocked(classId) ? classId : unlockedClasses[0].id;
+    // Falls back to whichever character was actually played most recently
+    // (set at run-start in confirmSelection, and held steady for the whole
+    // run since nothing else touches it until a Sanctuary visit overwrites
+    // it below) rather than always the first unlocked class - so returning
+    // to the Sanctuary with no explicit classId (abandoning a run, a game
+    // over, the title screen's own Sanctuary button) lands on the character
+    // you were just playing, not whichever class happens to unlock first.
+    const lastPlayed = Persistent.load().lastPlayedClassId;
+    const fallback = (lastPlayed && isClassUnlocked(lastPlayed)) ? lastPlayed : unlockedClasses[0].id;
+    classId = classId && isClassUnlocked(classId) ? classId : fallback;
     tab = tab || 'character';
     if (tab === 'cheats' && !Persistent.load().showCheats) tab = 'character';
     // Whichever character the player last actually looked at is who the
