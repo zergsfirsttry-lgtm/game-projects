@@ -476,6 +476,7 @@ const App = {
         else this.resolveTamingDecisions(node);
       });
     });
+    this.maybeShowTutorial('taming');
   },
 
   resolveTamingDecisions(node) {
@@ -551,6 +552,7 @@ const App = {
       });
     });
     document.getElementById('btn-leave-jess').addEventListener('click', () => this.showMap());
+    this.maybeShowTutorial('witchJess');
   },
 
   // ---------------- Rare NPCs ----------------
@@ -584,6 +586,7 @@ const App = {
         <button class="btn-primary" id="btn-claim-rare-npc">${npc.rewardKind === 'legendary' ? 'Claim Item' : 'Claim Companion'}</button>
       </div>`;
     document.getElementById('btn-claim-rare-npc').addEventListener('click', () => this.claimRareNpcReward(node));
+    this.maybeShowTutorial('rareNpc');
   },
 
   claimRareNpcReward(node) {
@@ -669,6 +672,7 @@ const App = {
       </div>`;
     document.getElementById('btn-jakesteel-duel').addEventListener('click', () => this.startJakesteelDuel(node));
     document.getElementById('btn-jakesteel-sacrifice').addEventListener('click', () => this.sacrificeToJakesteel(node));
+    this.maybeShowTutorial('jakesteel');
   },
 
   // Jakesteel's stats mirror the PLAYER'S OWN current effectiveStats (same
@@ -749,6 +753,7 @@ const App = {
     if (img && art) this.playLoopingAnimation(img, art.frames, 220);
     document.getElementById('btn-we-prevent').addEventListener('click', () => this.resolveWorldEventPrevent(node));
     document.getElementById('btn-we-allow').addEventListener('click', () => this.resolveWorldEventAllow(node));
+    this.maybeShowTutorial('worldEvent');
   },
 
   // Stopping the event only ever grants reputation, deliberately more than
@@ -817,6 +822,7 @@ const App = {
     const legendaryId = available[rand(0, available.length - 1)];
     Game.gauntlet = { legendaryId, waveIndex: 1, totalWaves: rand(5, 10), node };
     this.startGauntletWave();
+    this.maybeShowTutorial('legendaryEncounter');
   },
 
   startGauntletWave() {

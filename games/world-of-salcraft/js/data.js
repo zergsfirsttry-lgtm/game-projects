@@ -1863,104 +1863,75 @@ const CONTAINERS = {
 const TUTORIALS = {
   map: {
     lines: [
-      "Kyle! Bard, raconteur, and - as of about four seconds ago - your personal tour guide. Try to contain your excitement.",
-      "See those glowing circles ahead? Tap one. That's it, that's the whole trick. Battles, campfires, shops, and things I'm legally required to call \"stranger encounters\" all wait down different roads - choose with the wisdom of someone who's read the brochure, which, conveniently, you now have.",
-      "Mind your HP, gold, and Relics up top - and if you'd rather nap through the adventuring part, that AUTO toggle does the fighting and walking for you. No judgment. I do my best work from a hammock too."
+      "Tap a glowing node to move. Battles, camps, shops, and stranger encounters wait down different paths.",
+      "Watch your HP, gold, and Relics up top - or flip AUTO to let the game fight and walk for you."
     ]
   },
   combat: {
     lines: [
-      "Ah, violence! My favorite spectator sport. Attack swings whatever pointy or blunt thing you're holding; your Skill is the fancy class trick that needs a nap between uses, much like myself after a big performance.",
-      "Watch that HP bar - it's rude, but it will absolutely hit zero without asking permission. An item can bail you out, and fleeing is always on the table. I've fled from worse. Mostly angry husbands.",
-      "Pro tip from a professional bystander: Skills hit harder than plain Attacks. Use it like you mean it."
+      "Attack swings your weapon; your Skill hits harder but needs a cooldown between uses.",
+      "Watch your HP - an item can save you, and fleeing is always an option except against a boss."
     ]
   },
   relic: {
-    lines: [
-      "Ooh, shiny. A relic - yours for exactly one adventure, then poof, gone, same as your gold and whatever curses you've been collecting like a very unlucky stamp album.",
-      "Grab whichever one flatters your current strategy, or skip them all with your dignity intact. There's no wrong pick here - only the pick that keeps you breathing a little longer, which I'm told is generally the goal."
-    ]
+    lines: ["A relic boosts you for this adventure only - lost the moment you fall. Pick one, or skip."]
   },
   shop: {
-    lines: [
-      "A traveling shop, and look, an actual merchant instead of me pretending to sell things I clearly don't own. Spend your gold here - none of it comes home with you if you don't.",
-      "Prices climb the deeper you go, same as my asking price for a second song. Spend it like you mean it."
-    ]
+    lines: ["Spend gold here - none of it comes home if you don't. Prices rise the deeper you go."]
   },
   rest: {
-    lines: [
-      "A campfire! Sit, rest, mend those wounds - or meditate and permanently shave a round off your Skill's cooldown, which is the closest thing to actual magic I've ever seen that isn't just a card trick.",
-      "Got a fish? Cook it. Extra healing, extra Cooking experience, and frankly, better hygiene than the last three taverns I've played. Pick one option and you're back on the road."
-    ]
+    lines: ["Rest to heal, meditate to permanently shave a round off your Skill's cooldown, or cook a fish for HP and Cooking XP. Pick one."]
   },
   event: {
-    lines: [
-      "Now THIS is where the good stories come from - the ones I turn into songs later, occasionally with your name changed to protect the reckless.",
-      "Every choice below goes somewhere different - kind, cruel, or delightfully both. There's no correct answer, only the kind of legend you're trying to be. Choose accordingly, and try to give me something good to rhyme with."
-    ]
+    lines: ["Every choice here leads somewhere different - there's no wrong pick, just different outcomes."]
   },
-  treasure: {
-    lines: [
-      "Treasure! Gold, gear, maybe a relic if the universe is feeling generous - all yours, no strings, no fine print, no suspicious merchant lurking nearby. Suspicious of that? Good instincts.",
-      "Always worth a peek before you move on. I've never once regretted checking a treasure chest. The same cannot be said for every door I've opened in my life."
-    ]
+  worldEvent: {
+    lines: ["A rare, one-per-run set-piece. Stop it for reputation, or let it play out for a unique title plus a pet or mount."]
+  },
+  rareNpc: {
+    lines: ["A named NPC with a guaranteed signature reward - no luck involved, just claim it."]
+  },
+  witchJess: {
+    lines: ["Jess trades rare cats and kittens for Relics, not gold - prices rise with rarity."]
+  },
+  taming: {
+    lines: ["Answer right to tame it on the spot. Get one wrong and you'll have to fight for it instead."]
+  },
+  jakesteel: {
+    lines: ["A one-time signature duel. Beat him to recruit him permanently, or sacrifice every Relic you're carrying to pass unharmed."]
+  },
+  legendaryEncounter: {
+    lines: ["A multi-wave gauntlet guarding a named Legendary item - no fleeing, a small heal between waves."]
   },
   // ---------------- Sanctuary tabs ----------------
   // Same one-time-ever convention as the in-run screens above, just keyed
   // 'sanctuary_<tab>' (see maybeShowTutorial's call at the end of
   // showSanctuary in main.js) so every tab gets its own first-visit intro.
   sanctuary_character: {
-    lines: [
-      "Home base! Gear, stats, talents, and your own face staring back at you - try not to think too hard about who's actually holding the mirror.",
-      "See that shiny button above your portrait? Titles. Earn one from a dungeon, a raid, your reputation, or some other feat of questionable sanity, then wear it like a name tag at the world's most dangerous convention. Comes with a little passive bonus, too - free swagger."
-    ]
+    lines: ["Gear, stats, talents, and your equipped title - earn titles from encounters, dungeons, PvP, and reputation."]
   },
   sanctuary_pvp: {
-    lines: [
-      "A mirror match - you, against a ghostly copy of you, in a fight I can only describe as 'deeply confusing to referee.'",
-      "Win enough of these and you'll climb an actual rank ladder, Private up through Grand Marshal, each one an equippable title of its own. Honor buys gear here too, so don't let it just sit there looking smug."
-    ]
+    lines: ["Fight a mirror copy of yourself for Honor and rank. Honor buys gear here too."]
   },
   sanctuary_inventory: {
-    lines: [
-      "Everything you own, sorted so you don't have to dig through a bag that definitely violates several laws of physics.",
-      "Weapons, armor, food, relics, recipes - it's all filed away in here somewhere. Tap a category, not the whole pile at once. I learned that lesson the hard way with my own luggage."
-    ]
+    lines: ["Everything you own, sorted by category - weapons, armor, food, relics, recipes."]
   },
   sanctuary_professions: {
-    lines: [
-      "Crafting, gathering, cooking, and disenchanting - the unglamorous work that somehow makes the glamorous work possible.",
-      "Level one gathering profession at a time, cook up a buff, or melt down old gear into something useful. Nobody writes ballads about professions. They should. I might start."
-    ]
+    lines: ["Gathering, cooking, crafting, and disenchanting - level them up over time for passive bonuses."]
   },
   sanctuary_shop: {
-    lines: [
-      "The Bank Shop - spells, relics, and a little starter gear, all bought with the gold that actually survives a run.",
-      "Unlike the traveling shop out on the road, nothing in here vanishes if you die. Permanent purchases for a permanently reckless lifestyle."
-    ]
+    lines: ["Permanent gear, relics, and spells bought with banked gold - nothing here vanishes on death."]
   },
   sanctuary_quests: {
-    lines: [
-      "Quests! Little goals with real rewards - gold, XP, sometimes gear or a relic that sticks around for good.",
-      "Accept one, go do the thing, come back and claim it. Most repeat too, a little steeper each time, so this list never really runs dry."
-    ]
+    lines: ["Accept a quest, complete it, come back and claim the reward. Most repeat, a bit harder each time."]
   },
   sanctuary_journal: {
-    lines: [
-      "A record of everything you've ever seen, owned, or are still embarrassingly missing - and down at the top, your standing with every zone you've adventured through.",
-      "Get friendly enough with a zone and it opens its own little shop - weapons, armor, a pet, even a mount, gated behind how well you're liked there. Reputation, it turns out, is worth actual gold."
-    ]
+    lines: ["Everything you've seen or are missing, plus your reputation with every zone - get friendly enough and a zone's own shop unlocks."]
   },
   sanctuary_raids: {
-    lines: [
-      "Dungeons for a solo run at glory, raids for when you'd rather share the glory - and the blame - with a full party.",
-      "Each one's got a real boss waiting at the end with a name, a grudge, and considerably more health than anything you've met on the road so far."
-    ]
+    lines: ["Dungeons for a solo run, raids for a full party - each ends in a named boss fight."]
   },
   sanctuary_house: {
-    lines: [
-      "Your own little corner of the world - feed a pet or mount here to buff them up, and rename them if the name they came with doesn't suit their personality.",
-      "Recruit companions too, if you've got any saved from other adventurers - up to four can ride along and lend a hand in raids. It gets crowded. I approve."
-    ]
+    lines: ["Feed and rename your pets and mounts here, and equip up to four recruited companions to fight alongside you."]
   }
 };
