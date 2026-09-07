@@ -529,21 +529,37 @@ function instantiateLegendary(id) {
   };
 }
 
-function rollLootRarity(isBoss, isElite) {
-  const roll = Math.random() + (isBoss ? 0.5 : isElite ? 0.25 : 0);
-  if (roll > 1.35) return 'legendary';
-  if (roll > 1.05) return 'epic';
-  if (roll > 0.75) return 'rare';
-  if (roll > 0.45) return 'uncommon';
-  return 'common';
+// Epic/legendary drops are capped to later acts - without this a lucky
+// boss/elite roll in Act 1 could hand out best-in-slot gear immediately,
+// letting the player one-shot everything until the difficulty finally
+// caught up many acts later. Common/uncommon/rare are unrestricted (normal
+// early-game progression); the cap only clips the TOP of the roll, it never
+// rerolls, so a capped roll still lands on the best tier currently allowed
+// rather than falling all the way back to common.
+function maxLootRarityIndexForAct(act) {
+  if (act >= 7) return RARITY_ORDER.indexOf('legendary');
+  if (act >= 4) return RARITY_ORDER.indexOf('epic');
+  return RARITY_ORDER.indexOf('rare');
 }
 
-function rollLootDrop(enemy) {
+function rollLootRarity(isBoss, isElite, act) {
+  const roll = Math.random() + (isBoss ? 0.5 : isElite ? 0.25 : 0);
+  let rarity;
+  if (roll > 1.35) rarity = 'legendary';
+  else if (roll > 1.05) rarity = 'epic';
+  else if (roll > 0.75) rarity = 'rare';
+  else if (roll > 0.45) rarity = 'uncommon';
+  else rarity = 'common';
+  const cappedIdx = Math.min(RARITY_ORDER.indexOf(rarity), maxLootRarityIndexForAct(act || 1));
+  return RARITY_ORDER[cappedIdx];
+}
+
+function rollLootDrop(enemy, act) {
   const dropChance = enemy.boss ? 1 : enemy.elite ? 0.5 : 0.16;
   if (Math.random() > dropChance) return null;
   const ids = Object.keys(GEAR_TEMPLATES);
   const defId = ids[rand(0, ids.length - 1)];
-  return instantiateGear(defId, rollLootRarity(enemy.boss, enemy.elite));
+  return instantiateGear(defId, rollLootRarity(enemy.boss, enemy.elite, act));
 }
 
 // Which profession's passive boosts which material kind's drop AMOUNT (not
@@ -845,8 +861,9 @@ function computeAfkProgress() {
   const itemCount = Math.floor(3 * AFK_ECONOMY_RATE * elapsedHours + Math.random());
   const itemsGained = [];
   const gearIds = Object.keys(GEAR_TEMPLATES);
+  const afkAct = Meta.load().bestAct;
   for (let i = 0; i < itemCount; i++) {
-    const item = instantiateGear(gearIds[rand(0, gearIds.length - 1)], rollLootRarity(false, false));
+    const item = instantiateGear(gearIds[rand(0, gearIds.length - 1)], rollLootRarity(false, false, afkAct));
     pdata.inventory.push(item);
     itemsGained.push(item);
   }

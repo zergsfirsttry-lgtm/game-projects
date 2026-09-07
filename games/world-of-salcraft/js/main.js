@@ -1544,7 +1544,7 @@ const App = {
       const goldReward = Game.addGold(rand(s.enemy.gold[0], s.enemy.gold[1]));
       const xpReward = Math.max(4, Math.round(s.enemy.maxHp * 0.6));
       const levelResult = Game.grantXp(xpReward);
-      const loot = rollLootDrop(s.enemy);
+      const loot = rollLootDrop(s.enemy, Game.act);
       const material = rollMaterialDrop(s.enemy);
       const recipeItem = rollRecipeDrop();
       if (loot || material || recipeItem) {
