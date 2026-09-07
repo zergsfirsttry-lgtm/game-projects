@@ -3093,9 +3093,75 @@ const App = {
             <div class="xp-bar-wrap" style="margin-top:4px;width:180px"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
             <div class="small-text">${next ? `${rep} / ${next.threshold} to ${next.name}` : `${rep} rep - Exalted (max)`}</div>
           </div></div>
+          <button class="btn-secondary" data-rep-shop="${theme.id}">🛒 Shop</button>
         </div>`;
       }).join('');
-    }, () => {}, null);
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-rep-shop]').forEach(btn => {
+        btn.addEventListener('click', () => this.showReputationShopModal(btn.dataset.repShop, refresh));
+      });
+    }, null);
+  },
+
+  // A zone's reputation-shop popup (see REPUTATION_SHOP in data.js) -
+  // opened from the Shop button on that zone's reputation row. Each of the
+  // 4 items gates on both bank gold and that zone's reputation tier
+  // (REPUTATION_TIERS index); buying a weapon/armor piece mints a real
+  // instance via instantiateGear (same as the Bank Shop's Starter Gear),
+  // while a pet/mount just unlocks the id (same as any other taming
+  // reward) rather than being consumed. `onClose` re-renders the
+  // Reputation list behind it so the gold-bar/rep-bar there stay current.
+  showReputationShopModal(zoneId, onClose) {
+    const theme = ACT_THEMES.find(t => t.id === zoneId);
+    this.showListModal(`🛒 ${theme.name}`, () => {
+      const pdata = Persistent.load();
+      const tierIdx = getReputationTierIndex(zoneId);
+      return REPUTATION_SHOP[zoneId].map((entry, idx) => {
+        const locked = tierIdx < entry.repTier;
+        const tierName = REPUTATION_TIERS[entry.repTier].name;
+        let icon, name, rarityColor = null, detail;
+        if (entry.type === 'gear') {
+          const tmpl = GEAR_TEMPLATES[entry.defId];
+          icon = tmpl.icon; name = tmpl.name; rarityColor = RARITIES[entry.rarity].color;
+          detail = RARITIES[entry.rarity].label;
+        } else {
+          const def = (entry.type === 'pet' ? PETS : MOUNTS)[entry.id];
+          icon = def.icon; name = def.name; detail = def.desc;
+          const owned = (entry.type === 'pet' ? pdata.ownedPets : pdata.ownedMounts).includes(entry.id);
+          if (owned) detail = 'Already owned';
+        }
+        const alreadyOwned = entry.type !== 'gear' && (entry.type === 'pet' ? pdata.ownedPets : pdata.ownedMounts).includes(entry.id);
+        const canAfford = pdata.bankGold >= entry.price;
+        const disabled = locked || alreadyOwned || !canAfford;
+        const btnLabel = alreadyOwned ? 'Owned' : locked ? `🔒 ${tierName}` : `${entry.price} 🪙`;
+        return `<div class="gear-row" ${rarityColor ? `style="border-left:3px solid ${rarityColor}"` : ''}>
+          <div class="desc"><span>${icon}</span><div>
+            <strong ${rarityColor ? `style="color:${rarityColor}"` : ''}>${name}</strong>
+            <div class="small-text">${locked ? `Requires ${tierName} reputation` : detail}</div>
+          </div></div>
+          <button class="btn-secondary" data-buy-rep-item="${idx}" ${disabled ? 'disabled' : ''}>${btnLabel}</button>
+        </div>`;
+      }).join('');
+    }, (container, refresh) => {
+      container.querySelectorAll('[data-buy-rep-item]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const pdata = Persistent.load();
+          const entry = REPUTATION_SHOP[zoneId][parseInt(btn.dataset.buyRepItem, 10)];
+          if (!entry || pdata.bankGold < entry.price || getReputationTierIndex(zoneId) < entry.repTier) return;
+          if (entry.type === 'gear') {
+            pdata.bankGold -= entry.price;
+            pdata.inventory.push(instantiateGear(entry.defId, entry.rarity));
+          } else {
+            const owned = entry.type === 'pet' ? pdata.ownedPets : pdata.ownedMounts;
+            if (owned.includes(entry.id)) return;
+            pdata.bankGold -= entry.price;
+            owned.push(entry.id);
+          }
+          Persistent.save();
+          refresh();
+        });
+      });
+    }, onClose);
   },
 
   renderSanctuaryQuests(classId) {

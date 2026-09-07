@@ -461,6 +461,73 @@ const REPUTATION_TIERS = [
 ];
 const REPUTATION_GOLD_BONUS_PER_TIER = 0.005; // +0.5% gold per tier, per zone
 
+// --- Reputation Shop ---
+// One curated 4-item vendor per zone (see ACT_THEMES) - a weapon, a piece
+// of armor, a pet, and a mount, each gated behind a reputation tier (see
+// REPUTATION_TIERS) on top of its gold cost, escalating rep tier by tier
+// (weapon at Friendly, armor at Honored, pet at Revered, mount as the
+// Exalted capstone - the priciest, most prestigious item, same convention
+// real faction vendors use). Reuses the existing hand-authored gear
+// templates and the wild pet/mount pools rather than inventing
+// zone-exclusive items, so every reward is a real, equippable item - later
+// zones offer higher rarity as the run's own gear power scales up.
+const REPUTATION_SHOP = {
+  forest: [
+    { type: 'gear', defId: 'huntersBow', rarity: 'rare', repTier: 1, price: 150 },
+    { type: 'gear', defId: 'leatherVest', rarity: 'rare', repTier: 2, price: 180 },
+    { type: 'pet', id: 'direwolfPup', repTier: 3, price: 320 },
+    { type: 'mount', id: 'hippogriffMount', repTier: 4, price: 550 }
+  ],
+  swamp: [
+    { type: 'gear', defId: 'ironSword', rarity: 'rare', repTier: 1, price: 165 },
+    { type: 'gear', defId: 'chainmail', rarity: 'rare', repTier: 2, price: 195 },
+    { type: 'pet', id: 'ironshellTortle', repTier: 3, price: 340 },
+    { type: 'mount', id: 'warKodo', repTier: 4, price: 580 }
+  ],
+  desert: [
+    { type: 'gear', defId: 'steelGreataxe', rarity: 'rare', repTier: 1, price: 180 },
+    { type: 'gear', defId: 'clothRobe', rarity: 'rare', repTier: 2, price: 210 },
+    { type: 'pet', id: 'direhornRaptor', repTier: 3, price: 360 },
+    { type: 'mount', id: 'spectralTiger', repTier: 4, price: 610 }
+  ],
+  hellfire: [
+    { type: 'gear', defId: 'steelGreataxe', rarity: 'epic', repTier: 1, price: 200 },
+    { type: 'gear', defId: 'plateArmor', rarity: 'epic', repTier: 2, price: 230 },
+    { type: 'pet', id: 'impFamiliar', repTier: 3, price: 380 },
+    { type: 'mount', id: 'nightmareSteed', repTier: 4, price: 640 }
+  ],
+  emerald: [
+    { type: 'gear', defId: 'runedStaff', rarity: 'epic', repTier: 1, price: 210 },
+    { type: 'gear', defId: 'clothRobe', rarity: 'epic', repTier: 2, price: 240 },
+    { type: 'pet', id: 'moonkinHatchling', repTier: 3, price: 400 },
+    { type: 'mount', id: 'unicornMount', repTier: 4, price: 670 }
+  ],
+  silvermoon: [
+    { type: 'gear', defId: 'runedStaff', rarity: 'epic', repTier: 1, price: 220 },
+    { type: 'gear', defId: 'clothRobe', rarity: 'epic', repTier: 2, price: 250 },
+    { type: 'pet', id: 'pseudodragon', repTier: 3, price: 420 },
+    { type: 'mount', id: 'griffonMount', repTier: 4, price: 700 }
+  ],
+  blacktemple: [
+    { type: 'gear', defId: 'rustedBlade', rarity: 'legendary', repTier: 1, price: 230 },
+    { type: 'gear', defId: 'plateArmor', rarity: 'legendary', repTier: 2, price: 260 },
+    { type: 'pet', id: 'faerieDragonling', repTier: 3, price: 440 },
+    { type: 'mount', id: 'nightmareSteed', repTier: 4, price: 730 }
+  ],
+  northrend: [
+    { type: 'gear', defId: 'ironSword', rarity: 'legendary', repTier: 1, price: 240 },
+    { type: 'gear', defId: 'plateArmor', rarity: 'legendary', repTier: 2, price: 270 },
+    { type: 'pet', id: 'dragonWhelpling', repTier: 3, price: 460 },
+    { type: 'mount', id: 'frostwolfMount', repTier: 4, price: 760 }
+  ],
+  nether: [
+    { type: 'gear', defId: 'huntersBow', rarity: 'legendary', repTier: 1, price: 250 },
+    { type: 'gear', defId: 'chainmail', rarity: 'legendary', repTier: 2, price: 280 },
+    { type: 'pet', id: 'owlFamiliar', repTier: 3, price: 480 },
+    { type: 'mount', id: 'netherdrake', repTier: 4, price: 800 }
+  ]
+};
+
 // --- Titles (WoW-inspired) ---
 // Account-wide unlocks, like unlockedClasses/ownedLegendaries - any
 // character can equip any title this account has earned (see
