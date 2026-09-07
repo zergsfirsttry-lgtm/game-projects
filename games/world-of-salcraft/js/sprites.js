@@ -442,18 +442,28 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'bard_bow', 'bard_lute', 'bard_mace', 'bard_sword'
 ].map(_weaponAttackAnim));
 
-// World Event scene art (see WORLD_EVENTS in data.js) - a wide illustration
-// plus a subtle ambient animation loop (see playLoopingAnimation in
-// main.js), same PixelLab pipeline as BOSS_ART but for a scene rather than
-// a character portrait.
-function _worldEventArt(zoneId) {
-  return [zoneId, {
-    idle: `assets/sprites/events/${zoneId}_idle.png`,
-    frames: [0, 1, 2, 3, 4, 5].map(i => `assets/sprites/events/${zoneId}_anim_${i}.png`)
+// World Event scene art (see WORLD_EVENTS in data.js, keyed by each event's
+// own `artKey`) - a wide illustration plus a subtle ambient animation loop
+// (see playLoopingAnimation in main.js), same PixelLab pipeline as
+// BOSS_ART but for a scene rather than a character portrait. Each zone has
+// 3 events: the first uses the bare zone id (pre-existing art), the other
+// two use `<zoneId>_2` / `<zoneId>_3`.
+function _worldEventArt(artKey) {
+  return [artKey, {
+    idle: `assets/sprites/events/${artKey}_idle.png`,
+    frames: [0, 1, 2, 3, 4, 5].map(i => `assets/sprites/events/${artKey}_anim_${i}.png`)
   }];
 }
 const WORLD_EVENT_ART = Object.fromEntries([
-  'forest', 'swamp', 'desert', 'hellfire', 'emerald', 'silvermoon', 'blacktemple', 'northrend', 'nether'
+  'forest', 'forest_2', 'forest_3',
+  'swamp', 'swamp_2', 'swamp_3',
+  'desert', 'desert_2', 'desert_3',
+  'hellfire', 'hellfire_2', 'hellfire_3',
+  'emerald', 'emerald_2', 'emerald_3',
+  'silvermoon', 'silvermoon_2', 'silvermoon_3',
+  'blacktemple', 'blacktemple_2', 'blacktemple_3',
+  'northrend', 'northrend_2', 'northrend_3',
+  'nether', 'nether_2', 'nether_3'
 ].map(_worldEventArt));
 
 // Attack animations for every pet/mount with real PixelLab art (CREATURE_ART_IDS

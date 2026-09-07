@@ -435,86 +435,281 @@ const ACT_THEMES = [
 // --- World Events ---
 // A one-per-act, zone-themed encounter (see NODE_TYPES.worldEvent in
 // map.js and enterWorldEvent in main.js) - a single large decision, not a
-// fight. `prevent` stops the event and only grants reputation, no loot;
-// `allow` lets it play out and grants a unique, never-randomly-found
-// title (see the matching we_<zoneId> TITLES entry below) plus a
-// signature pet or mount (see PETS/MOUNTS above). Art lives at
-// assets/sprites/events/<zoneId>_idle.png (+ _attack_0..N frames reused as
-// an ambient loop, same PixelLab pipeline as BOSS_ART) - see
-// WORLD_EVENT_ART in sprites.js.
+// fight. Each zone has 3 potential events (WORLD_EVENTS[zoneId] is an
+// array); one is picked at random when the node is visited. `prevent`
+// stops the event and only grants reputation, no loot; `allow` lets it
+// play out and grants a unique, never-randomly-found title (see the
+// matching TITLES entry named by `titleKey`) plus a pet or mount. The
+// first event per zone rewards one of the 9 signature World Event
+// companions (see PETS/MOUNTS above); the other two reuse an existing
+// wild pet/mount reward instead of inventing a new creature for every
+// single event - still a real, useful reward, just not exclusive art.
+// Art lives at assets/sprites/events/<artKey>_idle.png (+ _anim_0..5 frames
+// looped ambiently) - see WORLD_EVENT_ART in sprites.js; `artKey` matches
+// the zone id for each zone's first event (pre-existing art) and
+// `<zoneId>_2` / `<zoneId>_3` for the two new ones.
 const WORLD_EVENTS = {
-  forest: {
-    name: 'The Withering Elder',
-    flavor: "Elderglen's oldest tree - vast enough to have its own weather - has begun to blacken and wither from the inside out, as if something ancient within it is finally dying. The forest around it has gone completely silent.",
-    preventLabel: 'Perform the old rite to save it',
-    allowLabel: 'Let the old tree fall',
-    allowFlavor: 'The tree groans and comes down like a mountain collapsing, root-hollows exhaling centuries of dust. Something small and withered crawls free of the wreckage and looks up at you.',
-    rewardKind: 'pet', rewardId: 'witherbarkSprite'
-  },
-  swamp: {
-    name: 'The Sunken Idol',
-    flavor: "A bloated, half-sunk idol in the deepest part of the Murkfen has begun to glow a sick green, and every creature in the swamp has gone still, gathering around it in a silence that feels deliberate.",
-    preventLabel: 'Shatter the idol',
-    allowLabel: 'Let the ritual complete',
-    allowFlavor: 'The glow collapses inward with a sound like a held breath finally released. The muck around the idol churns, and something enormous and leech-like surfaces, docile, and looks to you as if waiting for orders.',
-    rewardKind: 'mount', rewardId: 'murkfenDireleech'
-  },
-  desert: {
-    name: 'The Rumbling Peak',
-    flavor: 'A volcano at the edge of the Sunscar Wastes has started rumbling, ash sifting down over a village built too close to its base. The villagers are already arguing about whether to run.',
-    preventLabel: 'Climb up and stop the eruption',
-    allowLabel: 'Let it erupt',
-    allowFlavor: 'The mountain splits open in a column of fire and ash, the village below gone within minutes. In the cooling black rock at the crater\'s lip, something small stirs and cracks its way out of a heat-blackened egg.',
-    rewardKind: 'pet', rewardId: 'cinderWhelp'
-  },
-  hellfire: {
-    name: 'The Widening Rift',
-    flavor: 'A tear to the Shattered Hellscape\'s demonic depths has torn open beside a refugee camp, fel-green light spilling across the sand and something enormous breathing on the other side.',
-    preventLabel: 'Seal the rift',
-    allowLabel: 'Let it widen',
-    allowFlavor: "The rift tears open fully, and the refugees scatter into the dunes. From the widening dark, something four-legged and burning steps through, and - unexpectedly - kneels.",
-    rewardKind: 'mount', rewardId: 'felstrider'
-  },
-  emerald: {
-    name: 'The Overgrowing Vale',
-    flavor: "A single seedling in the Emerald Dream has begun blooming at an impossible speed, vines already swallowing the vale around it whole, threatening to bury it entirely by nightfall.",
-    preventLabel: "Contain the seedling's growth",
-    allowLabel: 'Let the vale be consumed',
-    allowFlavor: "By morning the vale is gone entirely, replaced by a forest that shouldn't exist yet. At its heart, one small sapling pulls its roots free of the ground to walk alongside you.",
-    rewardKind: 'pet', rewardId: 'emeraldSapling'
-  },
-  silvermoon: {
-    name: 'The Unstable Spire',
-    flavor: "One of Silvermoon's arcane spires has gone unstable, arcing raw magic into the sky in wild, colorful bursts that are starting to draw a very nervous crowd below.",
-    preventLabel: 'Stabilize the spire',
-    allowLabel: 'Let it overload',
-    allowFlavor: 'The spire discharges everything at once in a silent, blinding flash, arcane fire raining harmlessly down as light rather than flame. Something feathered and glowing drifts down out of it and lands near your feet, waiting.',
-    rewardKind: 'mount', rewardId: 'starlitHawkstrider'
-  },
-  blacktemple: {
-    name: 'The Forbidden Circle',
-    flavor: 'A ritual circle beneath the Black Bastion has been uncovered mid-ceremony, still humming with the kind of power that makes torches gutter and shadows stretch the wrong direction.',
-    preventLabel: 'Destroy the circle',
-    allowLabel: 'Let the ritual complete',
-    allowFlavor: 'The circle flares black, then goes dark and cold all at once. Where its center burned brightest, a warhorse stands wreathed in shadow, utterly silent, utterly yours.',
-    rewardKind: 'mount', rewardId: 'shadowmaneCharger'
-  },
-  northrend: {
-    name: 'The Cracking Glacier',
-    flavor: "An ancient wyrm frozen deep in Northrend's ice has begun to stir, spiderweb cracks spreading across the glacier above it with every slow, freezing breath.",
-    preventLabel: 'Re-freeze the glacier',
-    allowLabel: 'Let it wake',
-    allowFlavor: 'The glacier shatters outward in a wave of frost. What claws its way free is far smaller than the cracks suggested - barely more than a hatchling, blinking up at the sun for the first time in centuries.',
-    rewardKind: 'pet', rewardId: 'frostwyrmling'
-  },
-  nether: {
-    name: 'The Tear in Reality',
-    flavor: 'A tear in the Twisting Nether itself has opened without warning, void-touched shapes drifting through the gap and dissolving into the air like ink in water.',
-    preventLabel: 'Close the tear',
-    allowLabel: 'Let it widen',
-    allowFlavor: 'The tear yawns fully open, and for one long moment the sky itself seems to hold its breath. Then it snaps shut - and something that was never quite there to begin with remains behind, waiting on you.',
-    rewardKind: 'mount', rewardId: 'voidstrider'
-  }
+  forest: [
+    {
+      artKey: 'forest', titleKey: 'we_forest',
+      name: 'The Withering Elder',
+      flavor: "Elderglen's oldest tree - vast enough to have its own weather - has begun to blacken and wither from the inside out, as if something ancient within it is finally dying. The forest around it has gone completely silent.",
+      preventLabel: 'Perform the old rite to save it',
+      allowLabel: 'Let the old tree fall',
+      allowFlavor: 'The tree groans and comes down like a mountain collapsing, root-hollows exhaling centuries of dust. Something small and withered crawls free of the wreckage and looks up at you.',
+      rewardKind: 'pet', rewardId: 'witherbarkSprite'
+    },
+    {
+      artKey: 'forest_2', titleKey: 'we_forest_2',
+      name: 'The Migrating Herd',
+      flavor: "A herd of massive antlered beasts has broken from its ancient migration path, stampeding straight toward a druid grove that's stood undisturbed for a thousand years.",
+      preventLabel: 'Redirect the herd around the grove',
+      allowLabel: 'Let the herd run its course',
+      allowFlavor: "The grove is flattened in minutes, centuries of growth gone in a single thundering pass. In the churned-up earth left behind, a young wolf pup - separated from its own pack somewhere in the chaos - trots up and refuses to leave your side.",
+      rewardKind: 'pet', rewardId: 'direwolfPup'
+    },
+    {
+      artKey: 'forest_3', titleKey: 'we_forest_3',
+      name: 'The Singing Grove',
+      flavor: 'A stand of trees near the road has begun singing in a low, wordless harmony, and every traveler who hears it seems to wander a little closer, a little more willing to stay forever.',
+      preventLabel: 'Silence the grove',
+      allowLabel: 'Let the song play on',
+      allowFlavor: "You stay and listen until the song finally ends on its own, hours later. Where you stood, the grass is worn away in a perfect circle - and a small winged shape, drawn by the same song, has been waiting there with you the whole time.",
+      rewardKind: 'pet', rewardId: 'pixieSprite'
+    }
+  ],
+  swamp: [
+    {
+      artKey: 'swamp', titleKey: 'we_swamp',
+      name: 'The Sunken Idol',
+      flavor: "A bloated, half-sunk idol in the deepest part of the Murkfen has begun to glow a sick green, and every creature in the swamp has gone still, gathering around it in a silence that feels deliberate.",
+      preventLabel: 'Shatter the idol',
+      allowLabel: 'Let the ritual complete',
+      allowFlavor: 'The glow collapses inward with a sound like a held breath finally released. The muck around the idol churns, and something enormous and leech-like surfaces, docile, and looks to you as if waiting for orders.',
+      rewardKind: 'mount', rewardId: 'murkfenDireleech'
+    },
+    {
+      artKey: 'swamp_2', titleKey: 'we_swamp_2',
+      name: 'The Drowned Caravan',
+      flavor: "A merchant caravan sank into the bog decades ago, and tonight its ghostly occupants have resurfaced, still hawking wares that dissolve into mud the moment coin changes hands.",
+      preventLabel: 'Lay the drowned merchants to rest',
+      allowLabel: 'Loot the drowned caravan',
+      allowFlavor: "The ghosts scatter into mist the instant you touch their cargo, but the crates themselves are real enough. Half-sunk in the wreckage, something huge and armored trudges free of the muck - a beast of burden nobody thought to claim.",
+      rewardKind: 'mount', rewardId: 'warKodo'
+    },
+    {
+      artKey: 'swamp_3', titleKey: 'we_swamp_3',
+      name: 'The Croaking Chorus',
+      flavor: 'Every frog in the Murkfen has begun croaking in perfect, eerie unison, a rhythm that feels less like nature and more like a summons older than the swamp itself.',
+      preventLabel: 'Break up the chorus',
+      allowLabel: 'Let the chorus finish',
+      allowFlavor: "The croaking builds to a single sustained note, then stops all at once - and the silence afterward is somehow louder. A shelled shape that had been keeping perfect time with its own shell throughout wanders over once the ritual ends.",
+      rewardKind: 'pet', rewardId: 'ironshellTortle'
+    }
+  ],
+  desert: [
+    {
+      artKey: 'desert', titleKey: 'we_desert',
+      name: 'The Rumbling Peak',
+      flavor: 'A volcano at the edge of the Sunscar Wastes has started rumbling, ash sifting down over a village built too close to its base. The villagers are already arguing about whether to run.',
+      preventLabel: 'Climb up and stop the eruption',
+      allowLabel: 'Let it erupt',
+      allowFlavor: 'The mountain splits open in a column of fire and ash, the village below gone within minutes. In the cooling black rock at the crater\'s lip, something small stirs and cracks its way out of a heat-blackened egg.',
+      rewardKind: 'pet', rewardId: 'cinderWhelp'
+    },
+    {
+      artKey: 'desert_2', titleKey: 'we_desert_2',
+      name: 'The Buried City',
+      flavor: "A sandstorm has scoured away centuries of dunes overnight, revealing the spire of an entire city that shouldn't be there - one no map has ever recorded.",
+      preventLabel: 'Let the sands reclaim it',
+      allowLabel: 'Excavate the buried city',
+      allowFlavor: "You dig for hours before the wind picks back up, threatening to bury it all again by morning - but not before something fast and ghostly-striped slips out of the ruins, keeping perfect pace with you across the sand.",
+      rewardKind: 'mount', rewardId: 'spectralTiger'
+    },
+    {
+      artKey: 'desert_3', titleKey: 'we_desert_3',
+      name: 'The Mirage Caravan',
+      flavor: 'A trade caravan shimmers on the horizon, close enough to make out individual merchants and far enough that it never seems to get any closer - offering deals too good to be real.',
+      preventLabel: 'Warn nearby travelers away from the mirage',
+      allowLabel: 'Trade with the mirage',
+      allowFlavor: "You walk toward it for what feels like an hour and arrive in a single step, the merchants real enough to haggle with after all. One of them presses a parting gift into your hands before the whole caravan fades - a watchful, wide-eyed companion.",
+      rewardKind: 'pet', rewardId: 'owlFamiliar'
+    }
+  ],
+  hellfire: [
+    {
+      artKey: 'hellfire', titleKey: 'we_hellfire',
+      name: 'The Widening Rift',
+      flavor: 'A tear to the Shattered Hellscape\'s demonic depths has torn open beside a refugee camp, fel-green light spilling across the sand and something enormous breathing on the other side.',
+      preventLabel: 'Seal the rift',
+      allowLabel: 'Let it widen',
+      allowFlavor: "The rift tears open fully, and the refugees scatter into the dunes. From the widening dark, something four-legged and burning steps through, and - unexpectedly - kneels.",
+      rewardKind: 'mount', rewardId: 'felstrider'
+    },
+    {
+      artKey: 'hellfire_2', titleKey: 'we_hellfire_2',
+      name: 'The Ashen Choir',
+      flavor: 'A cluster of fel-touched refugees has begun chanting in unnerving unison, their voices layering into something with far too many harmonies for the number of throats present.',
+      preventLabel: 'Break the chant',
+      allowLabel: 'Let the choir finish',
+      allowFlavor: "The chant crescendos into a single unbroken tone that seems to come from everywhere at once, then cuts to silence. Something small, horned, and grinning steps out of the ash left behind, entirely unbothered by the whole affair.",
+      rewardKind: 'pet', rewardId: 'impFamiliar'
+    },
+    {
+      artKey: 'hellfire_3', titleKey: 'we_hellfire_3',
+      name: 'The Bonepyre',
+      flavor: 'A mountain of bleached bones at the wasteland\'s edge has begun to smolder from within, fragments knitting themselves together into something that hasn\'t decided what it wants to be yet.',
+      preventLabel: 'Scatter the bonepyre',
+      allowLabel: 'Let it reassemble',
+      allowFlavor: 'The bones finish their slow climb into a shape too large and too fast to be anything born naturally - and then, impossibly, it lowers its burning head for a saddle.',
+      rewardKind: 'mount', rewardId: 'nightmareSteed'
+    }
+  ],
+  emerald: [
+    {
+      artKey: 'emerald', titleKey: 'we_emerald',
+      name: 'The Overgrowing Vale',
+      flavor: "A single seedling in the Emerald Dream has begun blooming at an impossible speed, vines already swallowing the vale around it whole, threatening to bury it entirely by nightfall.",
+      preventLabel: "Contain the seedling's growth",
+      allowLabel: 'Let the vale be consumed',
+      allowFlavor: "By morning the vale is gone entirely, replaced by a forest that shouldn't exist yet. At its heart, one small sapling pulls its roots free of the ground to walk alongside you.",
+      rewardKind: 'pet', rewardId: 'emeraldSapling'
+    },
+    {
+      artKey: 'emerald_2', titleKey: 'we_emerald_2',
+      name: 'The Sleeping Titan',
+      flavor: "A hill that has never once moved in living memory has begun to breathe, slow and enormous, an ancient nature-spirit stirring for the first time in an age.",
+      preventLabel: 'Sing the titan back to sleep',
+      allowLabel: 'Wake the titan',
+      allowFlavor: "The hill rises fully, shedding centuries of soil and root, and looks down at you with something like curiosity before settling back into a smaller, calmer shape. Perched on its shoulder the whole time, unbothered, an owlbeast chick blinks awake with it.",
+      rewardKind: 'pet', rewardId: 'moonkinHatchling'
+    },
+    {
+      artKey: 'emerald_3', titleKey: 'we_emerald_3',
+      name: 'The Dreaming Pool',
+      flavor: 'A still pool deep in the Dream has begun reflecting visions of a world that almost - but not quite - matches the one you\'re standing in.',
+      preventLabel: 'Seal the pool',
+      allowLabel: 'Step into the dream',
+      allowFlavor: "The reflection swallows you whole for a heartbeat that feels like hours, and when you surface, gasping, something small, prismatic, and delighted has followed you back out.",
+      rewardKind: 'pet', rewardId: 'faerieDragonling'
+    }
+  ],
+  silvermoon: [
+    {
+      artKey: 'silvermoon', titleKey: 'we_silvermoon',
+      name: 'The Unstable Spire',
+      flavor: "One of Silvermoon's arcane spires has gone unstable, arcing raw magic into the sky in wild, colorful bursts that are starting to draw a very nervous crowd below.",
+      preventLabel: 'Stabilize the spire',
+      allowLabel: 'Let it overload',
+      allowFlavor: 'The spire discharges everything at once in a silent, blinding flash, arcane fire raining harmlessly down as light rather than flame. Something feathered and glowing drifts down out of it and lands near your feet, waiting.',
+      rewardKind: 'mount', rewardId: 'starlitHawkstrider'
+    },
+    {
+      artKey: 'silvermoon_2', titleKey: 'we_silvermoon_2',
+      name: 'The Floating Archive',
+      flavor: "A library has come unmoored from its own foundations and is drifting slowly skyward, shelves and scrolls trailing loose behind it like a ship dragging its anchor chain.",
+      preventLabel: 'Tether the archive back down',
+      allowLabel: 'Loot its secrets before it drifts away',
+      allowFlavor: "You climb aboard and grab everything you can carry before the archive rises out of reach for good. A small clockwork creature, dislodged from its post as a shelf-tender, rides down with you rather than be left behind.",
+      rewardKind: 'pet', rewardId: 'mechanicalSquirrel'
+    },
+    {
+      artKey: 'silvermoon_3', titleKey: 'we_silvermoon_3',
+      name: 'The Mirrored Duel',
+      flavor: "A tall standing mirror in the plaza has begun producing a perfect magical duplicate of any champion who stands before it, and the duplicate is currently challenging everyone in sight.",
+      preventLabel: 'Shatter the mirror',
+      allowLabel: 'Let the duel happen',
+      allowFlavor: "The duplicate fights with everything you have and none of your restraint, and the crowd loves every second of it. When the mirror finally cracks from the strain, a proud, feathered mount steps out of the shards as if it had been waiting its whole life for an entrance.",
+      rewardKind: 'mount', rewardId: 'griffonMount'
+    }
+  ],
+  blacktemple: [
+    {
+      artKey: 'blacktemple', titleKey: 'we_blacktemple',
+      name: 'The Forbidden Circle',
+      flavor: 'A ritual circle beneath the Black Bastion has been uncovered mid-ceremony, still humming with the kind of power that makes torches gutter and shadows stretch the wrong direction.',
+      preventLabel: 'Destroy the circle',
+      allowLabel: 'Let the ritual complete',
+      allowFlavor: 'The circle flares black, then goes dark and cold all at once. Where its center burned brightest, a warhorse stands wreathed in shadow, utterly silent, utterly yours.',
+      rewardKind: 'mount', rewardId: 'shadowmaneCharger'
+    },
+    {
+      artKey: 'blacktemple_2', titleKey: 'we_blacktemple_2',
+      name: 'The Weeping Statues',
+      flavor: 'Every stone statue in the Bastion\'s lower halls has begun weeping thick black tears at once, an ill omen even by this place\'s usual standards.',
+      preventLabel: 'Cleanse the statues',
+      allowLabel: 'Collect the tears',
+      allowFlavor: "The tears pool into a single dark vial by the time you're done collecting, and the statues fall still and dry again as if nothing happened. Something low and horned, drawn by the smell of old grief, has been trailing the puddles the whole time.",
+      rewardKind: 'pet', rewardId: 'direhornRaptor'
+    },
+    {
+      artKey: 'blacktemple_3', titleKey: 'we_blacktemple_3',
+      name: 'The Hollow Choir',
+      flavor: 'Ghostly monks have filled an abandoned chapel with a slow, layered chant, calling toward something on the other side of the Bastion\'s walls that hasn\'t answered yet.',
+      preventLabel: 'Silence the choir',
+      allowLabel: 'Join the chant',
+      allowFlavor: "Your voice joins theirs and the chant finally resolves into something almost like a name. The monks fade with the dawn, but a small, curious dragon-kin - drawn in by the sound - stays behind long after they're gone.",
+      rewardKind: 'pet', rewardId: 'pseudodragon'
+    }
+  ],
+  northrend: [
+    {
+      artKey: 'northrend', titleKey: 'we_northrend',
+      name: 'The Cracking Glacier',
+      flavor: "An ancient wyrm frozen deep in Northrend's ice has begun to stir, spiderweb cracks spreading across the glacier above it with every slow, freezing breath.",
+      preventLabel: 'Re-freeze the glacier',
+      allowLabel: 'Let it wake',
+      allowFlavor: 'The glacier shatters outward in a wave of frost. What claws its way free is far smaller than the cracks suggested - barely more than a hatchling, blinking up at the sun for the first time in centuries.',
+      rewardKind: 'pet', rewardId: 'frostwyrmling'
+    },
+    {
+      artKey: 'northrend_2', titleKey: 'we_northrend_2',
+      name: 'The Frozen Legion',
+      flavor: "An entire army lies perfectly preserved beneath the ice, frost-armor still gleaming after centuries - and something is beginning, slowly, to thaw them.",
+      preventLabel: 'Re-freeze the legion',
+      allowLabel: 'Let them thaw',
+      allowFlavor: "The ice groans and gives way row by row, but whatever animated the legion left it centuries ago - they crumble to frost the moment they're free. Only one loyal war-wolf, bonded too deep to fully fade, digs itself out and lives.",
+      rewardKind: 'mount', rewardId: 'frostwolfMount'
+    },
+    {
+      artKey: 'northrend_3', titleKey: 'we_northrend_3',
+      name: 'The Aurora Rift',
+      flavor: "The northern lights overhead have torn open into something that clearly isn't light at all - a rift shot through with colors that have no names.",
+      preventLabel: 'Close the rift',
+      allowLabel: 'Step through',
+      allowFlavor: "You step through and back in what feels like seconds but leaves frost in your hair regardless. Something with wings woven from the same impossible colors follows you back out before the rift seals itself shut.",
+      rewardKind: 'mount', rewardId: 'hippogriffMount'
+    }
+  ],
+  nether: [
+    {
+      artKey: 'nether', titleKey: 'we_nether',
+      name: 'The Tear in Reality',
+      flavor: 'A tear in the Twisting Nether itself has opened without warning, void-touched shapes drifting through the gap and dissolving into the air like ink in water.',
+      preventLabel: 'Close the tear',
+      allowLabel: 'Let it widen',
+      allowFlavor: 'The tear yawns fully open, and for one long moment the sky itself seems to hold its breath. Then it snaps shut - and something that was never quite there to begin with remains behind, waiting on you.',
+      rewardKind: 'mount', rewardId: 'voidstrider'
+    },
+    {
+      artKey: 'nether_2', titleKey: 'we_nether_2',
+      name: 'The Drifting Fleet',
+      flavor: 'A ghostly armada drifts silent through the void nearby, sails full of a wind that doesn\'t exist, crewed by shapes that never quite resolve into faces.',
+      preventLabel: 'Guide the fleet to rest',
+      allowLabel: 'Board the fleet',
+      allowFlavor: "You walk the drifting decks until dawn - or whatever passes for it out here - and the fleet dissolves around you plank by plank as the void reclaims it. One drake, apparently native to these currents, stays behind and lets you approach.",
+      rewardKind: 'mount', rewardId: 'netherdrake'
+    },
+    {
+      artKey: 'nether_3', titleKey: 'we_nether_3',
+      name: 'The Star-Eaten Sky',
+      flavor: 'Stars are vanishing overhead one by one, swallowed by something vast, patient, and utterly silent moving through the space between them.',
+      preventLabel: 'Drive it away',
+      allowLabel: 'Witness the devouring',
+      allowFlavor: "You watch until the last star in view winks out, and the silence afterward is the loudest thing you've ever heard. When it finally passes on, a single small dragon whelp - spat out rather than swallowed - tumbles down out of the dark toward you.",
+      rewardKind: 'pet', rewardId: 'dragonWhelpling'
+    }
+  ]
 };
 
 // Per-zone procedural backdrop art (see renderZoneSkyline in sprites.js) - a
@@ -698,19 +893,39 @@ const TITLES = {
   pvp_marshal: { name: 'Marshal', position: 'prefix', source: 'Win 40 PvP matches', effect: { atk: 3, def: 2, critBonus: 0.02 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 40 },
   pvp_grandMarshal: { name: 'Grand Marshal', position: 'prefix', source: 'Win 60 PvP matches', effect: { atk: 4, def: 3, critBonus: 0.03 }, check: () => (Persistent.load().pvpWinsTotal || 0) >= 60 },
 
-  // World Event titles - granted the moment its zone's event is let play
-  // out (see resolveWorldEventAllow in main.js, which pushes the zone id
-  // into pdata.worldEventTitlesEarned). Never re-earnable if declined or
-  // prevented - each zone's event only offers this once, ever.
-  we_forest: { name: 'the Elderfallen', position: 'suffix', source: 'Let the Withering Elder fall (Elderglen Forest World Event)', effect: { hpRegen: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('forest') },
-  we_swamp: { name: 'the Bogsworn', position: 'suffix', source: 'Let the Sunken Idol\'s ritual complete (Murkfen Swamp World Event)', effect: { lifesteal: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('swamp') },
-  we_desert: { name: 'the Ashbringer', position: 'suffix', source: 'Let the Rumbling Peak erupt (Sunscar Wastes World Event)', effect: { spellPower: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('desert') },
-  we_hellfire: { name: 'the Doomherald', position: 'suffix', source: 'Let the Widening Rift tear open (Shattered Hellscape World Event)', effect: { atk: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('hellfire') },
-  we_emerald: { name: 'the Wildsower', position: 'suffix', source: 'Let the Overgrowing Vale be consumed (Emerald Dream World Event)', effect: { maxHp: 6 }, check: () => Persistent.load().worldEventTitlesEarned.includes('emerald') },
-  we_silvermoon: { name: 'the Spireshatterer', position: 'suffix', source: 'Let the Unstable Spire overload (Silvermoon Spires World Event)', effect: { critBonus: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('silvermoon') },
-  we_blacktemple: { name: 'the Ritualbound', position: 'suffix', source: 'Let the Forbidden Circle complete (The Black Bastion World Event)', effect: { def: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('blacktemple') },
-  we_northrend: { name: 'the Glacierwaker', position: 'suffix', source: 'Let the Cracking Glacier wake (Northrend Wastes World Event)', effect: { def: 1, maxHp: 3 }, check: () => Persistent.load().worldEventTitlesEarned.includes('northrend') },
-  we_nether: { name: 'the Voidtouched', position: 'suffix', source: 'Let the Tear in Reality widen (The Twisting Nether World Event)', effect: { speed: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('nether') }
+  // World Event titles - granted the moment that specific event is let
+  // play out (see resolveWorldEventAllow in main.js, which pushes the
+  // event's own titleKey into pdata.worldEventTitlesEarned). Never
+  // re-earnable if declined or prevented - each event only offers this
+  // once, ever. Each zone has 3 possible events (WORLD_EVENTS in data.js),
+  // so 3 titles per zone below.
+  we_forest: { name: 'the Elderfallen', position: 'suffix', source: 'Let the Withering Elder fall (Elderglen Forest World Event)', effect: { hpRegen: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_forest') },
+  we_forest_2: { name: 'the Trampled Path', position: 'suffix', source: 'Let the Migrating Herd run its course (Elderglen Forest World Event)', effect: { speed: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_forest_2') },
+  we_forest_3: { name: 'the Grove-Touched', position: 'suffix', source: 'Listen to the Singing Grove (Elderglen Forest World Event)', effect: { critBonus: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_forest_3') },
+  we_swamp: { name: 'the Bogsworn', position: 'suffix', source: 'Let the Sunken Idol\'s ritual complete (Murkfen Swamp World Event)', effect: { lifesteal: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_swamp') },
+  we_swamp_2: { name: 'the Bogpicker', position: 'suffix', source: 'Loot the Drowned Caravan (Murkfen Swamp World Event)', effect: { goldBonus: 0.02 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_swamp_2') },
+  we_swamp_3: { name: 'the Frogsong', position: 'suffix', source: 'Let the Croaking Chorus finish (Murkfen Swamp World Event)', effect: { def: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_swamp_3') },
+  we_desert: { name: 'the Ashbringer', position: 'suffix', source: 'Let the Rumbling Peak erupt (Sunscar Wastes World Event)', effect: { spellPower: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_desert') },
+  we_desert_2: { name: 'the Sanddigger', position: 'suffix', source: 'Excavate the Buried City (Sunscar Wastes World Event)', effect: { atk: 1, speed: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_desert_2') },
+  we_desert_3: { name: 'the Mirage-Walker', position: 'suffix', source: 'Trade with the Mirage Caravan (Sunscar Wastes World Event)', effect: { goldBonus: 0.02 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_desert_3') },
+  we_hellfire: { name: 'the Doomherald', position: 'suffix', source: 'Let the Widening Rift tear open (Shattered Hellscape World Event)', effect: { atk: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_hellfire') },
+  we_hellfire_2: { name: 'the Ashen Voice', position: 'suffix', source: 'Let the Ashen Choir finish (Shattered Hellscape World Event)', effect: { spellPower: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_hellfire_2') },
+  we_hellfire_3: { name: "the Bonepyre's Kin", position: 'suffix', source: 'Let the Bonepyre reassemble (Shattered Hellscape World Event)', effect: { atk: 1, def: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_hellfire_3') },
+  we_emerald: { name: 'the Wildsower', position: 'suffix', source: 'Let the Overgrowing Vale be consumed (Emerald Dream World Event)', effect: { maxHp: 6 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_emerald') },
+  we_emerald_2: { name: 'the Titan-Waker', position: 'suffix', source: 'Wake the Sleeping Titan (Emerald Dream World Event)', effect: { maxHp: 5, def: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_emerald_2') },
+  we_emerald_3: { name: 'the Dream-Walker', position: 'suffix', source: 'Step into the Dreaming Pool (Emerald Dream World Event)', effect: { hpRegen: 1, spellPower: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_emerald_3') },
+  we_silvermoon: { name: 'the Spireshatterer', position: 'suffix', source: 'Let the Unstable Spire overload (Silvermoon Spires World Event)', effect: { critBonus: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_silvermoon') },
+  we_silvermoon_2: { name: 'the Archive-Keeper', position: 'suffix', source: 'Loot the Floating Archive (Silvermoon Spires World Event)', effect: { spellPower: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_silvermoon_2') },
+  we_silvermoon_3: { name: 'the Mirror-Breaker', position: 'suffix', source: 'Let the Mirrored Duel happen (Silvermoon Spires World Event)', effect: { atk: 1, critBonus: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_silvermoon_3') },
+  we_blacktemple: { name: 'the Ritualbound', position: 'suffix', source: 'Let the Forbidden Circle complete (The Black Bastion World Event)', effect: { def: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_blacktemple') },
+  we_blacktemple_2: { name: 'the Tear-Collector', position: 'suffix', source: 'Collect the Weeping Statues\' tears (The Black Bastion World Event)', effect: { lifesteal: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_blacktemple_2') },
+  we_blacktemple_3: { name: 'the Hollow Voice', position: 'suffix', source: 'Join the Hollow Choir (The Black Bastion World Event)', effect: { spellPower: 0.01, def: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_blacktemple_3') },
+  we_northrend: { name: 'the Glacierwaker', position: 'suffix', source: 'Let the Cracking Glacier wake (Northrend Wastes World Event)', effect: { def: 1, maxHp: 3 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_northrend') },
+  we_northrend_2: { name: 'the Legion-Waker', position: 'suffix', source: 'Let the Frozen Legion thaw (Northrend Wastes World Event)', effect: { atk: 1, def: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_northrend_2') },
+  we_northrend_3: { name: 'the Aurora-Touched', position: 'suffix', source: 'Step through the Aurora Rift (Northrend Wastes World Event)', effect: { speed: 1, critBonus: 0.01 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_northrend_3') },
+  we_nether: { name: 'the Voidtouched', position: 'suffix', source: 'Let the Tear in Reality widen (The Twisting Nether World Event)', effect: { speed: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_nether') },
+  we_nether_2: { name: 'the Fleet-Walker', position: 'suffix', source: 'Board the Drifting Fleet (The Twisting Nether World Event)', effect: { maxHp: 4, speed: 1 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_nether_2') },
+  we_nether_3: { name: 'the Star-Eaten', position: 'suffix', source: 'Witness the Star-Eaten Sky (The Twisting Nether World Event)', effect: { spellPower: 0.01, maxHp: 3 }, check: () => Persistent.load().worldEventTitlesEarned.includes('we_nether_3') }
 };
 
 // --- Curses ---

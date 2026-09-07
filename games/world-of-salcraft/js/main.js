@@ -748,19 +748,21 @@ const App = {
   },
 
   // ---------------- World Events ----------------
-  // A single big decision, not a fight - see WORLD_EVENTS in data.js. At
-  // most one can appear per act (capped in generateMap, map.js), and always
-  // matches the CURRENT zone theme rather than being chosen at map-gen
-  // time, so it never goes stale if the player is mid-zone-transition.
+  // A single big decision, not a fight - see WORLD_EVENTS in data.js (an
+  // array of 3 per zone). At most one node can appear per act (capped in
+  // generateMap, map.js); which of that zone's 3 events it actually is
+  // gets rolled here, at VISIT time rather than map-gen time, so it always
+  // matches the CURRENT zone theme even mid-zone-transition.
   enterWorldEvent(node) {
-    node.worldEventZoneId = getActTheme(Game.act).id;
+    const zoneId = getActTheme(Game.act).id;
+    const options = WORLD_EVENTS[zoneId];
+    node.worldEvent = options[rand(0, options.length - 1)];
     this.renderWorldEventScreen(node);
   },
 
   renderWorldEventScreen(node) {
-    const zoneId = node.worldEventZoneId;
-    const we = WORLD_EVENTS[zoneId];
-    const art = WORLD_EVENT_ART[zoneId];
+    const we = node.worldEvent;
+    const art = WORLD_EVENT_ART[we.artKey];
     this.root.innerHTML = `
       ${this.renderHud()}
       ${this.renderZoneBanner()}
@@ -783,14 +785,15 @@ const App = {
   // a normal event/rest/shop node's flat +8 (see selectNode) since this is
   // a much bigger set-piece - no loot, matching the user's spec exactly.
   resolveWorldEventPrevent(node) {
-    const zoneId = node.worldEventZoneId;
+    const we = node.worldEvent;
+    const zoneId = getActTheme(Game.act).id;
     const theme = ACT_THEMES.find(t => t.id === zoneId);
     grantReputation(zoneId, 60);
     this.root.innerHTML = `
       ${this.renderHud()}
       ${this.renderZoneBanner()}
       <div class="panel">
-        <h2>${WORLD_EVENTS[zoneId].name}</h2>
+        <h2>${we.name}</h2>
         <div class="outcome-box">You step in and stop it before it can finish. Word spreads fast - your standing with ${theme.name} grows.<br>+60 Reputation.</div>
         <button class="btn-primary" id="btn-continue">Continue</button>
       </div>`;
@@ -798,17 +801,16 @@ const App = {
   },
 
   // Letting the event play out grants no reputation - instead a unique,
-  // never-randomly-found pet or mount, plus that zone's own title
-  // (we_<zoneId> in TITLES) the FIRST time only; a second run's version of
-  // the same event still plays out narratively but doesn't re-grant either
-  // (both are one-time-ever, tracked separately: ownedPets/ownedMounts and
-  // worldEventTitlesEarned).
+  // never-randomly-found title (we.titleKey in TITLES) the FIRST time
+  // only, plus a pet or mount. A second encounter with the same event
+  // (this run or a future one) still plays out narratively but doesn't
+  // re-grant either (both are one-time-ever, tracked separately:
+  // ownedPets/ownedMounts and worldEventTitlesEarned).
   resolveWorldEventAllow(node) {
-    const zoneId = node.worldEventZoneId;
-    const we = WORLD_EVENTS[zoneId];
+    const we = node.worldEvent;
     const pdata = Persistent.load();
-    const titleIsNew = !pdata.worldEventTitlesEarned.includes(zoneId);
-    if (titleIsNew) pdata.worldEventTitlesEarned.push(zoneId);
+    const titleIsNew = !pdata.worldEventTitlesEarned.includes(we.titleKey);
+    if (titleIsNew) pdata.worldEventTitlesEarned.push(we.titleKey);
     const owned = we.rewardKind === 'pet' ? pdata.ownedPets : pdata.ownedMounts;
     const rewardIsNew = !owned.includes(we.rewardId);
     if (rewardIsNew) owned.push(we.rewardId);
@@ -818,7 +820,7 @@ const App = {
       ? `${rewardDef.icon} <strong>${rewardDef.name}</strong> joins your Sanctuary - visit the House tab.`
       : `${rewardDef.icon} ${rewardDef.name} is already yours.`;
     const titleLine = titleIsNew
-      ? `Title earned: <strong>${TITLES['we_' + zoneId].name}</strong> - equip it from the Character tab.`
+      ? `Title earned: <strong>${TITLES[we.titleKey].name}</strong> - equip it from the Character tab.`
       : '';
     this.root.innerHTML = `
       ${this.renderHud()}
