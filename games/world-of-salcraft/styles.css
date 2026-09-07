@@ -1198,6 +1198,11 @@ button {
 }
 .auto-toggle input { accent-color: var(--accent-2); width: 18px; height: 18px; cursor: pointer; }
 .hud .auto-toggle { align-self: center; }
+/* Groups Auto Combat/Auto Dialogue/Auto Shop into one compact column - as a
+   single flex item the HUD's own row can wrap around it as a unit instead
+   of 3 separate toggles spreading out across the row individually. */
+.auto-toggle-group { display: flex; flex-direction: column; gap: 2px; align-self: center; }
+.auto-toggle-group .auto-toggle { min-height: unset; align-self: flex-start; }
 
 .combat-log {
   background: #0c0906;

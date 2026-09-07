@@ -19,6 +19,8 @@ const App = {
   root: null,
   selectedClass: null,
   autoCombat: false,
+  autoDialogue: false,
+  autoShop: false,
   selectedArmorySlot: null, // transient UI state for the Character tab's paperdoll picker
 
   init() {
@@ -48,6 +50,15 @@ const App = {
           const mapContainer = document.getElementById('map-container');
           if (mapContainer) this.autoPickPath(mapContainer);
         }
+      } else if (e.target && e.target.id === 'hud-auto-dialogue-toggle') {
+        this.autoDialogue = e.target.checked;
+        // Same "kick off immediately if the relevant screen is already up"
+        // convention as Auto Combat/Auto Shop - autoDialogueIfEnabled just
+        // no-ops if the current screen has no matching choice buttons.
+        if (this.autoDialogue) this.autoDialogueIfEnabled('.choice-list .choice-btn, .rest-option button');
+      } else if (e.target && e.target.id === 'hud-auto-shop-toggle') {
+        this.autoShop = e.target.checked;
+        if (this.autoShop) this.autoBuyShopItems();
       }
     });
     // Same delegation approach for the HUD's Relics button (see renderHud) -
@@ -291,9 +302,17 @@ const App = {
         ${buffs ? `<div class="hud-buffs">${buffs}</div>` : ''}
         ${moralEffects ? `<div class="hud-buffs">${moralEffects}</div>` : ''}
         <div class="hud-act">Act ${Game.act} · Lv.${stats.level}</div>
-        <label class="auto-toggle" title="Auto-resolves combat and, on the map, always sets out down whichever path looks hardest.">
-          <input type="checkbox" id="hud-auto-toggle" ${this.autoCombat ? 'checked' : ''}> AUTO
-        </label>
+        <div class="auto-toggle-group">
+          <label class="auto-toggle" title="Auto-resolves combat and, on the map, always sets out down whichever path looks hardest.">
+            <input type="checkbox" id="hud-auto-toggle" ${this.autoCombat ? 'checked' : ''}> Auto Combat
+          </label>
+          <label class="auto-toggle" title="Auto-picks a random option on campfires, events, world events, taming, and Jakesteel's duel-or-sacrifice choice.">
+            <input type="checkbox" id="hud-auto-dialogue-toggle" ${this.autoDialogue ? 'checked' : ''}> Auto Dialogue
+          </label>
+          <label class="auto-toggle" title="Auto-buys a relic and potions at the shop, weighed against your current HP and gold.">
+            <input type="checkbox" id="hud-auto-shop-toggle" ${this.autoShop ? 'checked' : ''}> Auto Shop
+          </label>
+        </div>
       </div>`;
   },
 
@@ -466,6 +485,7 @@ const App = {
       });
     });
     this.maybeShowTutorial('taming');
+    this.autoDialogueIfEnabled('.choice-list .choice-btn');
   },
 
   resolveTamingDecisions(node) {
@@ -679,6 +699,7 @@ const App = {
     document.getElementById('btn-jakesteel-duel').addEventListener('click', () => this.startJakesteelDuel(node));
     document.getElementById('btn-jakesteel-sacrifice').addEventListener('click', () => this.sacrificeToJakesteel(node));
     this.maybeShowTutorial('jakesteel');
+    this.autoDialogueIfEnabled('.choice-list .choice-btn');
   },
 
   // Jakesteel's stats mirror the PLAYER'S OWN current effectiveStats (same
@@ -759,6 +780,7 @@ const App = {
     document.getElementById('btn-we-prevent').addEventListener('click', () => this.resolveWorldEventPrevent(node));
     document.getElementById('btn-we-allow').addEventListener('click', () => this.resolveWorldEventAllow(node));
     this.maybeShowTutorial('worldEvent');
+    this.autoDialogueIfEnabled('.choice-list .choice-btn');
   },
 
   // Stopping the event only ever grants reputation, deliberately more than
@@ -912,6 +934,7 @@ const App = {
       });
     });
     this.maybeShowTutorial('event');
+    this.autoDialogueIfEnabled('.choice-list .choice-btn');
   },
 
   // ---------------- Treasure ----------------
@@ -1020,12 +1043,50 @@ const App = {
       finish(`You cook your catch over the fire. +${cookHealAmount} HP, +15 Cooking XP.`);
     });
     this.maybeShowTutorial('rest');
+    this.autoDialogueIfEnabled('.rest-option button');
   },
 
   // ---------------- Shop ----------------
   showShop(node) {
     if (!node.stock) node.stock = generateShopStock();
+    this.currentShopNode = node; // so the HUD's Auto Shop toggle can buy immediately if flipped on mid-shop
     this.renderShopScreen(node);
+  },
+
+  // Auto Shop: buys down node.stock in priority order - relics first
+  // (always worth it while affordable, no HP dependency), then healing
+  // items scaled to how low current HP actually is (skipped entirely once
+  // HP is mostly full), then anything else left over as long as it doesn't
+  // spend the player's last GOLD_RESERVE gold. Re-renders once at the end
+  // if it bought anything, so the buttons reflect what's left.
+  autoShopHealItemIds: ['potion', 'bigPotion', 'antidote'],
+  autoShopReserveGold: 20,
+  autoBuyShopItems() {
+    if (!this.autoShop || !Game.player || !this.currentShopNode) return;
+    const node = this.currentShopNode;
+    if (!node.stock) return;
+    const stats = Game.effectiveStats();
+    const hpPct = Game.player.hp / stats.maxHp;
+    let bought = false;
+    const tryBuy = (entry) => {
+      if (entry.bought || Game.player.gold < entry.price) return false;
+      Game.player.gold -= entry.price;
+      entry.bought = true;
+      if (entry.kind === 'item') Game.player.items.push(entry.id);
+      else Game.player.relics.push(entry.id);
+      return true;
+    };
+    node.stock.filter(e => e.kind === 'relic').forEach(entry => { if (tryBuy(entry)) bought = true; });
+    if (hpPct < 0.85) {
+      node.stock.filter(e => e.kind === 'item' && this.autoShopHealItemIds.includes(e.id)).forEach(entry => {
+        if (tryBuy(entry)) bought = true;
+      });
+    }
+    node.stock.filter(e => e.kind === 'item' && !this.autoShopHealItemIds.includes(e.id)).forEach(entry => {
+      if (entry.bought || Game.player.gold - entry.price < this.autoShopReserveGold) return;
+      if (tryBuy(entry)) bought = true;
+    });
+    if (bought) this.renderShopScreen(node);
   },
 
   renderShopScreen(node) {
@@ -1065,6 +1126,7 @@ const App = {
     });
     document.getElementById('btn-leave-shop').addEventListener('click', () => this.showMap());
     this.maybeShowTutorial('shop');
+    this.autoBuyShopItems();
   },
 
   // ---------------- Combat ----------------
@@ -1383,6 +1445,23 @@ const App = {
     if (this.autoCombat && Combat.state && !Combat.state.over) {
       setTimeout(() => this.performAutoAction(node), 500);
     }
+  },
+
+  // Auto Dialogue: picks a random enabled button matching `selector` on
+  // whatever screen is currently up and clicks it after a short beat, same
+  // "let the game play itself" idea as Auto Combat/Auto Shop just for
+  // narrative choices - campfires, events, world events, taming, and
+  // Jakesteel's duel-or-sacrifice pick all share the .choice-list/.choice-btn
+  // markup (see showEvent/renderWorldEventScreen/showTamingStep/
+  // renderJakesteelScreen) except the campfire, which uses .rest-option
+  // button instead (see showRest) - callers pass whichever selector(s)
+  // apply. A no-op if the current screen has no matching buttons at all.
+  autoDialogueIfEnabled(selector) {
+    if (!this.autoDialogue) return;
+    const buttons = Array.from(this.root.querySelectorAll(selector)).filter(b => !b.disabled);
+    if (!buttons.length) return;
+    const pick = buttons[rand(0, buttons.length - 1)];
+    setTimeout(() => { if (pick.isConnected) pick.click(); }, 550);
   },
 
   decideAutoAction() {
@@ -4035,7 +4114,7 @@ const App = {
           ${step('🗺️', '2. Pick your path', 'Battles, elites, rest sites, shops, treasure, and stranger things all wait on different nodes. Reach the act boss at the end to push into a new, harder zone.')}
           ${step('💀', '3. Fight smart', "Attack or use your class's Skill each round. Watch your HP - use an item or flee if a fight turns against you. Dying ends the run.")}
           ${step('🏠', '4. Build your Sanctuary', 'Character level, gear, gold, professions, reputation, and companions are all PERMANENT, stored in your Sanctuary - only what you carried in-pocket for that one run is lost on death.')}
-          ${step('🤖', '5. Let AUTO take over', "Check the AUTO box (top of the screen, any time) to have your character fight and explore on its own, picking the toughest path forward - even keep progressing while you're away from the game.")}
+          ${step('🤖', '5. Let AUTO take over', "Three toggles up top, any time: Auto Combat fights and explores on its own (even keeps progressing while you're away), Auto Dialogue picks a random option at campfires/events/taming, and Auto Shop buys relics and potions as needed.")}
         </div>
         <button class="btn-primary" id="tutorial-close" style="width:100%;margin-top:12px">Got it, let's go!</button>
       </div>`;
