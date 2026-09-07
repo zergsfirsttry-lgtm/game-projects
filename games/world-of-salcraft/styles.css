@@ -647,7 +647,7 @@ button {
   text-align: center;
   box-shadow: inset 0 0 0 1px rgba(212,175,90,0.08);
 }
-.combatant .portrait { display: flex; justify-content: center; align-items: flex-end; height: 97px; position: relative; }
+.combatant .portrait { display: flex; justify-content: center; align-items: flex-end; height: 108px; position: relative; }
 /* max-width+height:auto (not just image-rendering) so a narrow mobile
    combatant column shrinks the sprite proportionally instead of squashing
    it sideways - a flex item with an explicit width/height SVG child only
@@ -1433,7 +1433,6 @@ button {
   .panel { padding: 16px; }
   .combat-arena { gap: 10px; }
   .combatant { padding: 10px; }
-  .combatant .name { font-size: 0.9rem; }
   .class-card { width: 100%; max-width: 320px; }
   .hp-bar-wrap { width: 100px; }
   .combat-actions button { min-width: 90px; font-size: 0.92rem; }

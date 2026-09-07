@@ -8,9 +8,9 @@
 // frame. Only combat/map portraits follow this rule - menu chrome (class
 // select cards, the Armory paperdoll portrait, HUD mini-icons) scales
 // independently since those aren't "encounters."
-const PLAYER_SPRITE_SIZE = 76;
-const EPIC_ENEMY_SPRITE_SIZE = 88;
-const REGULAR_ENEMY_SPRITE_SIZE = 56;
+const PLAYER_SPRITE_SIZE = 92;
+const EPIC_ENEMY_SPRITE_SIZE = 96;
+const REGULAR_ENEMY_SPRITE_SIZE = 84;
 function epicEnemySize(enemy) {
   return (enemy.boss || enemy.elite) ? EPIC_ENEMY_SPRITE_SIZE : REGULAR_ENEMY_SPRITE_SIZE;
 }
@@ -1128,7 +1128,26 @@ const App = {
 
     if (s.anim.enemy === 'attack' && BOSS_ART[s.enemy.id]) {
       const portraitImg = this.root.querySelector('.combatant.enemy .boss-portrait-sprite');
-      if (portraitImg) this.playBossAttackAnimation(portraitImg, BOSS_ART[s.enemy.id].attackFrames);
+      if (portraitImg) this.playAttackAnimation(portraitImg, BOSS_ART[s.enemy.id].attackFrames);
+    }
+
+    // Same treatment for the player's own basic Attack / spell cast - reuses
+    // the weapon-swing frames for a melee-flavored skill (cleave/multiplier/
+    // rage/drain) and a dedicated cast animation for a 'flat'-type magic
+    // spell (Fireball, Frostbolt, etc. - see SPELLS in data.js), keyed by
+    // currentWeaponVisual (progression.js) so it always matches whatever's
+    // actually equipped. No entry (e.g. an un-covered class) just keeps the
+    // plain CSS swing/glow it always had.
+    if (s.anim.player === 'attack' || s.anim.player === 'skill') {
+      const castSkill = s.anim.player === 'skill' ? SPELLS[s.anim.castSkillId] : null;
+      const animKey = (castSkill && castSkill.type === 'flat')
+        ? `${p.classId}_cast`
+        : `${p.classId}_${currentWeaponVisual(p.classId, weaponSlot)}`;
+      const anim = WEAPON_ATTACK_ANIM[animKey];
+      if (anim) {
+        const playerImg = this.root.querySelector('.combatant.player .player-weapon-sprite');
+        if (playerImg) this.playAttackAnimation(playerImg, anim.attackFrames);
+      }
     }
 
     if (s.over) {
@@ -1182,7 +1201,7 @@ const App = {
   // than setInterval so a stray tick after the next re-render (which tears
   // down and rebuilds the whole combat screen) just finds the element
   // detached and quietly stops instead of touching a stale node.
-  playBossAttackAnimation(imgEl, frames) {
+  playAttackAnimation(imgEl, frames) {
     let i = 0;
     const step = () => {
       if (!imgEl.isConnected) return;

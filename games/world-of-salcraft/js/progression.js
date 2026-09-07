@@ -1660,6 +1660,20 @@ function previewClassStats(classId) {
 // melee weapon and a bow visibly swings whichever one that specific attack
 // used, reverting to their mainHand "resting" look everywhere else (map,
 // armory, HUD) since those calls never pass a slot.
+// Which weapon-visual (see ITEMS[x].visual) a class's body art should show
+// for a given weaponSlot - shared by characterSpriteFor (the static portrait)
+// and the weapon-attack-animation trigger in main.js, which needs this same
+// resolution to look up WEAPON_ATTACK_ANIM[`${classId}_${weaponVisual}`].
+function currentWeaponVisual(classId, weaponSlot) {
+  const rec = Persistent.getCharacter(classId);
+  const eq = rec.equipped;
+  const weapon = eq.mainHand ? Persistent.findItem(eq.mainHand) : null;
+  const rangedItem = eq.ranged ? Persistent.findItem(eq.ranged) : null;
+  const useRanged = weaponSlot === 'ranged' && rangedItem && rangedItem.visual;
+  const activeWeapon = useRanged ? rangedItem : weapon;
+  return (activeWeapon && activeWeapon.visual) || CLASS_ART_DEFAULTS[classId].weaponVisual;
+}
+
 function characterSpriteFor(classId, sizePx, weaponSlot) {
   const rec = Persistent.getCharacter(classId);
   const eq = rec.equipped;
@@ -1672,11 +1686,11 @@ function characterSpriteFor(classId, sizePx, weaponSlot) {
     const useRanged = weaponSlot === 'ranged' && rangedItem && rangedItem.visual;
     const activeWeapon = useRanged ? rangedItem : weapon;
     const armorStyle = (armor && armor.visual) || defaults.armorStyle;
-    const weaponVisual = (activeWeapon && activeWeapon.visual) || defaults.weaponVisual;
+    const weaponVisual = currentWeaponVisual(classId, weaponSlot);
     const path = classBodyArtPath(classId, armorStyle, weaponVisual);
     const filter = RARITY_SPRITE_FILTER[maxRarity(activeWeapon && activeWeapon.rarity, armor && armor.rarity)];
     const filterAttr = filter !== 'none' ? ` style="filter:${filter}"` : '';
-    return `<img src="${path}" width="${sizePx}" height="${sizePx}"${filterAttr} alt="${classId}">`;
+    return `<img class="player-weapon-sprite" src="${path}" width="${sizePx}" height="${sizePx}"${filterAttr} alt="${classId}">`;
   }
 
   const shirt = eq.shirt ? Persistent.findItem(eq.shirt) : null;

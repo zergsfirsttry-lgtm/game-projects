@@ -405,6 +405,23 @@ const BOSS_ART = Object.fromEntries([
   _bossArt('ahnQiraj', "Queen Anub'khepra")
 ]);
 
+// Player weapon-swing / spell-cast animations - same PixelLab treatment as
+// BOSS_ART, keyed by `${classId}_${weaponVisual}` for a basic Attack (see
+// currentWeaponVisual in progression.js) or `${classId}_cast` for a 'flat'
+// -type magic spell (see isPlayerSpellCast in main.js). First wave covers
+// only the three starter classes (warrior/rogue/mage) - a class or weapon
+// with no entry here just keeps the plain CSS swing/glow it always had.
+function _weaponAttackAnim(key) {
+  return [key, {
+    attackFrames: [0, 1, 2, 3, 4, 5, 6, 7].map(i => `assets/sprites/classes/anim/${key}_attack_${i}.png`)
+  }];
+}
+const WEAPON_ATTACK_ANIM = Object.fromEntries([
+  'warrior_axe', 'warrior_bow', 'warrior_dagger', 'warrior_mace', 'warrior_sword',
+  'rogue_bow', 'rogue_dagger', 'rogue_mace', 'rogue_sword',
+  'mage_dagger', 'mage_mace', 'mage_staff', 'mage_sword', 'mage_cast'
+].map(_weaponAttackAnim));
+
 // The boss's idle portrait - anyCharacterSvg (progression.js) checks BOSS_ART
 // before falling through to spriteSvg, so this is what shows outside of the
 // brief attack-animation window.
