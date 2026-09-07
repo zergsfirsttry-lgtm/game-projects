@@ -40,7 +40,46 @@ const SPELLS = {
   frostbolt: { id: 'frostbolt', name: 'Frostbolt', desc: 'Deal 17 frost damage', cooldown: 3, type: 'flat', power: 17, icon: 'assets/icons/spells/frostbolt.png' },
   execute: { id: 'execute', name: 'Execute', desc: 'Deal 3x damage', cooldown: 4, type: 'multiplier', power: 3, icon: 'assets/icons/spells/execute.png' },
   chainLightning: { id: 'chainLightning', name: 'Chain Lightning', desc: '+10 damage, ignores 3 DEF', cooldown: 2, type: 'cleave', power: 10, ignoreDef: 3, icon: 'assets/icons/spells/chainLightning.png' },
-  inspire: { id: 'inspire', name: 'Inspire', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 7, icon: 'assets/icons/spells/inspire.png' }
+  inspire: { id: 'inspire', name: 'Inspire', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 7, icon: 'assets/icons/spells/inspire.png' },
+  // 36 more bank-shop-only spells (see BANK_SHOP.spells) - same 5 damage
+  // types as above, no class restriction, so the shop reads as one big
+  // shared grimoire every class can shop from.
+  iceLance: { id: 'iceLance', name: 'Ice Lance', desc: 'Deal 16 frost damage', cooldown: 2, type: 'flat', power: 16, icon: 'assets/icons/spells/iceLance.png' },
+  shadowBolt: { id: 'shadowBolt', name: 'Shadow Bolt', desc: 'Deal 15 shadow damage', cooldown: 2, type: 'flat', power: 15, icon: 'assets/icons/spells/shadowBolt.png' },
+  arcaneBlast: { id: 'arcaneBlast', name: 'Arcane Blast', desc: 'Deal 18 arcane damage', cooldown: 3, type: 'flat', power: 18, icon: 'assets/icons/spells/arcaneBlast.png' },
+  earthShatter: { id: 'earthShatter', name: 'Earth Shatter', desc: '+9 damage, ignores 2 DEF', cooldown: 2, type: 'cleave', power: 9, ignoreDef: 2, icon: 'assets/icons/spells/earthShatter.png' },
+  moonfire: { id: 'moonfire', name: 'Moonfire', desc: 'Deal 13 arcane damage', cooldown: 2, type: 'flat', power: 13, icon: 'assets/icons/spells/moonfire.png' },
+  sinisterStrike: { id: 'sinisterStrike', name: 'Sinister Strike', desc: '+8 damage, ignores 1 DEF', cooldown: 2, type: 'cleave', power: 8, ignoreDef: 1, icon: 'assets/icons/spells/sinisterStrike.png' },
+  eviscerate: { id: 'eviscerate', name: 'Eviscerate', desc: 'Deal 2.0x damage', cooldown: 3, type: 'multiplier', power: 2.0, icon: 'assets/icons/spells/eviscerate.png' },
+  ambush: { id: 'ambush', name: 'Ambush', desc: 'Deal 2.4x damage', cooldown: 3, type: 'multiplier', power: 2.4, icon: 'assets/icons/spells/ambush.png' },
+  crusaderStrike: { id: 'crusaderStrike', name: "Crusader's Strike", desc: '+10 damage, ignores 2 DEF', cooldown: 2, type: 'cleave', power: 10, ignoreDef: 2, icon: 'assets/icons/spells/crusaderStrike.png' },
+  consecration: { id: 'consecration', name: 'Consecration', desc: 'Deal damage and heal for half', cooldown: 3, type: 'drain', power: 9, icon: 'assets/icons/spells/consecration.png' },
+  flashHeal: { id: 'flashHeal', name: 'Flash Heal', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 7, icon: 'assets/icons/spells/flashHeal.png' },
+  hammerOfJustice: { id: 'hammerOfJustice', name: 'Hammer of Justice', desc: '+11 damage, ignores 3 DEF', cooldown: 3, type: 'cleave', power: 11, ignoreDef: 3, icon: 'assets/icons/spells/hammerOfJustice.png' },
+  whirlwind: { id: 'whirlwind', name: 'Whirlwind', desc: 'Deal 1.7x damage', cooldown: 2, type: 'multiplier', power: 1.7, icon: 'assets/icons/spells/whirlwind.png' },
+  bloodlust: { id: 'bloodlust', name: 'Bloodlust', desc: '+12 damage, 50% more if below half HP', cooldown: 3, type: 'rage', power: 12, icon: 'assets/icons/spells/bloodlust.png' },
+  rampage: { id: 'rampage', name: 'Rampage', desc: '+14 damage, 50% more if below half HP', cooldown: 3, type: 'rage', power: 14, icon: 'assets/icons/spells/rampage.png' },
+  mortalStrike: { id: 'mortalStrike', name: 'Mortal Strike', desc: 'Deal 2.6x damage', cooldown: 4, type: 'multiplier', power: 2.6, icon: 'assets/icons/spells/mortalStrike.png' },
+  serpentSting: { id: 'serpentSting', name: 'Serpent Sting', desc: 'Deal 12 nature damage', cooldown: 2, type: 'flat', power: 12, icon: 'assets/icons/spells/serpentSting.png' },
+  multiShot: { id: 'multiShot', name: 'Multi-Shot', desc: '+9 damage, ignores 2 DEF', cooldown: 2, type: 'cleave', power: 9, ignoreDef: 2, icon: 'assets/icons/spells/multiShot.png' },
+  voidBolt: { id: 'voidBolt', name: 'Void Bolt', desc: 'Deal 19 shadow damage', cooldown: 3, type: 'flat', power: 19, icon: 'assets/icons/spells/voidBolt.png' },
+  drainLife: { id: 'drainLife', name: 'Drain Life', desc: 'Deal damage and heal for half', cooldown: 3, type: 'drain', power: 11, icon: 'assets/icons/spells/drainLife.png' },
+  hellfireBlast: { id: 'hellfireBlast', name: 'Hellfire Blast', desc: 'Deal 20 fire damage', cooldown: 3, type: 'flat', power: 20, icon: 'assets/icons/spells/hellfireBlast.png' },
+  curseOfAgony: { id: 'curseOfAgony', name: 'Curse of Agony', desc: 'Deal 10 shadow damage', cooldown: 2, type: 'flat', power: 10, icon: 'assets/icons/spells/curseOfAgony.png' },
+  penanceStrike: { id: 'penanceStrike', name: 'Penance', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 9, icon: 'assets/icons/spells/penanceStrike.png' },
+  smite: { id: 'smite', name: 'Smite', desc: 'Deal 14 holy damage', cooldown: 2, type: 'flat', power: 14, icon: 'assets/icons/spells/smite.png' },
+  judgment: { id: 'judgment', name: 'Judgment', desc: '+12 damage, ignores 3 DEF', cooldown: 3, type: 'cleave', power: 12, ignoreDef: 3, icon: 'assets/icons/spells/judgment.png' },
+  holyWrath: { id: 'holyWrath', name: 'Holy Wrath', desc: 'Deal 16 holy damage', cooldown: 3, type: 'flat', power: 16, icon: 'assets/icons/spells/holyWrath.png' },
+  slam: { id: 'slam', name: 'Slam', desc: 'Deal 1.9x damage', cooldown: 2, type: 'multiplier', power: 1.9, icon: 'assets/icons/spells/slam.png' },
+  heroicStrike: { id: 'heroicStrike', name: 'Heroic Strike', desc: '+8 damage, ignores 1 DEF', cooldown: 2, type: 'cleave', power: 8, ignoreDef: 1, icon: 'assets/icons/spells/heroicStrike.png' },
+  overpower: { id: 'overpower', name: 'Overpower', desc: 'Deal 2.1x damage', cooldown: 3, type: 'multiplier', power: 2.1, icon: 'assets/icons/spells/overpower.png' },
+  shieldSlam: { id: 'shieldSlam', name: 'Shield Slam', desc: '+10 damage, ignores 2 DEF', cooldown: 2, type: 'cleave', power: 10, ignoreDef: 2, icon: 'assets/icons/spells/shieldSlam.png' },
+  soulFire: { id: 'soulFire', name: 'Soul Fire', desc: 'Deal 22 fire damage', cooldown: 4, type: 'flat', power: 22, icon: 'assets/icons/spells/soulFire.png' },
+  chaosBolt: { id: 'chaosBolt', name: 'Chaos Bolt', desc: 'Deal 24 chaos damage', cooldown: 4, type: 'flat', power: 24, icon: 'assets/icons/spells/chaosBolt.png' },
+  starfall: { id: 'starfall', name: 'Starfall', desc: 'Deal 15 arcane damage', cooldown: 3, type: 'flat', power: 15, icon: 'assets/icons/spells/starfall.png' },
+  wildStrike: { id: 'wildStrike', name: 'Wild Strike', desc: '+10 damage, 50% more if below half HP', cooldown: 2, type: 'rage', power: 10, icon: 'assets/icons/spells/wildStrike.png' },
+  rejuvenation: { id: 'rejuvenation', name: 'Rejuvenation', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 6, icon: 'assets/icons/spells/rejuvenation.png' },
+  avengingWrath: { id: 'avengingWrath', name: 'Avenging Wrath', desc: '+16 damage, 50% more if below half HP', cooldown: 4, type: 'rage', power: 16, icon: 'assets/icons/spells/avengingWrath.png' }
 };
 
 const CLASSES = {
@@ -271,8 +310,11 @@ function pickRelicChoices(classId, count) {
 // Unlike relics these are PERSISTENT (stored in Persistent, survive death) and
 // use the same effect{} lever bag as relics/gear, summed in via companionStatBonus()
 // in progression.js. Won only from rare 'taming' map encounters (see TAMING_DECISIONS
-// below and Game logic in map.js/main.js). Icons stand in for sprite art since these
-// are companions, not wearable gear - no new sprite rendering needed.
+// below and Game logic in map.js/main.js), except the JESS_EXCLUSIVE_PETS below,
+// which only Jess's rare witchJess encounter sells. `icon` is still a compact
+// emoji badge for list rows (House, tooltips) alongside the real PixelLab
+// sprite used everywhere the companion is actually drawn (see CREATURE_ART_IDS
+// in sprites.js) - every id below has a matching assets/sprites/<id>.png.
 const PETS = {
   dragonWhelpling: { id: 'dragonWhelpling', name: 'Dragon Whelpling', icon: '🐲', universe: 'WoW', desc: 'A bonded baby dragon. +2 ATK, +5% spell damage.', effect: { atk: 2, spellPower: 0.05 } },
   direwolfPup: { id: 'direwolfPup', name: 'Direwolf Pup', icon: '🐺', universe: 'WoW', desc: 'Loyal and vicious. +2 ATK, +1 Speed.', effect: { atk: 2, speed: 1 } },
@@ -289,8 +331,39 @@ const PETS = {
   // plain pet, Healer mends you a little each round it acts.
   ironshellTortle: { id: 'ironshellTortle', name: 'Ironshell Tortle', icon: '🐢', universe: 'D&D', desc: 'A stalwart tortle hatchling, shell hardened like plate. +4 DEF. In battle: braces before the enemy\'s reply, blunting the next hit.', effect: { def: 4 }, role: 'tank' },
   direhornRaptor: { id: 'direhornRaptor', name: 'Direhorn Raptor', icon: '🦖', universe: 'WoW', desc: 'A vicious hatchling bred for the pit fights of Pandaria. +3 ATK. In battle: strikes noticeably harder than an ordinary pet.', effect: { atk: 3 }, role: 'dps' },
-  faerieDragonling: { id: 'faerieDragonling', name: 'Faerie Dragonling', icon: '🦚', universe: 'D&D', desc: 'A tiny prismatic dragon, more mischief than menace. +3% healing from items. In battle: mends a little HP each round it acts.', effect: { potionHealBonus: 0.03 }, role: 'healer' }
+  faerieDragonling: { id: 'faerieDragonling', name: 'Faerie Dragonling', icon: '🦚', universe: 'D&D', desc: 'A tiny prismatic dragon, more mischief than menace. +3% healing from items. In battle: mends a little HP each round it acts.', effect: { potionHealBonus: 0.03 }, role: 'healer' },
+  // Jess's own stock (see JESS_EXCLUSIVE_PETS/JESS_PET_PRICE below and
+  // enterWitchJess in main.js) - cats and kittens only, bought with THIS
+  // RUN's temporary relics (spent at random) rather than tamed in the wild.
+  // Kittens cost double a cat's price, so their effect is tuned a notch
+  // above the cats' rather than below - "kitten" is rarity/cost here, not
+  // power tier.
+  emberTabby: { id: 'emberTabby', name: 'Ember Tabby', icon: '🐱', universe: 'D&D', desc: 'A hearth-warmed familiar out of Jess\'s cottage, orange as the coals it naps in. +4% spell damage, +1 Speed.', effect: { spellPower: 0.04, speed: 1 }, tier: 'cat' },
+  shadowPouncer: { id: 'shadowPouncer', name: 'Shadow Pouncer', icon: '🐈‍⬛', universe: 'D&D', desc: 'Silent, quick, and always one pounce behind you in the dark. +5% critical hit chance.', effect: { critBonus: 0.05 }, tier: 'cat' },
+  luckyCalico: { id: 'luckyCalico', name: 'Lucky Calico', icon: '🐈', universe: 'WoW', desc: 'Three-colored and thrice-lucky, or so Jess swears. +2 Max HP, +6% gold from all sources.', effect: { maxHp: 2, goldBonus: 0.06 }, tier: 'cat' },
+  starlitKitten: { id: 'starlitKitten', name: 'Starlit Kitten', icon: '✨', universe: 'D&D', desc: 'Still small, but already humming with borrowed starlight. +2 hp regen per round, +2% spell damage.', effect: { hpRegen: 2, spellPower: 0.02 }, tier: 'kitten' },
+  witchlightKitten: { id: 'witchlightKitten', name: 'Witchlight Kitten', icon: '🐾', universe: 'WoW', desc: 'Raised on Jess\'s own hearthfire magic. +4% healing from items. In battle: mends a little HP each round it acts.', effect: { potionHealBonus: 0.04 }, role: 'healer', tier: 'kitten' },
+  // Signature companions from RARE_NPCS/LEGENDARY_TAMINGS below - each tied
+  // to one specific one-time-ever encounter (see enterRareNpc/
+  // enterLegendaryTaming in main.js), never randomly tamed in the wild.
+  ryker: { id: 'ryker', name: 'Ryker', icon: '🐕‍🦺', universe: 'Original', desc: "George's giant black dog - as ruthless in a fight as his owner. +4 ATK. In battle: strikes noticeably harder than an ordinary pet.", effect: { atk: 4 }, role: 'dps' },
+  landryDuckling: { id: 'landryDuckling', name: "Landry's Deputy", icon: '🦆', universe: 'Original', desc: "Sheriff Landry's giant yellow duckling - tougher than it looks. +3 DEF, +4 Max HP.", effect: { def: 3, maxHp: 4 } },
+  monkey: { id: 'monkey', name: 'Monkey', icon: '🐱', universe: 'Original', desc: 'A giant grey cat in a strawhat, captain of the largest pirate gang in the world. +6% gold from all sources, +1 Speed.', effect: { goldBonus: 0.06, speed: 1 } },
+  chopper: { id: 'chopper', name: 'Chopper', icon: '🐱', universe: 'Original', desc: "A giant grey cat and a renowned doctor. +5% healing from items. In battle: mends a little HP each round it acts.", effect: { potionHealBonus: 0.05 }, role: 'healer' }
 };
+
+// The 3 cats (5 relics each) and 2 kittens (10 relics each) only Jess sells -
+// excluded from pickTamingReward()'s wild-encounter pool below so they're
+// never randomly tamed instead. Kitten price is tuned to their effect, not
+// the other way around - see the comment above.
+const JESS_EXCLUSIVE_PETS = new Set(['emberTabby', 'shadowPouncer', 'luckyCalico', 'starlitKitten', 'witchlightKitten']);
+const JESS_PET_PRICE = { cat: 5, kitten: 10 };
+
+// Every pet/mount id that's a signature reward of ONE specific rare
+// encounter rather than a random wild find - excluded from both
+// pickTamingReward()'s pool and, for the pets, Jess's stock.
+const SIGNATURE_PET_IDS = new Set(['ryker', 'landryDuckling', 'monkey', 'chopper']);
+const SIGNATURE_MOUNT_IDS = new Set(['izzoCorvette', 'robin']);
 
 const MOUNTS = {
   netherdrake: { id: 'netherdrake', name: 'Netherdrake', icon: '🐉', universe: 'WoW', desc: 'A drake bred in the Twisting Nether. +4 ATK, +5 Max HP.', effect: { atk: 4, maxHp: 5 } },
@@ -300,7 +373,10 @@ const MOUNTS = {
   hippogriffMount: { id: 'hippogriffMount', name: 'Hippogriff', icon: '🐎', universe: 'D&D', desc: 'Half eagle, half horse, all fury. +2 Speed, +3 ATK.', effect: { speed: 2, atk: 3 } },
   nightmareSteed: { id: 'nightmareSteed', name: 'Nightmare', icon: '🐴', universe: 'D&D', desc: 'A fiendish steed wreathed in smoke. +4 ATK, +3% spell damage.', effect: { atk: 4, spellPower: 0.03 } },
   unicornMount: { id: 'unicornMount', name: 'Unicorn', icon: '🦄', universe: 'D&D', desc: 'A radiant, healing presence. +3 hp regen per round, +5 Max HP.', effect: { hpRegen: 3, maxHp: 5 } },
-  spectralTiger: { id: 'spectralTiger', name: 'Spectral Tiger', icon: '🐯', universe: 'WoW', desc: 'A ghostly, impossibly fast hunting cat. +3 Speed, +6% critical hit chance.', effect: { speed: 3, critBonus: 0.06 } }
+  spectralTiger: { id: 'spectralTiger', name: 'Spectral Tiger', icon: '🐯', universe: 'WoW', desc: 'A ghostly, impossibly fast hunting cat. +3 Speed, +6% critical hit chance.', effect: { speed: 3, critBonus: 0.06 } },
+  // Signature mounts - see SIGNATURE_MOUNT_IDS above.
+  izzoCorvette: { id: 'izzoCorvette', name: "Izzo's Corvette", icon: '🏎️', universe: 'Original', desc: 'Race King Izzo\'s own racecar, keys and all. +4 Speed, +2 ATK.', effect: { speed: 4, atk: 2 } },
+  robin: { id: 'robin', name: 'Robin', icon: '🐕', universe: 'Original', desc: 'A giant brindle pitbull, sweet as often as vicious. +3 ATK, +3 DEF.', effect: { atk: 3, def: 3 } }
 };
 
 // An equipped pet/mount doesn't just grant a passive stat (see
@@ -471,13 +547,80 @@ const TAMING_DECISIONS = [
   }
 ];
 
-// Picks what a taming encounter offers - roughly even odds of a pet or a mount.
+// Picks what a taming encounter offers - roughly even odds of a pet or a
+// mount. Jess's own cats/kittens (JESS_EXCLUSIVE_PETS) and every signature
+// companion (SIGNATURE_PET_IDS/SIGNATURE_MOUNT_IDS) are filtered out of the
+// pool - those are only ever earned from their own specific encounter.
 function pickTamingReward() {
   const pool = Math.random() < 0.5 ? PETS : MOUNTS;
-  const ids = Object.keys(pool);
+  const exclusive = pool === PETS ? JESS_EXCLUSIVE_PETS : null;
+  const signature = pool === PETS ? SIGNATURE_PET_IDS : SIGNATURE_MOUNT_IDS;
+  const ids = Object.keys(pool).filter(id => !(exclusive && exclusive.has(id)) && !signature.has(id));
   const id = ids[rand(0, ids.length - 1)];
   return { kind: pool === PETS ? 'pet' : 'mount', id, def: pool[id] };
 }
+
+// --- Rare NPC encounters (see enterRareNpc in main.js) ---
+// One-time-ever, account-wide (pdata.metRareNpcs) - each NPC always hands
+// out their OWN signature named reward (a LEGENDARY_ITEMS weapon/armor, or a
+// SIGNATURE_PET_IDS/SIGNATURE_MOUNT_IDS companion), never a random roll. A
+// portrait (assets/sprites/<portrait>.png) and a line of flavor stand in for
+// the multi-step taming/shop flow those other rare encounters use - this one
+// is simpler: meet them, take what they offer, move on.
+const RARE_NPCS = {
+  george: {
+    name: 'George',
+    portrait: 'george',
+    flavor: "A mountain of a man steps out from the treeline, knuckles dark with old blood, a huge black dog padding silent at his heel. \"Name's George,\" he grunts. \"Don't need a blade. Never have.\" He nods at the dog. \"This is Ryker. Reckon he likes you.\"",
+    rewardKind: 'pet', rewardId: 'ryker'
+  },
+  landry: {
+    name: 'Sheriff Landry',
+    portrait: 'landry',
+    flavor: "A broad-shouldered sheriff tips his hat, shotgun resting easy on one shoulder, mustache twitching as a duckling the size of a wagon wheel waddles up beside him. \"Sheriff Landry,\" he drawls. \"This here's my deputy. Don't let the size fool you - toughest bird in three counties.\"",
+    rewardKind: 'pet', rewardId: 'landryDuckling'
+  },
+  william: {
+    name: 'Combat Master Williams',
+    portrait: 'william',
+    flavor: "A tall, composed man watches you approach without a flicker of concern, hands loose at his sides. \"Every style, every school, every discipline,\" he says simply. \"I've mastered them all. You've earned a lesson - and a gift.\" He offers a wrapped bundle without another word.",
+    rewardKind: 'legendary', rewardId: 'williamsFists'
+  },
+  mcclures: {
+    name: 'The McClure Brothers',
+    portrait: 'mcclures',
+    flavor: "Two red-haired brothers lean against a still half-hidden in the brush, cigarette smoke curling between them - one wiry and sharp-eyed, the other built like a barrel. \"Well now,\" the bigger one grins, \"a payin' customer.\" His brother tosses you something wrapped in burlap. \"On the house. Don't tell the revenuers.\"",
+    rewardKind: 'legendary', rewardId: 'mcclureReserve'
+  },
+  izzo: {
+    name: 'Race King Izzo',
+    portrait: 'izzo',
+    flavor: "An engine roars somewhere close before a gleaming racecar skids to a stop beside you, a bald, broad-shouldered man vaulting over the door without opening it. \"Izzo,\" he says, flashing a grin sharp enough to cut glass. \"Race King, three years running.\" He tosses you a set of keys. \"She's fast. Try not to wreck her.\"",
+    rewardKind: 'mount', rewardId: 'izzoCorvette'
+  },
+  dylinator: {
+    name: 'Dylinator 2000',
+    portrait: 'dylinator',
+    flavor: "Something huge and half-metal unfolds from the shadows, servos whining, a bank of cyan lights flickering across its chest like a heartbeat. \"I built myself better,\" it says, voice layered with static. \"Better than they ever could have.\" A panel hisses open, offering you a slab of gleaming plating.",
+    rewardKind: 'legendary', rewardId: 'dylinatorChassis'
+  },
+  tina: {
+    name: 'DJ Tina',
+    portrait: 'tina',
+    flavor: "Bass thumps out of nowhere as a woman spins into view behind a floating set of turntables, mic in hand, grinning like she's already won you over. \"DJ Tina,\" she says over the beat. \"You've got main character energy. Here - this'll help you sound as good as you look.\" She tosses you her spare mic.",
+    rewardKind: 'legendary', rewardId: 'tinasEncoreMic'
+  }
+};
+
+// --- Legendary taming encounters (see enterLegendaryTaming in main.js) ---
+// The exact same 3-decision approach-and-earn-trust flow as a normal
+// 'taming' node (TAMING_DECISIONS), but guarantees ONE SPECIFIC named
+// creature instead of a random pet/mount - one-time-ever, account-wide.
+const LEGENDARY_TAMINGS = {
+  robin: { kind: 'mount', id: 'robin' },
+  monkey: { kind: 'pet', id: 'monkey' },
+  chopper: { kind: 'pet', id: 'chopper' }
+};
 
 const ENEMIES = [
   { id: 'slime', name: 'Slime', icon: '🟢', hp: 14, atk: 3, def: 0, speed: 2, gold: [5, 10] },
@@ -1241,5 +1384,58 @@ const CONTAINERS = {
       const ids = Object.keys(PVP_GEAR_TEMPLATES);
       return instantiatePvpGear(ids[rand(0, ids.length - 1)], rarity);
     }
+  }
+};
+
+// --- Tutorial system (Kyle the Bard) ---
+// Keyed by screen id (see maybeShowTutorial in main.js) - each shows once
+// EVER, account-wide (pdata.kyleTutorialsSeen), the first time that screen
+// is reached, unless the player checked "Skip Tutorials" on the title
+// screen. Kyle only leaves when the player taps anywhere on screen - no
+// auto-dismiss, no separate close button.
+const TUTORIALS = {
+  map: {
+    lines: [
+      "Kyle! Bard, raconteur, and - as of about four seconds ago - your personal tour guide. Try to contain your excitement.",
+      "See those glowing circles ahead? Tap one. That's it, that's the whole trick. Battles, campfires, shops, and things I'm legally required to call \"stranger encounters\" all wait down different roads - choose with the wisdom of someone who's read the brochure, which, conveniently, you now have.",
+      "Mind your HP, gold, and Relics up top - and if you'd rather nap through the adventuring part, that AUTO toggle does the fighting and walking for you. No judgment. I do my best work from a hammock too."
+    ]
+  },
+  combat: {
+    lines: [
+      "Ah, violence! My favorite spectator sport. Attack swings whatever pointy or blunt thing you're holding; your Skill is the fancy class trick that needs a nap between uses, much like myself after a big performance.",
+      "Watch that HP bar - it's rude, but it will absolutely hit zero without asking permission. An item can bail you out, and fleeing is always on the table. I've fled from worse. Mostly angry husbands.",
+      "Pro tip from a professional bystander: Skills hit harder than plain Attacks. Use it like you mean it."
+    ]
+  },
+  relic: {
+    lines: [
+      "Ooh, shiny. A relic - yours for exactly one adventure, then poof, gone, same as your gold and whatever curses you've been collecting like a very unlucky stamp album.",
+      "Grab whichever one flatters your current strategy, or skip them all with your dignity intact. There's no wrong pick here - only the pick that keeps you breathing a little longer, which I'm told is generally the goal."
+    ]
+  },
+  shop: {
+    lines: [
+      "A traveling shop, and look, an actual merchant instead of me pretending to sell things I clearly don't own. Spend your gold here - none of it comes home with you if you don't.",
+      "Prices climb the deeper you go, same as my asking price for a second song. Spend it like you mean it."
+    ]
+  },
+  rest: {
+    lines: [
+      "A campfire! Sit, rest, mend those wounds - or meditate and permanently shave a round off your Skill's cooldown, which is the closest thing to actual magic I've ever seen that isn't just a card trick.",
+      "Got a fish? Cook it. Extra healing, extra Cooking experience, and frankly, better hygiene than the last three taverns I've played. Pick one option and you're back on the road."
+    ]
+  },
+  event: {
+    lines: [
+      "Now THIS is where the good stories come from - the ones I turn into songs later, occasionally with your name changed to protect the reckless.",
+      "Every choice below goes somewhere different - kind, cruel, or delightfully both. There's no correct answer, only the kind of legend you're trying to be. Choose accordingly, and try to give me something good to rhyme with."
+    ]
+  },
+  treasure: {
+    lines: [
+      "Treasure! Gold, gear, maybe a relic if the universe is feeling generous - all yours, no strings, no fine print, no suspicious merchant lurking nearby. Suspicious of that? Good instincts.",
+      "Always worth a peek before you move on. I've never once regretted checking a treasure chest. The same cannot be said for every door I've opened in my life."
+    ]
   }
 };

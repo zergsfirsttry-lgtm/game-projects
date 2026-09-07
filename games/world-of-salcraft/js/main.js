@@ -8,7 +8,7 @@
 // frame. Only combat/map portraits follow this rule - menu chrome (class
 // select cards, the Armory paperdoll portrait, HUD mini-icons) scales
 // independently since those aren't "encounters."
-const PLAYER_SPRITE_SIZE = 56;
+const PLAYER_SPRITE_SIZE = 76;
 const EPIC_ENEMY_SPRITE_SIZE = 88;
 const REGULAR_ENEMY_SPRITE_SIZE = 56;
 function epicEnemySize(enemy) {
@@ -119,12 +119,20 @@ const App = {
         <button class="btn-secondary title-btn" id="btn-difficulty">🎚️ Change Difficulty (${DIFFICULTIES[pdata.difficulty].name})</button>
         <button class="btn-secondary title-btn" id="btn-settings">⚙️ Settings</button>
         <button class="btn-secondary title-btn" id="btn-how-to-play">❔ How to Play</button>
+        <label class="title-skip-tutorials">
+          <input type="checkbox" id="chk-skip-tutorials" ${pdata.skipTutorials ? 'checked' : ''}>
+          Skip Tutorials (Kyle the Bard's in-run tips)
+        </label>
       </div>`;
     document.getElementById('btn-new-run').addEventListener('click', () => this.showClassSelect());
     document.getElementById('btn-sanctuary').addEventListener('click', () => this.showSanctuary());
     document.getElementById('btn-difficulty').addEventListener('click', () => this.showDifficultyModal());
     document.getElementById('btn-settings').addEventListener('click', () => this.showSettingsModal());
     document.getElementById('btn-how-to-play').addEventListener('click', () => this.showTutorialModal());
+    document.getElementById('chk-skip-tutorials').addEventListener('change', (e) => {
+      pdata.skipTutorials = e.target.checked;
+      Persistent.save();
+    });
     // A brand-new player (never dismissed it before) gets the walkthrough
     // automatically, once, the first time they ever see the title screen.
     if (!pdata.tutorialSeen) this.showTutorialModal();
@@ -136,19 +144,19 @@ const App = {
     const cards = Object.values(CLASSES).map(c => {
       const unlocked = isClassUnlocked(c.id);
       const rec = Persistent.getCharacter(c.id);
-      const spell = SPELLS[rec.equipped.spell || c.defaultSpell];
+      const spells = equippedSpellIds(rec, c).map(id => SPELLS[id]);
       // The character's ACTUAL current stats (level, gear, talents, relics,
       // Gear Set Bonus, everything) - not the class's flat base numbers, so
       // this screen reflects who that character really is right now.
       const stats = unlocked ? previewClassStats(c.id) : null;
       return `
       <button type="button" class="class-card ${unlocked ? '' : 'locked'}" data-class="${c.id}" ${unlocked ? '' : 'disabled'}>
-        <div class="class-icon">${characterSpriteFor(c.id, 64)}</div>
+        <div class="class-icon">${characterSpriteFor(c.id, 88)}</div>
         <h3>${c.name} ${unlocked ? `<span class="small-text">Lv.${rec.level}</span>` : ''}</h3>
         ${unlocked ? `
           <p>${c.blurb}</p>
           <div class="class-stats">HP ${stats.maxHp} · ATK ${stats.atk} · DEF ${stats.def} · SPD ${stats.speed}</div>
-          <div class="class-stats">${spell.name}: ${spell.desc}</div>
+          ${spells.map(spell => `<div class="class-stats">${spell.name}: ${spell.desc}</div>`).join('')}
         ` : `
           <p class="small-text">🔒 Locked</p>
           <p class="small-text">Win this class's Class Trial (a rare map encounter) to unlock it.</p>
@@ -319,7 +327,8 @@ const App = {
       <div class="map-legend">
         <span>⚔️ Battle</span><span>👹 Elite</span><span>❓ Unknown</span>
         <span>🔥 Rest</span><span>💰 Shop</span><span>🎁 Treasure</span>
-        <span>🌟 Class Trial</span><span>👑 Legendary</span><span>🐾 Wild Creature</span><span>☠️ Boss</span>
+        <span>🌟 Class Trial</span><span>👑 Legendary</span><span>🐾 Wild Creature</span><span>🐈 Glowing Witch</span>
+        <span>🎭 Rare Encounter</span><span>🐕 Legendary Creature</span><span>☠️ Boss</span>
       </div>
       <button class="btn-secondary" id="btn-inrun-inventory">🎒 Inventory</button>
       <button class="btn-secondary btn-abandon-run" id="btn-abandon-run">🏠 Return to Sanctuary</button>`;
@@ -328,6 +337,7 @@ const App = {
     document.getElementById('btn-inrun-inventory').addEventListener('click', () => this.showInRunInventory());
     document.getElementById('btn-abandon-run').addEventListener('click', () => this.confirmAbandonRun());
     if (this.autoCombat) this.autoPickPath(container);
+    this.maybeShowTutorial('map');
   },
 
   // With AUTO on, the map picks whichever available node reads as the most
@@ -423,6 +433,9 @@ const App = {
     else if (node.type === 'classTrial') this.enterClassTrial(node);
     else if (node.type === 'legendary') this.enterLegendaryEncounter(node);
     else if (node.type === 'taming') this.enterTaming(node);
+    else if (node.type === 'witchJess') this.enterWitchJess(node);
+    else if (node.type === 'rareNpc') this.enterRareNpc(node);
+    else if (node.type === 'legendaryTaming') this.enterLegendaryTaming(node);
   },
 
   // ---------------- Taming (pet/mount) ----------------
@@ -500,6 +513,146 @@ const App = {
         <button class="btn-primary" id="btn-continue">Continue</button>
       </div>`;
     document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+  },
+
+  // ---------------- Jess (rare cat/kitten vendor) ----------------
+  // A very rare encounter (see pickType in map.js) - a glowing witch who
+  // deals exclusively in her own cats/kittens (JESS_EXCLUSIVE_PETS in
+  // data.js), priced in THIS RUN's temporary relics (spent at random, like
+  // paying a toll) rather than gold, since relics vanish at the end of the
+  // run anyway. The offered stock never changes once generated for this
+  // node, but re-renders each purchase so price/afford/owned states update.
+  enterWitchJess(node) {
+    if (!node.jessStock) node.jessStock = Object.keys(PETS).filter(id => JESS_EXCLUSIVE_PETS.has(id));
+    grantReputation(getActTheme(Game.act).id, 10);
+    this.renderWitchJessScreen(node);
+  },
+
+  renderWitchJessScreen(node) {
+    const pdata = Persistent.load();
+    const relicCount = Game.player.relics.length;
+    const rows = node.jessStock.map(id => {
+      const def = PETS[id];
+      const price = JESS_PET_PRICE[def.tier];
+      const owned = pdata.ownedPets.includes(id);
+      const afford = relicCount >= price;
+      return `<div class="shop-item">
+        <div class="desc"><span>${def.icon}</span><div><strong>${def.name}</strong> <span class="small-text">(${def.tier === 'kitten' ? 'Kitten' : 'Cat'})</span><div class="small-text">${def.desc}</div></div></div>
+        <div>
+          <span class="price">${price} 💠</span>
+          <button class="btn-secondary" data-buy-jess-pet="${id}" ${owned || !afford ? 'disabled' : ''}>${owned ? 'Owned' : (afford ? 'Buy' : 'Need more')}</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    this.root.innerHTML = `
+      ${this.renderHud()}
+      ${this.renderZoneBanner()}
+      <div class="panel witch-jess-encounter">
+        <div class="jess-portrait-wrap"><img src="assets/sprites/witchJess.png" class="jess-portrait" alt="Jess"></div>
+        <h2>Jess</h2>
+        <p class="flavor">A witch steps out from between the trees, hair the color of turned earth, an orange cat winding figure-eights around her ankles - both of them faintly, unmistakably glowing. "Name's Jess. Cats and kittens, that's the trade - and I'll only take relics for 'em. You're carrying ${relicCount}, if you've got the nerve to spend 'em."</p>
+        ${rows}
+        <button class="btn-primary" id="btn-leave-jess" style="margin-top:6px">Leave</button>
+      </div>`;
+
+    this.root.querySelectorAll('[data-buy-jess-pet]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.buyJessPet;
+        const def = PETS[id];
+        const price = JESS_PET_PRICE[def.tier];
+        if (pdata.ownedPets.includes(id) || Game.player.relics.length < price) return;
+        for (let i = 0; i < price; i++) Game.player.relics.splice(rand(0, Game.player.relics.length - 1), 1);
+        pdata.ownedPets.push(id);
+        Persistent.save();
+        this.renderWitchJessScreen(node);
+      });
+    });
+    document.getElementById('btn-leave-jess').addEventListener('click', () => this.showMap());
+  },
+
+  // ---------------- Rare NPCs ----------------
+  // One-time-ever, account-wide (pdata.metRareNpcs) - each NPC (RARE_NPCS in
+  // data.js) always hands out their own signature named reward, never a
+  // random roll. Falls back to an elite fight, same as Class Trial/Legendary
+  // Encounter, once every NPC has already been met.
+  enterRareNpc(node) {
+    const pdata = Persistent.load();
+    const remaining = Object.keys(RARE_NPCS).filter(id => !pdata.metRareNpcs.includes(id));
+    if (remaining.length === 0) {
+      this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
+      return;
+    }
+    node.rareNpcId = remaining[rand(0, remaining.length - 1)];
+    this.renderRareNpcScreen(node);
+  },
+
+  renderRareNpcScreen(node) {
+    const npc = RARE_NPCS[node.rareNpcId];
+    const rewardDef = npc.rewardKind === 'legendary' ? LEGENDARY_ITEMS[npc.rewardId]
+      : npc.rewardKind === 'mount' ? MOUNTS[npc.rewardId] : PETS[npc.rewardId];
+    this.root.innerHTML = `
+      ${this.renderHud()}
+      ${this.renderZoneBanner()}
+      <div class="panel rare-npc-encounter">
+        <div class="npc-portrait-wrap"><img src="assets/sprites/${npc.portrait}.png" class="npc-portrait" alt="${npc.name}"></div>
+        <h2>${npc.name}</h2>
+        <p class="flavor">${npc.flavor}</p>
+        <div class="outcome-box">${rewardDef.icon} <strong>${rewardDef.name}</strong><div class="small-text">${rewardDef.desc}</div></div>
+        <button class="btn-primary" id="btn-claim-rare-npc">${npc.rewardKind === 'legendary' ? 'Claim Item' : 'Claim Companion'}</button>
+      </div>`;
+    document.getElementById('btn-claim-rare-npc').addEventListener('click', () => this.claimRareNpcReward(node));
+  },
+
+  claimRareNpcReward(node) {
+    const npc = RARE_NPCS[node.rareNpcId];
+    const pdata = Persistent.load();
+    pdata.metRareNpcs.push(node.rareNpcId);
+    if (npc.rewardKind === 'legendary') {
+      pdata.ownedLegendaries.push(npc.rewardId);
+      const item = instantiateLegendary(npc.rewardId);
+      pdata.inventory.push(item);
+      if (Persistent.getCharacter(Game.player.classId).autoEquip) this.autoEquipBestGear(Game.player.classId);
+    } else if (npc.rewardKind === 'mount') {
+      if (!pdata.ownedMounts.includes(npc.rewardId)) pdata.ownedMounts.push(npc.rewardId);
+    } else {
+      if (!pdata.ownedPets.includes(npc.rewardId)) pdata.ownedPets.push(npc.rewardId);
+    }
+    Game.grantProfessionXp(rand(4, 9));
+    grantReputation(getActTheme(Game.act).id, 15);
+    Persistent.save();
+    if (this.autoCombat) {
+      this.showAutoToast(`<strong>${npc.name} rewards you!</strong>`);
+      this.showMap();
+      return;
+    }
+    this.showMap();
+  },
+
+  // ---------------- Legendary taming (Robin / Monkey / Chopper) ----------------
+  // Same TAMING_DECISIONS flow as a normal 'taming' node (showTamingStep/
+  // resolveTamingDecisions/grantTamingReward all work unmodified on whatever
+  // node.tamingReward holds) - only the reward itself is forced to one
+  // specific, not-yet-owned creature instead of pickTamingReward()'s random
+  // pick. One-time-ever per creature; falls back to an elite fight once all
+  // three are already owned.
+  enterLegendaryTaming(node) {
+    const pdata = Persistent.load();
+    const remaining = Object.keys(LEGENDARY_TAMINGS).filter(key => {
+      const t = LEGENDARY_TAMINGS[key];
+      const owned = t.kind === 'pet' ? pdata.ownedPets : pdata.ownedMounts;
+      return !owned.includes(t.id);
+    });
+    if (remaining.length === 0) {
+      this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
+      return;
+    }
+    const t = LEGENDARY_TAMINGS[remaining[rand(0, remaining.length - 1)]];
+    const pool = t.kind === 'pet' ? PETS : MOUNTS;
+    node.tamingReward = { kind: t.kind, id: t.id, def: pool[t.id] };
+    node.tamingStep = 0;
+    node.tamingWrong = 0;
+    this.showTamingStep(node);
   },
 
   // A rare map encounter that offers to permanently unlock a bonus class. The
@@ -629,6 +782,7 @@ const App = {
         this.checkDeathThen(() => this.showMap());
       });
     });
+    this.maybeShowTutorial('event');
   },
 
   // ---------------- Treasure ----------------
@@ -658,6 +812,7 @@ const App = {
         <button class="btn-primary" id="btn-continue">Continue</button>
       </div>`;
     document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+    this.maybeShowTutorial('treasure');
   },
 
   // ---------------- Rest ----------------
@@ -718,10 +873,10 @@ const App = {
       finish(`You rest by the fire. +${healAmount} HP.${caught ? ' You catch a fish while resting!' : ''}`);
     });
     document.getElementById('btn-rest-skill').addEventListener('click', () => {
-      Game.player.skill.cooldown = Math.max(1, Game.player.skill.cooldown - 1);
+      Game.player.skills.forEach(sk => { sk.cooldown = Math.max(1, sk.cooldown - 1); });
       Game.grantProfessionXp(rand(4, 9));
       const caught = tryCatchFish();
-      finish(`Your ${Game.player.skill.name} cooldown is now ${Game.player.skill.cooldown}.${caught ? ' You catch a fish while resting!' : ''}`);
+      finish(`Every equipped skill's cooldown is reduced by 1.${caught ? ' You catch a fish while resting!' : ''}`);
     });
     const cookBtn = document.getElementById('btn-rest-cook');
     if (cookBtn) cookBtn.addEventListener('click', () => {
@@ -732,6 +887,7 @@ const App = {
       Persistent.save();
       finish(`You cook your catch over the fire. +${cookHealAmount} HP, +15 Cooking XP.`);
     });
+    this.maybeShowTutorial('rest');
   },
 
   // ---------------- Shop ----------------
@@ -777,6 +933,7 @@ const App = {
       });
     });
     document.getElementById('btn-leave-shop').addEventListener('click', () => this.showMap());
+    this.maybeShowTutorial('shop');
   },
 
   // ---------------- Combat ----------------
@@ -853,7 +1010,6 @@ const App = {
     const s = Combat.state;
     const p = Game.player;
     const stats = Game.effectiveStats();
-    const skill = p.skill;
     const usableItems = [...new Set(p.items)];
     const inputLocked = s.locked || this.autoCombat;
 
@@ -893,7 +1049,7 @@ const App = {
     // .fireball-projectile in styles.css) instead of the plain glow every
     // other skill gets - keyed to the SPELL being cast, not the class, since
     // Fireball can be bought and equipped by any class via the Bank Shop.
-    const isFireballCast = s.anim.player === 'skill' && Game.player.skill && Game.player.skill.id === 'fireball';
+    const isFireballCast = s.anim.player === 'skill' && s.anim.castSkillId === 'fireball';
 
     const theme = getActTheme(Game.act || 1);
     this.root.innerHTML = `
@@ -952,7 +1108,9 @@ const App = {
         `) : `
           <div class="combat-actions">
             <button id="act-attack" ${inputLocked ? 'disabled' : ''}>Attack</button>
-            <button id="act-skill" ${inputLocked || skill.cooldownLeft > 0 ? 'disabled' : ''}>${skill.icon ? `<img src="${skill.icon}" width="18" height="18" alt="" class="btn-icon">` : ''}${skill.name}${skill.cooldownLeft > 0 ? ` (${skill.cooldownLeft})` : ''}</button>
+            ${p.skills.map((skill, i) => `
+              <button data-skill-index="${i}" ${inputLocked || skill.cooldownLeft > 0 ? 'disabled' : ''}>${skill.icon ? `<img src="${skill.icon}" width="18" height="18" alt="" class="btn-icon">` : ''}${skill.name}${skill.level > 1 ? ` <span class="small-text">Lv.${skill.level}</span>` : ''}${skill.cooldownLeft > 0 ? ` (${skill.cooldownLeft})` : ''}</button>
+            `).join('')}
             <button id="act-flee" ${inputLocked || s.enemy.boss || inGauntlet || stats.fleeDisabled ? 'disabled' : ''} title="${stats.fleeDisabled ? 'A curse binds your feet' : ''}">Flee</button>
           </div>
           <div class="item-row" id="item-row">
@@ -968,6 +1126,11 @@ const App = {
     const log = document.getElementById('combat-log');
     if (log) log.scrollTop = log.scrollHeight;
 
+    if (s.anim.enemy === 'attack' && BOSS_ART[s.enemy.id]) {
+      const portraitImg = this.root.querySelector('.combatant.enemy .boss-portrait-sprite');
+      if (portraitImg) this.playBossAttackAnimation(portraitImg, BOSS_ART[s.enemy.id].attackFrames);
+    }
+
     if (s.over) {
       if (this.autoCombat) setTimeout(() => { if (Game.player && Combat.state === s) this.resolveCombatEnd(node); }, 500);
       else document.getElementById('btn-combat-continue').addEventListener('click', () => this.resolveCombatEnd(node));
@@ -977,11 +1140,14 @@ const App = {
     if (inputLocked) return;
 
     document.getElementById('act-attack').addEventListener('click', () => this.runPlayerAction(node, () => Combat.playerAttack()));
-    document.getElementById('act-skill').addEventListener('click', () => this.runPlayerAction(node, () => Combat.playerSkill()));
+    this.root.querySelectorAll('[data-skill-index]').forEach(btn => {
+      btn.addEventListener('click', () => this.runPlayerAction(node, () => Combat.playerSkill(Number(btn.dataset.skillIndex))));
+    });
     document.getElementById('act-flee').addEventListener('click', () => this.runPlayerAction(node, () => Combat.playerFlee()));
     this.root.querySelectorAll('.item-chip').forEach(chip => {
       chip.addEventListener('click', () => this.runPlayerAction(node, () => Combat.playerItem(chip.dataset.item)));
     });
+    this.maybeShowTutorial('combat');
   },
 
   // Resolves one full round in two beats: the player's action renders immediately
@@ -1011,6 +1177,22 @@ const App = {
     }
   },
 
+  // Plays a boss's PixelLab attack animation (see BOSS_ART in sprites.js)
+  // over its enemy portrait during its own turn - recursive setTimeout rather
+  // than setInterval so a stray tick after the next re-render (which tears
+  // down and rebuilds the whole combat screen) just finds the element
+  // detached and quietly stops instead of touching a stale node.
+  playBossAttackAnimation(imgEl, frames) {
+    let i = 0;
+    const step = () => {
+      if (!imgEl.isConnected) return;
+      imgEl.src = frames[i];
+      i++;
+      if (i < frames.length) setTimeout(step, 90);
+    };
+    step();
+  },
+
   continueAutoIfEnabled(node) {
     if (this.autoCombat && Combat.state && !Combat.state.over) {
       setTimeout(() => this.performAutoAction(node), 500);
@@ -1025,7 +1207,14 @@ const App = {
       if (p.items.includes('potion')) return { type: 'item', id: 'potion' };
       if (p.items.includes('antidote')) return { type: 'item', id: 'antidote' };
     }
-    if (p.skill.cooldownLeft === 0) return { type: 'skill' };
+    // Among every equipped skill off cooldown, favor the one with the
+    // highest base cooldown as a proxy for "biggest hit" - bigger spells
+    // consistently carry longer cooldowns in this game's design.
+    let bestIndex = -1, bestCooldown = -1;
+    p.skills.forEach((sk, i) => {
+      if (sk.cooldownLeft === 0 && sk.cooldown > bestCooldown) { bestIndex = i; bestCooldown = sk.cooldown; }
+    });
+    if (bestIndex !== -1) return { type: 'skill', index: bestIndex };
     return { type: 'attack' };
   },
 
@@ -1034,7 +1223,7 @@ const App = {
     const s = Combat.state;
     if (!s || s.over || s.locked) return;
     const action = this.decideAutoAction();
-    const fn = action.type === 'skill' ? () => Combat.playerSkill()
+    const fn = action.type === 'skill' ? () => Combat.playerSkill(action.index)
       : action.type === 'item' ? () => Combat.playerItem(action.id)
       : () => Combat.playerAttack();
     this.runPlayerAction(node, fn);
@@ -1044,6 +1233,47 @@ const App = {
   // shows instead of the normal victory/reward screen, so the run keeps
   // moving without a click. Re-uses one persistent DOM node so back-to-back
   // victories don't stack up a pile of toasts.
+  // ---------------- Kyle the Bard (in-run tutorial) ----------------
+  // Shows once ever per screen key (see TUTORIALS in data.js), the first
+  // time that screen is actually reached - never again after that, and
+  // never at all if "Skip Tutorials" is checked on the title screen or
+  // AUTO is running (an overlay that only a tap dismisses would just stall
+  // automated play). Call this as the LAST line of a screen's render
+  // function, after its own content and event wiring are in place.
+  maybeShowTutorial(key) {
+    if (this.autoCombat) return;
+    const pdata = Persistent.load();
+    if (pdata.skipTutorials || pdata.kyleTutorialsSeen[key]) return;
+    const tut = TUTORIALS[key];
+    if (!tut) return;
+    pdata.kyleTutorialsSeen[key] = true;
+    Persistent.save();
+    this.showKyleOverlay(tut);
+  },
+
+  // Appended to <body> (like showAutoToast/showSettingsModal) so it survives
+  // independently of whatever screen is underneath, including one that
+  // re-renders itself (combat) while Kyle is still up. Dismissed by a tap
+  // ANYWHERE in the overlay - no close button, no timer.
+  showKyleOverlay(tut) {
+    const old = document.getElementById('kyle-overlay');
+    if (old) old.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'kyle-overlay';
+    overlay.className = 'kyle-overlay';
+    overlay.innerHTML = `
+      <div class="kyle-card">
+        <img src="assets/sprites/kyle.png" class="kyle-portrait" alt="Kyle">
+        <div class="kyle-textbox">
+          <div class="kyle-name">Kyle</div>
+          ${tut.lines.map(l => `<p>${l}</p>`).join('')}
+          <div class="kyle-hint">(tap anywhere to continue)</div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', () => overlay.remove());
+  },
+
   showAutoToast(html, durationMs) {
     let el = document.getElementById('auto-toast');
     if (!el) {
@@ -1201,6 +1431,7 @@ const App = {
       });
     });
     document.getElementById('btn-skip-relic').addEventListener('click', () => onDone());
+    this.maybeShowTutorial('relic');
   },
 
   rewardLines(reward) {
@@ -1446,6 +1677,25 @@ const App = {
     refresh();
   },
 
+  // Small blocking popup for "you tried to craft/upgrade/enchant/enter
+  // something and don't have enough X" - every craft/upgrade click handler
+  // that used to silently no-op on insufficient resources now calls this
+  // instead so the player actually finds out why nothing happened.
+  showInsufficientResourcesAlert(message) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const close = () => overlay.remove();
+    overlay.innerHTML = `
+      <div class="panel modal-panel">
+        <h4>⚠️ Not Enough Resources</h4>
+        <p class="flavor">${message}</p>
+        <button class="btn-primary" id="btn-close-insufficient-alert" style="margin-top:14px">OK</button>
+      </div>`;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector('#btn-close-insufficient-alert').addEventListener('click', close);
+    document.body.appendChild(overlay);
+  },
+
   // The class-picker button's popup - every unlocked class as a clickable
   // row, replacing the old <select> dropdown. Picking one closes the popup
   // and re-renders the Sanctuary on that character, same tab as before.
@@ -1534,7 +1784,8 @@ const App = {
     const cls = CLASSES[classId];
     const rec = Persistent.getCharacter(classId);
     const stats = previewClassStats(classId);
-    const spell = SPELLS[rec.equipped.spell || cls.defaultSpell];
+    const spells = equippedSpellIds(rec, cls).map(id => SPELLS[id]);
+    const maxSpellSlots = maxEquippedSpells(rec.level);
     const custom = rec.customization;
     const setBonusPct = Math.round(stats.setBonusPct * 100);
     return `
@@ -1546,12 +1797,14 @@ const App = {
           <span>ATK ${stats.atk}</span><span>DEF ${stats.def}</span>
           <span>HP ${stats.maxHp}</span><span>SPD ${stats.speed}</span>
         </div>
-        <div class="small-text">Active Spell: ${spell.name} - ${spell.desc}</div>
+        <div class="small-text">Active Spells (${spells.length}/${maxSpellSlots} slots - equip more from Inventory): ${spells.map(s => `${s.name}${s.level > 1 ? ` Lv.${s.level}` : ''}`).join(', ')}</div>
         <div class="small-text">Talent Points: ${getTalentPointsAvailable(rec)} available - see Talents below</div>
         <div class="small-text" title="Scales with how many equip slots are filled and their rarity - multiplies every stat bonus from items, relics, food, pets, and mounts together. Needs at least 2 equipped items; caps at +100% with every slot filled by a legendary.">⭐ Gear Set Bonus: +${setBonusPct}%</div>
-        <button class="btn-secondary" id="btn-toggle-customization">🎨 ${this.customizationOpen ? 'Hide Customization' : 'Customize Appearance'}</button>
+        <label class="customize-row" style="max-width:320px;margin-top:10px">
+          <span>Name</span>
+          <input type="text" id="char-name-input" maxlength="16" placeholder="${cls.name}" value="${escapeHtml(custom.name || '')}">
+        </label>
       </div>
-      ${this.customizationOpen ? this.renderCharCustomize(classId) : ''}
       <label class="customize-row" style="max-width:360px;margin-top:12px" title="Automatically equips the strongest available item (from your inventory) into every slot, and re-checks after any new loot arrives.">
         <span>⚡ Auto Equip Best Gear</span>
         <input type="checkbox" id="chk-auto-equip" ${rec.autoEquip ? 'checked' : ''}>
@@ -1563,37 +1816,6 @@ const App = {
     return `
       ${this.renderArmoryPaperdoll(classId, this.renderCharInfoBlock(classId))}
       ${this.selectedArmorySlot ? this.renderSlotPicker(classId, this.selectedArmorySlot) : ''}
-    `;
-  },
-
-  // The color/name pickers, tucked behind the "Customize Appearance" toggle
-  // on the Character tab so they don't clutter the main paperdoll view.
-  renderCharCustomize(classId) {
-    const cls = CLASSES[classId];
-    const rec = Persistent.getCharacter(classId);
-    const custom = rec.customization;
-    const look = CLASS_LOOKS[classId];
-    return `
-      <div class="char-customize">
-        <h4>Customization</h4>
-        <label class="customize-row">
-          <span>Name</span>
-          <input type="text" id="char-name-input" maxlength="16" placeholder="${cls.name}" value="${escapeHtml(custom.name || '')}">
-        </label>
-        <label class="customize-row">
-          <span>Hair Color</span>
-          <input type="color" id="char-hair-input" value="${custom.hairColor || look.head.r}">
-        </label>
-        <label class="customize-row">
-          <span>Eye Color</span>
-          <input type="color" id="char-eye-input" value="${custom.eyeColor || look.head.e}">
-        </label>
-        <label class="customize-row">
-          <span>Armor Color</span>
-          <input type="color" id="char-armor-input" value="${custom.armorColor || look.armorPalette.A}">
-        </label>
-        <button class="btn-secondary" id="btn-reset-customization">Reset Appearance</button>
-      </div>
     `;
   },
 
@@ -1697,7 +1919,7 @@ const App = {
       <div class="armory-layout">
         <div class="armory-column">${leftColumn}</div>
         <div class="armory-center">
-          <div class="armory-portrait">${characterSpriteFor(classId, 140)}</div>
+          <div class="armory-portrait">${characterSpriteFor(classId, 172)}</div>
           ${centerExtraHtml || ''}
           <div class="armory-weapon-row">${weaponRow}</div>
         </div>
@@ -1779,38 +2001,60 @@ const App = {
   // Each tree collapses into its own <details> section (same pattern as the
   // Crafting/Shop/Inventory categories) since 3 trees x 5 talents is a lot
   // of rows to show all at once.
+  // Talent trees are buttons opening a popup per tree (see showTalentTreeModal)
+  // instead of inline <details> dropdowns - "Reset Talents" stays on the main
+  // Character tab body since it applies across every tree at once.
   renderSanctuaryTalents(classId) {
     const rec = Persistent.getCharacter(classId);
     const trees = TALENT_TREES[classId];
     const pointsAvailable = getTalentPointsAvailable(rec);
     const ranksSpent = getTalentRanksSpent(rec);
-    const treeSections = Object.entries(trees).map(([treeKey, tree]) => {
+    const treeButtons = Object.entries(trees).map(([treeKey, tree]) => {
       const spent = getTreeSpentPoints(rec, tree.talents);
-      const rows = tree.talents.map((t, tierIndex) => {
-        const rank = rec.talents.ranks[t.id] || 0;
-        const unlocked = isTalentTierUnlocked(rec, tree.talents, tierIndex);
-        const maxed = rank >= t.maxRank;
-        const canInvest = unlocked && !maxed && pointsAvailable > 0;
-        return `<div class="gear-row talent-row ${!unlocked ? 'talent-locked' : ''}">
-          <div class="desc"><span>${t.icon}</span><div>
-            <strong>${t.name}</strong> <span class="small-text">${rank}/${t.maxRank}</span>
-            <div class="small-text">${t.desc}</div>
-            ${!unlocked ? `<div class="small-text">Requires ${tierIndex * TALENT_TIER_SIZE} points spent in ${tree.name}</div>` : ''}
-          </div></div>
-          <button class="btn-secondary" data-tree="${treeKey}" data-talent="${t.id}" ${canInvest ? '' : 'disabled'}>+</button>
-        </div>`;
-      }).join('');
-      return `<details class="shop-category" data-key="${treeKey}">
-        <summary>${tree.icon} ${tree.name} <span class="small-text">(${spent} points spent)</span></summary>
-        ${rows}
-      </details>`;
+      return this.categoryButtonRow(`talent-${treeKey}`, tree.icon, tree.name, `${spent} points spent`);
     }).join('');
     return `
       <h4 style="margin-top:20px">Talents <span class="small-text">(${pointsAvailable} points available)</span></h4>
       <p class="flavor">Earn a talent point every time ${CLASSES[classId].name} levels up. Each tree's later tiers unlock once you've spent enough points earlier in that same tree.</p>
-      ${treeSections}
+      ${treeButtons}
       <button class="btn-secondary" id="btn-reset-talents" ${ranksSpent > 0 ? '' : 'disabled'}>Reset Talents (50 🪙)</button>
     `;
+  },
+
+  renderTalentTreeRows(classId, treeKey) {
+    const rec = Persistent.getCharacter(classId);
+    const tree = TALENT_TREES[classId][treeKey];
+    const pointsAvailable = getTalentPointsAvailable(rec);
+    return tree.talents.map((t, tierIndex) => {
+      const rank = rec.talents.ranks[t.id] || 0;
+      const unlocked = isTalentTierUnlocked(rec, tree.talents, tierIndex);
+      const maxed = rank >= t.maxRank;
+      const canInvest = unlocked && !maxed && pointsAvailable > 0;
+      return `<div class="gear-row talent-row ${!unlocked ? 'talent-locked' : ''}">
+        <div class="desc"><span>${t.icon}</span><div>
+          <strong>${t.name}</strong> <span class="small-text">${rank}/${t.maxRank}</span>
+          <div class="small-text">${t.desc}</div>
+          ${!unlocked ? `<div class="small-text">Requires ${tierIndex * TALENT_TIER_SIZE} points spent in ${tree.name}</div>` : ''}
+        </div></div>
+        <button class="btn-secondary" data-tree="${treeKey}" data-talent="${t.id}" ${canInvest ? '' : 'disabled'}>+</button>
+      </div>`;
+    }).join('');
+  },
+
+  showTalentTreeModal(classId, treeKey, onClose) {
+    const tree = TALENT_TREES[classId][treeKey];
+    this.showListModal(`${tree.icon} ${tree.name}`, () => this.renderTalentTreeRows(classId, treeKey),
+      (container, refresh) => {
+        container.querySelectorAll('[data-talent]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const rec = Persistent.getCharacter(classId);
+            if (investTalentPoint(rec, classId, btn.dataset.tree, btn.dataset.talent)) {
+              Persistent.save();
+              refresh();
+            }
+          });
+        });
+      }, onClose);
   },
 
   // ---------------- PvP (Ghost mirror matches) ----------------
@@ -1831,14 +2075,6 @@ const App = {
       return t.kind === 'weapon' && canClassUseWeaponType(classId, t.weaponType);
     });
     const shopDefIds = [...weaponDefIds, 'pvpArmor', 'pvpTrinket'];
-    const shopRow = (defId) => {
-      const tmpl = PVP_GEAR_TEMPLATES[defId];
-      const owned = pdata.pvpInventory.some(i => i.defId === defId && i.rarity === 'common');
-      const price = PVP_GEAR_PRICE[tmpl.kind];
-      const preview = this.describeItemStats(instantiatePvpGear(defId, 'common'));
-      return `<div class="gear-row"><div class="desc"><span>${tmpl.icon}</span><div><strong>${tmpl.name}</strong><div class="small-text">${preview} - PvP matches only</div></div></div>
-        <button class="btn-secondary" data-buy-pvp="${defId}" ${owned || pdata.honor < price ? 'disabled' : ''}>${owned ? 'Owned' : `${price} 🪙`}</button></div>`;
-    };
 
     const ownedRow = (item) => {
       const equippedKey = ['weapon', 'armor', 'trinket'].find(k => rec.pvpEquipped[k] === item.uid);
@@ -1849,10 +2085,6 @@ const App = {
         <button class="btn-secondary" data-equip-pvp="${item.kind}" data-pvp-uid="${item.uid}">${equippedKey ? 'Unequip' : 'Equip'}</button></div>`;
     };
 
-    const potionOwned = pdata.honorPotionCount;
-    const potionRow = `<div class="gear-row"><div class="desc"><span>${HONOR_SHOP.potion.icon}</span><div><strong>${HONOR_SHOP.potion.name}</strong><div class="small-text">${HONOR_SHOP.potion.desc}</div></div></div>
-      <button class="btn-secondary" data-buy-honor-potion="1" ${pdata.honor < HONOR_SHOP.potion.price ? 'disabled' : ''}>${HONOR_SHOP.potion.price} 🪙 (own ${potionOwned})</button></div>`;
-
     return `
       <h4>PvP <span class="small-text">(${pdata.honor} Honor)</span></h4>
       <button class="btn-primary" id="btn-find-pvp-match">Find PvP Match</button>
@@ -1861,12 +2093,61 @@ const App = {
         <input type="checkbox" id="chk-random-pvp" ${pdata.randomPvpEnabled ? 'checked' : ''}>
       </label>
       <p class="small-text">A Rival Ghost is 1.2x as strong as you and carries its own random gear, relics, and abilities - a genuinely difficult fight, not a mirror. Defeating one grants Honor, Gold, and a Bloody Bag.</p>
-      <h4 style="margin-top:16px">Honor Shop <span class="small-text">(common-rarity baseline - Honor only spends here)</span></h4>
-      ${shopDefIds.map(shopRow).join('')}
-      ${potionRow}
+      ${this.categoryButtonRow('pvp-honor-shop', '🎖️', 'Honor Shop', `${shopDefIds.length + 1} items - common-rarity baseline, Honor only spends here`)}
       <h4 style="margin-top:16px">Your PvP Gear <span class="small-text">(click to equip/unequip)</span></h4>
       ${pdata.pvpInventory.length ? pdata.pvpInventory.map(ownedRow).join('') : '<p class="small-text">No PvP gear owned yet.</p>'}
     `;
+  },
+
+  renderHonorShopRows(classId) {
+    const pdata = Persistent.load();
+    const weaponDefIds = Object.keys(PVP_GEAR_TEMPLATES).filter(id => {
+      const t = PVP_GEAR_TEMPLATES[id];
+      return t.kind === 'weapon' && canClassUseWeaponType(classId, t.weaponType);
+    });
+    const shopDefIds = [...weaponDefIds, 'pvpArmor', 'pvpTrinket'];
+    const shopRow = (defId) => {
+      const tmpl = PVP_GEAR_TEMPLATES[defId];
+      const owned = pdata.pvpInventory.some(i => i.defId === defId && i.rarity === 'common');
+      const price = PVP_GEAR_PRICE[tmpl.kind];
+      const preview = this.describeItemStats(instantiatePvpGear(defId, 'common'));
+      return `<div class="gear-row"><div class="desc"><span>${tmpl.icon}</span><div><strong>${tmpl.name}</strong><div class="small-text">${preview} - PvP matches only</div></div></div>
+        <button class="btn-secondary" data-buy-pvp="${defId}" ${owned ? 'disabled' : ''}>${owned ? 'Owned' : `${price} 🎖️`}</button></div>`;
+    };
+    const potionOwned = pdata.honorPotionCount;
+    const potionRow = `<div class="gear-row"><div class="desc"><span>${HONOR_SHOP.potion.icon}</span><div><strong>${HONOR_SHOP.potion.name}</strong><div class="small-text">${HONOR_SHOP.potion.desc}</div></div></div>
+      <button class="btn-secondary" data-buy-honor-potion="1">${HONOR_SHOP.potion.price} 🎖️ (own ${potionOwned})</button></div>`;
+    return shopDefIds.map(shopRow).join('') + potionRow;
+  },
+
+  showPvpHonorShopModal(classId, onClose) {
+    this.showListModal('🎖️ Honor Shop', () => this.renderHonorShopRows(classId),
+      (container, refresh) => {
+        container.querySelectorAll('[data-buy-pvp]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const pdata = Persistent.load();
+            const defId = btn.dataset.buyPvp;
+            const tmpl = PVP_GEAR_TEMPLATES[defId];
+            const price = PVP_GEAR_PRICE[tmpl.kind];
+            if (pdata.pvpInventory.some(i => i.defId === defId && i.rarity === 'common')) return;
+            if (pdata.honor < price) { this.showInsufficientResourcesAlert(`You need ${price} 🎖️ Honor to buy ${tmpl.name}.`); return; }
+            pdata.honor -= price;
+            pdata.pvpInventory.push(instantiatePvpGear(defId, 'common'));
+            Persistent.save();
+            refresh();
+          });
+        });
+        container.querySelectorAll('[data-buy-honor-potion]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const pdata = Persistent.load();
+            if (pdata.honor < HONOR_SHOP.potion.price) { this.showInsufficientResourcesAlert(`You need ${HONOR_SHOP.potion.price} 🎖️ Honor to buy ${HONOR_SHOP.potion.name}.`); return; }
+            pdata.honor -= HONOR_SHOP.potion.price;
+            pdata.honorPotionCount += 1;
+            Persistent.save();
+            refresh();
+          });
+        });
+      }, onClose);
   },
 
   // A random mid-adventure PvP encounter (see the checkbox in renderSanctuaryPvp
@@ -2165,19 +2446,36 @@ const App = {
       const pdata = Persistent.load();
       const rec = Persistent.getCharacter(classId);
       const cls = CLASSES[classId];
+      const maxSlots = maxEquippedSpells(rec.level);
+      const equipped = equippedSpellIds(rec, cls);
       const spellOptions = [cls.defaultSpell, ...pdata.unlockedSpells].filter((v, i, a) => a.indexOf(v) === i);
-      return spellOptions.map(id => {
+      const slotsFull = equipped.length >= maxSlots;
+      return `<p class="small-text">${equipped.length} / ${maxSlots} slots filled - more slots unlock at level 10, 30, 60, and ${MAX_LEVEL}.</p>` +
+        spellOptions.map(id => {
         const sp = SPELLS[id];
-        const active = (rec.equipped.spell || cls.defaultSpell) === id;
-        return `<div class="gear-row"><div class="desc"><span class="spell-icon"><img src="${sp.icon}" width="28" height="28" alt=""></span><div><strong>${sp.name}</strong><div class="small-text">${sp.desc}</div></div></div>
-          <button class="btn-secondary" data-spell="${id}" ${active ? 'disabled' : ''}>${active ? 'Active' : 'Equip'}</button></div>`;
+        const level = getSpellLevel(id).level;
+        const isDefault = id === cls.defaultSpell;
+        const active = equipped.includes(id);
+        const disabled = isDefault || (!active && slotsFull);
+        const label = isDefault ? 'Always Active' : (active ? 'Unequip' : (slotsFull ? 'Slots Full' : 'Equip'));
+        return `<div class="gear-row"><div class="desc"><span class="spell-icon"><img src="${sp.icon}" width="28" height="28" alt=""></span><div><strong>${sp.name}</strong> <span class="small-text">Lv.${level}/${SPELL_MAX_LEVEL}</span><div class="small-text">${sp.desc}</div></div></div>
+          <button class="btn-secondary" data-spell="${id}" ${disabled ? 'disabled' : ''}>${label}</button></div>`;
       }).join('');
     }, (container, refresh) => {
       container.querySelectorAll('[data-spell]').forEach(btn => {
         btn.addEventListener('click', () => {
           const rec = Persistent.getCharacter(classId);
+          const cls = CLASSES[classId];
           const id = btn.dataset.spell;
-          rec.equipped.spell = id === CLASSES[classId].defaultSpell ? null : id;
+          if (id === cls.defaultSpell) return;
+          const idx = rec.equipped.spells.indexOf(id);
+          if (idx !== -1) {
+            rec.equipped.spells.splice(idx, 1);
+          } else if (equippedSpellIds(rec, cls).length < maxEquippedSpells(rec.level)) {
+            rec.equipped.spells.push(id);
+          } else {
+            return;
+          }
           Persistent.save();
           refresh();
         });
@@ -2246,16 +2544,16 @@ const App = {
     const rarity = getRecipeRarity(r.id);
     const cost = scaledRecipeCost(r.id, r.cost);
     const goldCost = this.craftGoldCost(classId, cost.gold);
-    const canAfford = pdata.bankGold >= goldCost && Object.keys(cost).every(k => k === 'gold' || pdata.materials[k] >= cost[k]);
     const costText = Object.entries(cost).map(([k, v]) => k === 'gold' ? `${goldCost} 🪙` : `${v} ${k}`).join(', ');
     const ownedRecipeItem = pdata.inventory.find(i => i.slot === 'recipe' && i.recipeId === r.id);
-    const canUpgrade = !!ownedRecipeItem && rarity !== 'legendary';
+    const maxedOut = rarity === 'legendary';
     return `<div class="gear-row" style="border-left:3px solid ${RARITIES[rarity].color}">
       <div class="desc"><span>${tmpl.icon}</span><div><strong style="color:${RARITIES[rarity].color}">${tmpl.name}</strong>
-      <div class="small-text">${RARITIES[rarity].label} · Costs ${costText}</div></div></div>
+      <div class="small-text">${RARITIES[rarity].label} · Costs ${costText}</div>
+      <div class="small-text">Upgrade: ${ownedRecipeItem ? `Consume ${ownedRecipeItem.name}` : 'requires the matching Recipe item (drops rarely from encounters)'}</div></div></div>
       <div style="display:flex;gap:6px">
-        <button class="btn-secondary" data-recipe="${r.id}" ${canAfford ? '' : 'disabled'}>Craft</button>
-        <button class="btn-secondary" data-upgrade-recipe="${r.id}" title="${ownedRecipeItem ? `Consume ${ownedRecipeItem.name}` : 'Requires the matching Recipe item (drops rarely from encounters)'}" ${canUpgrade ? '' : 'disabled'}>Upgrade</button>
+        <button class="btn-secondary" data-recipe="${r.id}">Craft</button>
+        <button class="btn-secondary" data-upgrade-recipe="${r.id}" ${maxedOut ? 'disabled' : ''}>Upgrade</button>
       </div>
     </div>`;
   },
@@ -2269,18 +2567,18 @@ const App = {
     const cost = scaledRecipeCost(r.id, r.cost);
     const goldCost = this.craftGoldCost(classId, cost.gold);
     const meetsLevel = cookingLevel >= r.levelReq;
-    const canAfford = meetsLevel && pdata.bankGold >= goldCost && Object.keys(cost).every(k => k === 'gold' || pdata.materials[k] >= cost[k]);
     const costText = Object.entries(cost).map(([k, v]) => k === 'gold' ? `${goldCost} 🪙` : `${v} ${k}`).join(', ');
     const ownedRecipeItem = pdata.inventory.find(i => i.slot === 'recipe' && i.recipeId === r.id);
-    const canUpgrade = !!ownedRecipeItem && rarity !== 'legendary';
+    const maxedOut = rarity === 'legendary';
     const buffText = Object.keys(tmpl.effect).map(k => describeEffectLever(k, instantiateFoodItem(r.defId, rarity).effect[k])).join(', ');
     return `<div class="gear-row" style="border-left:3px solid ${RARITIES[rarity].color}">
       <div class="desc"><span>${tmpl.icon}</span><div><strong style="color:${RARITIES[rarity].color}">${tmpl.name}</strong>
       <div class="small-text">${RARITIES[rarity].label} · 1hr buff: ${buffText} · Costs ${costText}</div>
-      ${meetsLevel ? '' : `<div class="small-text" style="color:var(--bad)">Requires Cooking Lv.${r.levelReq}</div>`}</div></div>
+      ${meetsLevel ? '' : `<div class="small-text" style="color:var(--bad)">Requires Cooking Lv.${r.levelReq}</div>`}
+      <div class="small-text">Upgrade: ${ownedRecipeItem ? `Consume ${ownedRecipeItem.name}` : 'requires the matching Recipe item (drops rarely from encounters)'}</div></div></div>
       <div style="display:flex;gap:6px">
-        <button class="btn-secondary" data-food-recipe="${r.id}" ${canAfford ? '' : 'disabled'}>Cook</button>
-        <button class="btn-secondary" data-upgrade-food-recipe="${r.id}" title="${ownedRecipeItem ? `Consume ${ownedRecipeItem.name}` : 'Requires the matching Recipe item (drops rarely from encounters)'}" ${canUpgrade ? '' : 'disabled'}>Upgrade</button>
+        <button class="btn-secondary" data-food-recipe="${r.id}" ${meetsLevel ? '' : 'disabled'}>Cook</button>
+        <button class="btn-secondary" data-upgrade-food-recipe="${r.id}" ${maxedOut ? 'disabled' : ''}>Upgrade</button>
       </div>
     </div>`;
   },
@@ -2293,35 +2591,24 @@ const App = {
     const weaponRecipes = RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot === 'weapon');
     const armorRecipes = RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot !== 'weapon');
     const disenchanting = rec.disenchanting;
-    const disenchantXpNeed = disenchanting.level >= DISENCHANT_MAX_LEVEL ? 0 : professionXpForLevel(disenchanting.level);
     return `
       <h4>Professions</h4>
-      <div class="gear-row profession-row" style="margin-bottom:10px">
-        <div class="desc"><span>♻️</span><div>
-          <strong>Enchanting</strong> <span class="small-text">Lv.${disenchanting.level}${disenchanting.level >= DISENCHANT_MAX_LEVEL ? ' (max)' : ''}</span>
-          <div class="small-text">Break down unwanted gear into Dust/Shard/Crystal, then spend it enchanting your equipped gear.</div>
-          ${disenchanting.level >= DISENCHANT_MAX_LEVEL ? '' : `<div class="small-text">${disenchanting.xp} / ${disenchantXpNeed} XP</div>`}
-        </div></div>
-        <div style="display:flex;gap:6px">
-          <button class="btn-secondary" id="btn-open-disenchant">Disenchant</button>
-          <button class="btn-secondary" id="btn-open-enchant">Enchant</button>
-        </div>
-      </div>
-      ${this.categoryButtonRow('prof-weapons', '⚔️', 'Weapons', `${weaponRecipes.length} recipes`)}
-      ${this.categoryButtonRow('prof-armor', '🛡️', 'Armor & Accessories', `${armorRecipes.length} recipes`)}
+      ${this.categoryButtonRow('prof-enchanting', '♻️', 'Enchanting', `Lv.${disenchanting.level}${disenchanting.level >= DISENCHANT_MAX_LEVEL ? ' (max)' : ''} - disenchant gear into materials, then enchant your equipped items`)}
+      ${this.categoryButtonRow('prof-weapons', '⚔️', 'Weapon Crafting', `${weaponRecipes.length} recipes`)}
+      ${this.categoryButtonRow('prof-armor', '🛡️', 'Armor & Accessory Crafting', `${armorRecipes.length} recipes`)}
       ${this.categoryButtonRow('prof-cooking', '🍳', 'Cooking', `${COOKING_RECIPES.length} recipes - each grants a 1-hour buff when eaten`)}
       ${this.categoryButtonRow('prof-gathering', '⛏️', 'Gathering Professions', `Lv.1-${PROFESSION_MAX_LEVEL} · only one may be actively leveled at a time`)}
     `;
   },
 
   showProfWeaponsModal(classId, onClose) {
-    this.showListModal('⚔️ Weapons', () => RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot === 'weapon').map(r => this.renderRecipeRow(classId, r)).join(''),
+    this.showListModal('⚔️ Weapon Crafting', () => RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot === 'weapon').map(r => this.renderRecipeRow(classId, r)).join(''),
       (container, refresh) => this.wireRecipeCategoryClicks(classId, container, refresh),
       onClose);
   },
 
   showProfArmorModal(classId, onClose) {
-    this.showListModal('🛡️ Armor & Accessories', () => RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot !== 'weapon').map(r => this.renderRecipeRow(classId, r)).join(''),
+    this.showListModal('🛡️ Armor & Accessory Crafting', () => RECIPES.filter(r => GEAR_TEMPLATES[r.defId].slot !== 'weapon').map(r => this.renderRecipeRow(classId, r)).join(''),
       (container, refresh) => this.wireRecipeCategoryClicks(classId, container, refresh),
       onClose);
   },
@@ -2350,7 +2637,11 @@ const App = {
         const cost = scaledRecipeCost(recipe.id, recipe.cost);
         const goldCost = this.craftGoldCost(classId, cost.gold);
         const canAfford = pdata.bankGold >= goldCost && Object.keys(cost).every(k => k === 'gold' || pdata.materials[k] >= cost[k]);
-        if (!canAfford) return;
+        if (!canAfford) {
+          const costText = Object.entries(cost).map(([k, v]) => k === 'gold' ? `${goldCost} 🪙` : `${v} ${k}`).join(', ');
+          this.showInsufficientResourcesAlert(`You need ${costText} to craft ${GEAR_TEMPLATES[recipe.defId].name}.`);
+          return;
+        }
         pdata.bankGold -= goldCost;
         Object.keys(cost).forEach(k => { if (k !== 'gold') pdata.materials[k] -= cost[k]; });
         pdata.inventory.push(instantiateGear(recipe.defId, getRecipeRarity(recipe.id)));
@@ -2361,8 +2652,12 @@ const App = {
     container.querySelectorAll('[data-upgrade-recipe]').forEach(btn => {
       btn.addEventListener('click', () => {
         const recipeId = btn.dataset.upgradeRecipe;
+        if (getRecipeRarity(recipeId) === 'legendary') return;
         const idx = pdata.inventory.findIndex(i => i.slot === 'recipe' && i.recipeId === recipeId);
-        if (idx === -1 || getRecipeRarity(recipeId) === 'legendary') return;
+        if (idx === -1) {
+          this.showInsufficientResourcesAlert('You need the matching Recipe item (drops rarely from encounters) to upgrade this.');
+          return;
+        }
         pdata.inventory.splice(idx, 1);
         pdata.recipeRarityBoost[recipeId] = (pdata.recipeRarityBoost[recipeId] || 0) + 1;
         Persistent.save();
@@ -2376,7 +2671,11 @@ const App = {
         const cost = scaledRecipeCost(recipe.id, recipe.cost);
         const goldCost = this.craftGoldCost(classId, cost.gold);
         const canAfford = pdata.bankGold >= goldCost && Object.keys(cost).every(k => k === 'gold' || pdata.materials[k] >= cost[k]);
-        if (!canAfford) return;
+        if (!canAfford) {
+          const costText = Object.entries(cost).map(([k, v]) => k === 'gold' ? `${goldCost} 🪙` : `${v} ${k}`).join(', ');
+          this.showInsufficientResourcesAlert(`You need ${costText} to cook ${FOOD_TEMPLATES[recipe.defId].name}.`);
+          return;
+        }
         pdata.bankGold -= goldCost;
         Object.keys(cost).forEach(k => { if (k !== 'gold') pdata.materials[k] -= cost[k]; });
         pdata.inventory.push(instantiateFoodItem(recipe.defId, getFoodRecipeRarity(recipe.id)));
@@ -2387,8 +2686,12 @@ const App = {
     container.querySelectorAll('[data-upgrade-food-recipe]').forEach(btn => {
       btn.addEventListener('click', () => {
         const recipeId = btn.dataset.upgradeFoodRecipe;
+        if (getFoodRecipeRarity(recipeId) === 'legendary') return;
         const idx = pdata.inventory.findIndex(i => i.slot === 'recipe' && i.recipeId === recipeId);
-        if (idx === -1 || getFoodRecipeRarity(recipeId) === 'legendary') return;
+        if (idx === -1) {
+          this.showInsufficientResourcesAlert('You need the matching Recipe item (drops rarely from encounters) to upgrade this.');
+          return;
+        }
         pdata.inventory.splice(idx, 1);
         pdata.recipeRarityBoost[recipeId] = (pdata.recipeRarityBoost[recipeId] || 0) + 1;
         Persistent.save();
@@ -2429,16 +2732,18 @@ const App = {
         const pct = maxed ? 100 : Math.min(100, Math.round((progress.xp / xpNeed) * 100));
         const buffDesc = Object.keys(def.effect).map(k => describeEffectLever(k, def.effect[k])).join(', ');
         const equipped = rec.equipped[kind] === id;
+        const displayName = companionDisplayName(kind, id, def);
         return `<div class="gear-row house-row ${equipped ? 'profession-active' : ''}">
           <div class="desc"><span>${def.icon}</span><div>
-            <strong>${def.name}</strong> <span class="small-text">Lv.${progress.level}${maxed ? ' (max)' : ''}${equipped ? ' - Equipped' : ''}</span>
+            <strong>${displayName}</strong> <span class="small-text">Lv.${progress.level}${maxed ? ' (max)' : ''}${equipped ? ' - Equipped' : ''}</span>
             <div class="small-text">${def.universe} · ${def.desc}</div>
+            <input type="text" class="companion-name-input" data-rename-kind="${kind}" data-rename-id="${id}" maxlength="16" placeholder="${def.name} (rename)" value="${escapeHtml(progress.name || '')}" title="Give your ${def.name} a nickname">
             <div class="xp-bar-wrap" style="margin-top:4px;width:180px"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
             <div class="small-text">${maxed ? 'Max level' : `${progress.xp} / ${xpNeed} XP`}</div>
           </div></div>
           <div class="house-feed">
             <button class="btn-secondary" data-companion-kind="${kind}" data-companion-id="${id}">${equipped ? 'Unequip' : 'Equip'}</button>
-            <button class="btn-secondary" data-feed-kind="${kind}" data-feed-id="${id}" ${foodItems.length ? '' : 'disabled'} title="Grants ${def.name}'s own bonus (${buffDesc}) to you for 1 hour, plus experience to ${def.name}.">Feed</button>
+            <button class="btn-secondary" data-feed-kind="${kind}" data-feed-id="${id}" ${foodItems.length ? '' : 'disabled'} title="Grants ${displayName}'s own bonus (${buffDesc}) to you for 1 hour, plus experience to ${displayName}.">Feed</button>
           </div>
         </div>`;
       }).join('');
@@ -2745,7 +3050,12 @@ const App = {
       </div>`;
     }).join('') : '<p class="small-text">No quests available.</p>';
 
+    const anyReady = active.some(q => isQuestReady(q.id));
     return `
+      <div class="quest-bulk-actions" style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn-secondary" data-accept-all-quests ${available.length ? '' : 'disabled'}>Accept All</button>
+        <button class="btn-secondary" data-claim-all-quests ${anyReady ? '' : 'disabled'}>Complete All</button>
+      </div>
       <h4>Active Quests <span class="small-text">(claiming XP applies to ${CLASSES[classId].name})</span></h4>${activeRows}
       <h4>Available Quests</h4>${availableRows}
     `;
@@ -2824,10 +3134,19 @@ const App = {
   // content on every action instead of re-running the whole Sanctuary
   // template, and closing it does one showSanctuary refresh so the header's
   // material counts and the Disenchanting level catch up.
-  showDisenchantModal(classId) {
+  // ---------------- Enchanting (combined Disenchant + Enchant screen) ----------------
+  // One screen, two sections: break unwanted gear down into Dust/Shard/Crystal
+  // up top, then spend those materials enchanting your equipped items below
+  // via the same paperdoll-based picker enchanting always used. Reuses
+  // renderArmoryPaperdoll as-is (a "mirror of the Armory screen") - clicking a
+  // filled slot opens an enchant list for whatever's equipped there instead
+  // of a gear-swap picker; an empty slot is a no-op since there's nothing to
+  // enchant.
+  showEnchantingModal(classId, onClose) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    const closeModal = () => { overlay.remove(); this.showSanctuary(classId, 'professions'); };
+    let selectedSlot = null;
+    const closeModal = () => { overlay.remove(); if (onClose) onClose(); };
     const render = () => {
       const pdata = Persistent.load();
       const rec = Persistent.getCharacter(classId);
@@ -2835,7 +3154,7 @@ const App = {
       const maxed = d.level >= DISENCHANT_MAX_LEVEL;
       const xpNeed = maxed ? 0 : professionXpForLevel(d.level);
       const items = this.disenchantableItems(pdata);
-      const rows = items.map(item => {
+      const disenchantRows = items.map(item => {
         const yieldAmounts = disenchantYieldFor(item.rarity, d.level);
         const yieldText = Object.entries(yieldAmounts).map(([k, v]) => `${v} ${k}`).join(', ');
         const upgrade = this.isUpgradeFor(classId, item);
@@ -2850,13 +3169,17 @@ const App = {
       }).join('') || '<p class="small-text">Nothing in your inventory can be disenchanted right now.</p>';
 
       overlay.innerHTML = `
-        <div class="panel modal-panel">
-          <h4>♻️ Disenchanting <span class="small-text">Lv.${d.level}${maxed ? ' (max)' : ''}</span></h4>
+        <div class="panel modal-panel" style="max-width:640px">
+          <h4>♻️ Enchanting <span class="small-text">Disenchanting Lv.${d.level}${maxed ? ' (max)' : ''}</span></h4>
           ${maxed ? '' : `<div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${Math.min(100, Math.round(d.xp / xpNeed * 100))}%"></div></div><div class="small-text">${d.xp} / ${xpNeed} XP</div>`}
           <div class="small-text" style="margin:8px 0">✨ ${pdata.materials.dust} Dust · 🔹 ${pdata.materials.shard} Shard · 💠 ${pdata.materials.crystal} Crystal</div>
           <button class="btn-primary" id="btn-auto-disenchant" ${items.length ? '' : 'disabled'}>Auto Disenchant Non-Upgrades</button>
-          <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">${rows}</div>
-          <button class="btn-secondary" id="btn-close-disenchant" style="margin-top:14px">Close</button>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto">${disenchantRows}</div>
+          <hr style="margin:16px 0;border-color:var(--border)">
+          <h4 style="margin-top:0">Enchant <span class="small-text">- select an equipped item, then choose an enchant</span></h4>
+          ${this.renderArmoryPaperdoll(classId)}
+          ${selectedSlot && rec.equipped[selectedSlot] ? this.renderEnchantPicker(classId, selectedSlot) : ''}
+          <button class="btn-secondary" id="btn-close-enchanting" style="margin-top:14px">Close</button>
         </div>`;
 
       overlay.querySelectorAll('[data-disenchant-uid]').forEach(btn => {
@@ -2881,34 +3204,6 @@ const App = {
         Persistent.save();
         render();
       });
-      document.getElementById('btn-close-disenchant').addEventListener('click', closeModal);
-    };
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
-    document.body.appendChild(overlay);
-    render();
-  },
-
-  // ---------------- Enchanting ----------------
-  // Reuses renderArmoryPaperdoll as-is (a "mirror of the Armory screen") -
-  // clicking a filled slot opens an enchant list for whatever's equipped
-  // there instead of a gear-swap picker; an empty slot is a no-op since
-  // there's nothing to enchant.
-  showEnchantModal(classId) {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    let selectedSlot = null;
-    const closeModal = () => { overlay.remove(); this.showSanctuary(classId, 'professions'); };
-    const render = () => {
-      const pdata = Persistent.load();
-      const rec = Persistent.getCharacter(classId);
-      overlay.innerHTML = `
-        <div class="panel modal-panel" style="max-width:640px">
-          <h4>🔷 Enchanting <span class="small-text">- select an equipped item, then choose an enchant</span></h4>
-          <div class="small-text" style="margin-bottom:8px">✨ ${pdata.materials.dust} Dust · 🔹 ${pdata.materials.shard} Shard · 💠 ${pdata.materials.crystal} Crystal</div>
-          ${this.renderArmoryPaperdoll(classId)}
-          ${selectedSlot && rec.equipped[selectedSlot] ? this.renderEnchantPicker(classId, selectedSlot) : ''}
-          <button class="btn-secondary" id="btn-close-enchant" style="margin-top:14px">Close</button>
-        </div>`;
       overlay.querySelectorAll('[data-slot-key]').forEach(el => {
         el.addEventListener('click', () => {
           const key = el.dataset.slotKey;
@@ -2923,14 +3218,18 @@ const App = {
           const item = Persistent.findItem(rec.equipped[selectedSlot]);
           if (!enchant || !item) return;
           const canAfford = Object.keys(enchant.cost).every(k => (pdata.materials[k] || 0) >= enchant.cost[k]);
-          if (!canAfford) return;
+          if (!canAfford) {
+            const costText = Object.entries(enchant.cost).map(([k, v]) => `${v} ${k}`).join(', ');
+            this.showInsufficientResourcesAlert(`You need ${costText} to apply this enchant.`);
+            return;
+          }
           Object.keys(enchant.cost).forEach(k => { pdata.materials[k] -= enchant.cost[k]; });
           item.enchantId = enchant.id;
           Persistent.save();
           render();
         });
       });
-      document.getElementById('btn-close-enchant').addEventListener('click', closeModal);
+      document.getElementById('btn-close-enchanting').addEventListener('click', closeModal);
     };
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
     document.body.appendChild(overlay);
@@ -2948,7 +3247,6 @@ const App = {
     const item = Persistent.findItem(rec.equipped[slotKey]);
     if (!item) return '';
     const rows = enchantsFor(classId).map(e => {
-      const canAfford = Object.keys(e.cost).every(k => (pdata.materials[k] || 0) >= e.cost[k]);
       const costText = Object.entries(e.cost).map(([k, v]) => `${v} ${k}`).join(', ');
       const effectText = Object.keys(e.effect).map(k => describeEffectLever(k, e.effect[k])).join(', ');
       const isCurrent = item.enchantId === e.id;
@@ -2958,7 +3256,7 @@ const App = {
           <div class="small-text">${e.desc} - ${effectText}</div>
           <div class="small-text">Costs ${costText}</div>
         </div></div>
-        <button class="btn-secondary" data-apply-enchant="${e.id}" ${isCurrent || !canAfford ? 'disabled' : ''}>${isCurrent ? 'Active' : 'Apply'}</button>
+        <button class="btn-secondary" data-apply-enchant="${e.id}" ${isCurrent ? 'disabled' : ''}>${isCurrent ? 'Active' : 'Apply'}</button>
       </div>`;
     }).join('');
     return `
@@ -2976,22 +3274,52 @@ const App = {
   // require a full party of 3 - real matchmaking isn't wired up yet, so the
   // other two are always filled by Ghosts (see generateGhostCompanion in
   // data.js) - and are scaled harder than a dungeon at a comparable level.
-  renderSanctuaryRaids(classId) {
-    const pdata = Persistent.load();
-    const row = (entry, cost, dataAttr) => `
+  raidEntryRow(entry, cost, dataAttr) {
+    return `
       <div class="gear-row raid-row">
         <div class="desc"><span>${entry.icon}</span><div><strong>${entry.name}</strong>
         <div class="small-text">Recommended: Lv.${entry.recommendedLevel} · HP ${entry.hp} · ATK ${entry.atk} · DEF ${entry.def}</div></div></div>
-        <button class="btn-secondary" ${dataAttr}="${entry.id}" ${pdata.bankGold < cost ? 'disabled' : ''}>Enter (${cost} 🪙)</button>
+        <button class="btn-secondary" ${dataAttr}="${entry.id}">Enter (${cost} 🪙)</button>
       </div>`;
-    const dungeonRows = DUNGEONS.map(d => row(d, DUNGEON_COST, 'data-dungeon')).join('');
-    const raidRows = RAID_BOSSES.map(r => row(r, RAID_COST, 'data-raid')).join('');
+  },
+
+  renderSanctuaryRaids(classId) {
     return `
-      <h4>Dungeons <span class="small-text">(solo - 10 tiers, level 5 through level 90)</span></h4>
-      ${dungeonRows}
-      <h4 style="margin-top:16px">Raids <span class="small-text">(requires a full party of ${RAID_PARTY_SIZE} - 10 tiers, a well-geared level 60 through a well-geared level 99)</span></h4>
-      ${raidRows}
+      ${this.categoryButtonRow('raids-dungeons', '🗝️', 'Dungeons', `${DUNGEONS.length} tiers - solo, level 5 through level 90`)}
+      ${this.categoryButtonRow('raids-raids', '🐲', 'Raids', `${RAID_BOSSES.length} tiers - requires a full party of ${RAID_PARTY_SIZE}, a well-geared level 60 through a well-geared level 99`)}
     `;
+  },
+
+  showRaidsDungeonsModal(classId) {
+    this.showListModal('🗝️ Dungeons', () => DUNGEONS.map(d => this.raidEntryRow(d, DUNGEON_COST, 'data-dungeon')).join(''),
+      (container) => {
+        container.querySelectorAll('[data-dungeon]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const pdata = Persistent.load();
+            if (pdata.bankGold < DUNGEON_COST) { this.showInsufficientResourcesAlert(`You need ${DUNGEON_COST} 🪙 to enter this dungeon.`); return; }
+            pdata.bankGold -= DUNGEON_COST;
+            Persistent.save();
+            container.remove();
+            this.enterDungeon(classId, btn.dataset.dungeon);
+          });
+        });
+      }, null);
+  },
+
+  showRaidsRaidsModal(classId) {
+    this.showListModal('🐲 Raids', () => RAID_BOSSES.map(r => this.raidEntryRow(r, RAID_COST, 'data-raid')).join(''),
+      (container) => {
+        container.querySelectorAll('[data-raid]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const pdata = Persistent.load();
+            if (pdata.bankGold < RAID_COST) { this.showInsufficientResourcesAlert(`You need ${RAID_COST} 🪙 to enter this raid.`); return; }
+            pdata.bankGold -= RAID_COST;
+            Persistent.save();
+            container.remove();
+            this.enterRaid(classId, btn.dataset.raid);
+          });
+        });
+      }, null);
   },
 
   enterDungeon(classId, dungeonId) {
@@ -2999,7 +3327,8 @@ const App = {
     Game.dungeon = { classId, dungeonId };
     Game.player = Game.buildRaidPlayer(classId);
     Game.player.hp = Game.effectiveStats().maxHp;
-    this.enterCombat({ type: 'dungeonBoss' }, { ...dungeon });
+    // Same location-vs-boss naming split as enterRaid above.
+    this.enterCombat({ type: 'dungeonBoss' }, { ...dungeon, name: BOSS_ART[dungeon.id] ? BOSS_ART[dungeon.id].name : dungeon.name });
   },
 
   showDungeonOutcome(won) {
@@ -3043,7 +3372,12 @@ const App = {
     Game.player = Game.buildRaidPlayer(classId);
     if (!usingRealCompanions) Game.player.raidGhostBonus = { atk: 6, def: 4, maxHp: 16 };
     Game.player.hp = Game.effectiveStats().maxHp;
-    this.enterCombat({ type: 'raidBoss' }, { ...boss });
+    // The raid tab lists the location (e.g. "Icecrown Citadel"); the fight
+    // itself names whichever individual boss the location's BOSS_ART entry
+    // gives it (e.g. "Vaelkorath, the Hollow King"), same as the dungeon
+    // equivalent below - falls back to the location name for any boss that
+    // doesn't have full PixelLab art yet.
+    this.enterCombat({ type: 'raidBoss' }, { ...boss, name: BOSS_ART[boss.id] ? BOSS_ART[boss.id].name : boss.name });
   },
 
   // Win or wipe, a raid always ends back at the Sanctuary Raids tab - there's
@@ -3363,37 +3697,6 @@ const App = {
         Persistent.save();
         this.showSanctuary(classId, tab);
       });
-      const hairInput = document.getElementById('char-hair-input');
-      if (hairInput) hairInput.addEventListener('change', () => {
-        rec.customization.hairColor = hairInput.value;
-        Persistent.save();
-        this.showSanctuary(classId, tab);
-      });
-      const eyeInput = document.getElementById('char-eye-input');
-      if (eyeInput) eyeInput.addEventListener('change', () => {
-        rec.customization.eyeColor = eyeInput.value;
-        Persistent.save();
-        this.showSanctuary(classId, tab);
-      });
-      const armorInput = document.getElementById('char-armor-input');
-      if (armorInput) armorInput.addEventListener('change', () => {
-        rec.customization.armorColor = armorInput.value;
-        Persistent.save();
-        this.showSanctuary(classId, tab);
-      });
-      const resetBtn = document.getElementById('btn-reset-customization');
-      if (resetBtn) resetBtn.addEventListener('click', () => {
-        rec.customization.hairColor = null;
-        rec.customization.eyeColor = null;
-        rec.customization.armorColor = null;
-        Persistent.save();
-        this.showSanctuary(classId, tab);
-      });
-      const toggleCustomBtn = document.getElementById('btn-toggle-customization');
-      if (toggleCustomBtn) toggleCustomBtn.addEventListener('click', () => {
-        this.customizationOpen = !this.customizationOpen;
-        this.showSanctuary(classId, tab);
-      });
       const autoEquipChk = document.getElementById('chk-auto-equip');
       if (autoEquipChk) autoEquipChk.addEventListener('change', () => {
         rec.autoEquip = autoEquipChk.checked;
@@ -3440,17 +3743,13 @@ const App = {
       });
       // Talents now render as part of this same Character tab (see the
       // showSanctuary body dispatch) - its click handlers live here too.
-      this.root.querySelectorAll('[data-talent]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (investTalentPoint(rec, classId, btn.dataset.tree, btn.dataset.talent)) {
-            Persistent.save();
-            this.showSanctuary(classId, tab);
-          }
-        });
+      this.root.querySelectorAll('[data-open-category^="talent-"]').forEach(btn => {
+        const treeKey = btn.dataset.openCategory.slice('talent-'.length);
+        btn.addEventListener('click', () => this.showTalentTreeModal(classId, treeKey, () => this.showSanctuary(classId, tab)));
       });
       const resetTalentsBtn = document.getElementById('btn-reset-talents');
       if (resetTalentsBtn) resetTalentsBtn.addEventListener('click', () => {
-        if (pdata.bankGold < 50) return;
+        if (pdata.bankGold < 50) { this.showInsufficientResourcesAlert('You need 50 🪙 to reset your talents.'); return; }
         pdata.bankGold -= 50;
         resetTalents(rec);
         Persistent.save();
@@ -3459,11 +3758,7 @@ const App = {
     } else if (tab === 'inventory') {
       this.wireInventoryCategoryClicks(classId, this.root, () => this.showSanctuary(classId, tab));
     } else if (tab === 'professions') {
-      const disenchantBtn = document.getElementById('btn-open-disenchant');
-      if (disenchantBtn) disenchantBtn.addEventListener('click', () => this.showDisenchantModal(classId));
-      const enchantBtn = document.getElementById('btn-open-enchant');
-      if (enchantBtn) enchantBtn.addEventListener('click', () => this.showEnchantModal(classId));
-      const profModals = { 'prof-weapons': 'showProfWeaponsModal', 'prof-armor': 'showProfArmorModal', 'prof-cooking': 'showProfCookingModal', 'prof-gathering': 'showProfGatheringModal' };
+      const profModals = { 'prof-enchanting': 'showEnchantingModal', 'prof-weapons': 'showProfWeaponsModal', 'prof-armor': 'showProfArmorModal', 'prof-cooking': 'showProfCookingModal', 'prof-gathering': 'showProfGatheringModal' };
       this.root.querySelectorAll('[data-open-category]').forEach(btn => {
         btn.addEventListener('click', () => this[profModals[btn.dataset.openCategory]](classId, () => this.showSanctuary(classId, tab)));
       });
@@ -3486,6 +3781,17 @@ const App = {
           this.showSanctuary(classId, tab);
         });
       });
+      const acceptAllBtn = this.root.querySelector('[data-accept-all-quests]');
+      if (acceptAllBtn) acceptAllBtn.addEventListener('click', () => {
+        acceptAllQuests();
+        this.showSanctuary(classId, tab);
+      });
+      const claimAllBtn = this.root.querySelector('[data-claim-all-quests]');
+      if (claimAllBtn) claimAllBtn.addEventListener('click', () => {
+        completeAllQuests(classId);
+        if (Persistent.getCharacter(classId).autoEquip) this.autoEquipBestGear(classId);
+        this.showSanctuary(classId, tab);
+      });
     } else if (tab === 'pvp') {
       const findBtn = document.getElementById('btn-find-pvp-match');
       if (findBtn) findBtn.addEventListener('click', () => this.enterPvpMatch(classId));
@@ -3493,18 +3799,6 @@ const App = {
       if (randomPvpChk) randomPvpChk.addEventListener('change', () => {
         pdata.randomPvpEnabled = randomPvpChk.checked;
         Persistent.save();
-      });
-      this.root.querySelectorAll('[data-buy-pvp]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const defId = btn.dataset.buyPvp;
-          const tmpl = PVP_GEAR_TEMPLATES[defId];
-          const price = PVP_GEAR_PRICE[tmpl.kind];
-          if (pdata.honor < price || pdata.pvpInventory.some(i => i.defId === defId && i.rarity === 'common')) return;
-          pdata.honor -= price;
-          pdata.pvpInventory.push(instantiatePvpGear(defId, 'common'));
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
       });
       this.root.querySelectorAll('[data-equip-pvp]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -3514,39 +3808,31 @@ const App = {
           this.showSanctuary(classId, tab);
         });
       });
-      this.root.querySelectorAll('[data-buy-honor-potion]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (pdata.honor < HONOR_SHOP.potion.price) return;
-          pdata.honor -= HONOR_SHOP.potion.price;
-          pdata.honorPotionCount += 1;
-          Persistent.save();
-          this.showSanctuary(classId, tab);
-        });
-      });
+      const honorShopBtn = this.root.querySelector('[data-open-category="pvp-honor-shop"]');
+      if (honorShopBtn) honorShopBtn.addEventListener('click', () => this.showPvpHonorShopModal(classId, () => this.showSanctuary(classId, tab)));
     } else if (tab === 'journal') {
       const repBtn = this.root.querySelector('[data-open-category="journal-reputation"]');
       if (repBtn) repBtn.addEventListener('click', () => this.showJournalReputationModal());
     } else if (tab === 'raids') {
-      this.root.querySelectorAll('[data-dungeon]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (pdata.bankGold < DUNGEON_COST) return;
-          pdata.bankGold -= DUNGEON_COST;
-          Persistent.save();
-          this.enterDungeon(classId, btn.dataset.dungeon);
-        });
-      });
-      this.root.querySelectorAll('[data-raid]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (pdata.bankGold < RAID_COST) return;
-          pdata.bankGold -= RAID_COST;
-          Persistent.save();
-          this.enterRaid(classId, btn.dataset.raid);
-        });
+      const raidsModals = { 'raids-dungeons': 'showRaidsDungeonsModal', 'raids-raids': 'showRaidsRaidsModal' };
+      this.root.querySelectorAll('[data-open-category]').forEach(btn => {
+        btn.addEventListener('click', () => this[raidsModals[btn.dataset.openCategory]](classId));
       });
     } else if (tab === 'house') {
       this.root.querySelectorAll('[data-feed-kind]').forEach(btn => {
         btn.addEventListener('click', () => {
           this.showFoodPickerModal(classId, btn.dataset.feedKind, btn.dataset.feedId);
+        });
+      });
+      // 'change' (not 'input') - same reasoning as the character name field
+      // above: commits once the field is left, rather than re-rendering (and
+      // losing focus/cursor) on every keystroke.
+      this.root.querySelectorAll('[data-rename-kind]').forEach(input => {
+        input.addEventListener('change', () => {
+          const progress = getCompanionProgress(input.dataset.renameKind, input.dataset.renameId);
+          progress.name = input.value.trim().slice(0, 16);
+          Persistent.save();
+          this.showSanctuary(classId, tab);
         });
       });
       this.root.querySelectorAll('[data-companion-kind]').forEach(btn => {

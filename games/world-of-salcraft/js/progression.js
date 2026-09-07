@@ -500,7 +500,14 @@ const LEGENDARY_ITEMS = {
   luckBlade: { name: 'Luck Blade', slot: 'weapon', weaponType: 'mainHandOnly', visual: 'dagger', icon: '🍀', atk: 16, goldBonus: 0.15, universe: 'D&D', desc: 'Fortune favors its wielder. +15% gold.' },
   aegisOfAges: { name: 'Aegis of the Ages', slot: 'chest', visual: 'plate', icon: '🛡️', def: 8, hp: 20, universe: 'WoW', desc: 'An ancient, unbreakable ward.' },
   robeOfTheArchmagi: { name: 'Robe of the Archmagi', slot: 'chest', visual: 'cloth', icon: '🧙', def: 4, hp: 15, universe: 'WoW', desc: 'Woven from pure arcane silk.' },
-  dragonScaleMail: { name: 'Dragon Scale Mail', slot: 'chest', visual: 'mail', icon: '🐉', def: 7, hp: 18, universe: 'D&D', desc: 'Scales shed by an ancient wyrm.' }
+  dragonScaleMail: { name: 'Dragon Scale Mail', slot: 'chest', visual: 'mail', icon: '🐉', def: 7, hp: 18, universe: 'D&D', desc: 'Scales shed by an ancient wyrm.' },
+  // Signature rewards from RARE_NPCS (data.js) - never randomly rolled into
+  // the normal legendary encounter pool, always tied to that specific NPC
+  // (see enterRareNpc in main.js).
+  williamsFists: { name: "William's Iron Fists", slot: 'weapon', weaponType: 'oneHanded', visual: 'mace', icon: '👊', atk: 19, universe: 'Original', desc: "A lifetime of mastery, needing no blade at all." },
+  mcclureReserve: { name: 'The McClure Reserve', slot: 'weapon', weaponType: 'mainHandOnly', visual: 'dagger', icon: '🥃', atk: 15, goldBonus: 0.10, universe: 'Original', desc: "Bootlegged, illegal, and unreasonably effective. +10% gold." },
+  dylinatorChassis: { name: 'Dylinator Chassis Plating', slot: 'chest', visual: 'plate', icon: '🦾', def: 9, hp: 16, universe: 'Original', desc: 'Cybernetic armor plating, still warm from the forge.' },
+  tinasEncoreMic: { name: "Tina's Encore Mic", slot: 'weapon', weaponType: 'twoHanded', visual: 'staff', icon: '🎤', atk: 17, goldBonus: 0.08, universe: 'Original', desc: 'Turns every battle into a headline act. +8% gold.' }
 };
 
 function instantiateLegendary(id) {
@@ -862,7 +869,15 @@ function computeAfkProgress() {
 
 const BANK_SHOP = {
   relics: Object.keys(RELICS).map(id => ({ id, price: 180 })),
-  spells: ['frostbolt', 'execute', 'chainLightning', 'inspire'].map(id => ({ id, price: 220 })),
+  spells: [
+    'frostbolt', 'execute', 'chainLightning', 'inspire',
+    'iceLance', 'shadowBolt', 'arcaneBlast', 'earthShatter', 'moonfire', 'sinisterStrike',
+    'eviscerate', 'ambush', 'crusaderStrike', 'consecration', 'flashHeal', 'hammerOfJustice',
+    'whirlwind', 'bloodlust', 'rampage', 'mortalStrike', 'serpentSting', 'multiShot',
+    'voidBolt', 'drainLife', 'hellfireBlast', 'curseOfAgony', 'penanceStrike', 'smite',
+    'judgment', 'holyWrath', 'slam', 'heroicStrike', 'overpower', 'shieldSlam',
+    'soulFire', 'chaosBolt', 'starfall', 'wildStrike', 'rejuvenation', 'avengingWrath'
+  ].map(id => ({ id, price: 220 })),
   gear: [
     { defId: 'rustedBlade', rarity: 'common', price: 30 },
     { defId: 'clothRobe', rarity: 'common', price: 25 }
@@ -897,6 +912,95 @@ function grantXpToCharacter(charRecord, amount) {
     levelsGained += 1;
   }
   return { levelsGained };
+}
+
+// --- Multi-spell equip ---
+// Every class starts with 1 equipped slot (its defaultSpell) and unlocks one
+// more at level 10, 30, 60, and MAX_LEVEL (99 - the practical stand-in for
+// the requested "level 100" milestone, since MAX_LEVEL is the actual cap) -
+// 5 slots total at max level.
+function maxEquippedSpells(level) {
+  let slots = 1;
+  if (level >= 10) slots++;
+  if (level >= 30) slots++;
+  if (level >= 60) slots++;
+  if (level >= MAX_LEVEL) slots++;
+  return slots;
+}
+
+// The class's defaultSpell is always slot 1 and can't be unequipped;
+// rec.equipped.spells holds whatever's filling the additional slots.
+function equippedSpellIds(rec, cls) {
+  return [cls.defaultSpell, ...(rec.equipped.spells || [])].filter((v, i, a) => a.indexOf(v) === i);
+}
+
+// --- Spell leveling ---
+// Spells level up from use, same idea as companion leveling above but
+// account-wide per spell id (pdata.spellLevels) rather than per-character,
+// since a spell's usage carries over to whichever class has it equipped.
+// Capped at SPELL_MAX_LEVEL (10) - a level-10 spell hits much harder but
+// also carries a much longer cooldown (see scaledSpellDef), so it's a
+// meaningful long-term payoff rather than a free stat stick.
+const SPELL_MAX_LEVEL = 10;
+
+function spellXpForLevel(level) {
+  return Math.floor(15 * Math.pow(level, 1.4)) + 10;
+}
+
+function getSpellLevel(spellId) {
+  const pdata = Persistent.load();
+  if (!pdata.spellLevels[spellId]) pdata.spellLevels[spellId] = { level: 1, xp: 0 };
+  return pdata.spellLevels[spellId];
+}
+
+function grantSpellUsageXp(spellId, amount = 1) {
+  const progress = getSpellLevel(spellId);
+  if (progress.level >= SPELL_MAX_LEVEL) return { levelsGained: 0 };
+  progress.xp += amount;
+  let levelsGained = 0;
+  while (progress.level < SPELL_MAX_LEVEL) {
+    const need = spellXpForLevel(progress.level);
+    if (progress.xp < need) break;
+    progress.xp -= need;
+    progress.level += 1;
+    levelsGained += 1;
+  }
+  if (levelsGained) Persistent.save();
+  return { levelsGained };
+}
+
+// +20% power per level above 1 (level 10 = 2.8x) - deliberately steeper than
+// companion/gear scaling since this is the whole point of using a spell a lot.
+function spellLevelPowerMult(level) {
+  return 1 + (level - 1) * 0.2;
+}
+
+// +1 cooldown round every 3 levels (level 10 = +3) - the "large cooldown"
+// tradeoff for a level-10 spell's much bigger hit.
+function spellLevelCooldownBonus(level) {
+  return Math.floor((level - 1) / 3);
+}
+
+// The actual skill object combat/UI code should use in place of a raw
+// SPELLS[id] lookup - power and cooldown pre-scaled for the spell's current
+// level. resolveSkillDamage (combat.js) is generic over whatever's passed in,
+// so this is the only place the leveling math lives.
+function scaledSpellDef(spellId) {
+  const base = SPELLS[spellId];
+  const level = getSpellLevel(spellId).level;
+  if (level <= 1) return { ...base, level };
+  const mult = spellLevelPowerMult(level);
+  const scaled = { ...base, level, cooldown: base.cooldown + spellLevelCooldownBonus(level) };
+  scaled.power = base.type === 'multiplier' ? Math.round(base.power * mult * 100) / 100 : Math.round(base.power * mult);
+  return scaled;
+}
+
+// Builds Game.player.skills (see newRun/buildRaidPlayer in state.js) - one
+// live, cooldown-tracking instance per currently-equipped spell, already
+// scaled for that spell's account-wide level.
+function buildSkillInstances(classId, charRecord) {
+  const cls = CLASSES[classId];
+  return equippedSpellIds(charRecord, cls).map(id => ({ ...scaledSpellDef(id), cooldownLeft: 0 }));
 }
 
 // --- Gathering professions ---
@@ -1114,6 +1218,20 @@ function claimQuest(questId, classIdForXp) {
   return reward;
 }
 
+// Accepts every quest currently sitting in the Available list.
+function acceptAllQuests() {
+  getAvailableQuests().forEach(q => acceptQuest(q.id));
+}
+
+// Claims every active quest that's ready, returning how many were claimed.
+function completeAllQuests(classIdForXp) {
+  let count = 0;
+  getActiveQuests().filter(q => isQuestReady(q.id)).forEach(q => {
+    if (claimQuest(q.id, classIdForXp)) count++;
+  });
+  return count;
+}
+
 // --- Pets & Mounts ---
 // Sums the effect{} of whichever pet/mount a character has equipped (see
 // PETS/MOUNTS in data.js) - folded into Game.effectiveStats() alongside relics
@@ -1129,8 +1247,18 @@ const COMPANION_LEVEL_SCALING = 0.02; // +2% of the base effect per level above 
 
 function getCompanionProgress(kind, id) {
   const pdata = Persistent.load();
-  if (!pdata.companionLevels[kind][id]) pdata.companionLevels[kind][id] = { level: 1, xp: 0 };
+  if (!pdata.companionLevels[kind][id]) pdata.companionLevels[kind][id] = { level: 1, xp: 0, name: '' };
+  // Backfill for records saved before renaming existed.
+  if (pdata.companionLevels[kind][id].name === undefined) pdata.companionLevels[kind][id].name = '';
   return pdata.companionLevels[kind][id];
+}
+
+// The player's own custom nickname for a tamed pet/mount (see the rename
+// input in renderSanctuaryHouse), falling back to the species name - same
+// idea as a character's own customization.name in effectiveCharStats.
+function companionDisplayName(kind, id, def) {
+  const custom = getCompanionProgress(kind, id).name;
+  return custom || def.name;
 }
 
 // Same shape as _grantProfessionXpToId - kept separate (rather than a shared
@@ -1284,7 +1412,7 @@ function recruitCompanionFromSave(importedData) {
     stats: { atk: stats.atk, def: stats.def, maxHp: stats.maxHp, speed: stats.speed },
     petId: rec.equipped.pet || null,
     mountId: rec.equipped.mount || null,
-    spellId: rec.equipped.spell || CLASSES[classId].defaultSpell
+    spellId: (rec.equipped.spells && rec.equipped.spells[0]) || CLASSES[classId].defaultSpell
   };
   Persistent.data = backupData;
 
@@ -1396,7 +1524,17 @@ const Persistent = {
       ownedPets: [], ownedMounts: [], activeQuestIds: [], questProgress: {}, questTiers: {}, completedQuestIds: [],
       honor: 0, honorInventory: [], honorPotionCount: 0, pvpInventory: [], randomPvpEnabled: false, recipeRarityBoost: {},
       companionLevels: { pet: {}, mount: {} }, activeBuffs: [], lastSeenAt: Date.now(), reputation: {},
-      recruitedCompanions: [], equippedCompanionIds: [], showCheats: false, tutorialSeen: false, difficulty: 'normal'
+      recruitedCompanions: [], equippedCompanionIds: [], showCheats: false, tutorialSeen: false, difficulty: 'normal',
+      // Kyle the Bard's in-run tutorial (distinct from tutorialSeen above,
+      // which is the old static "How to Play" rules popup) - see
+      // maybeShowTutorial in main.js. Keyed by screen id, seen once ever.
+      kyleTutorialsSeen: {}, skipTutorials: false,
+      // Rare NPCs already met (see RARE_NPCS/enterRareNpc) - one-time-ever,
+      // account-wide, same idea as ownedLegendaries/unlockedClasses.
+      metRareNpcs: [],
+      // Spell leveling (see grantSpellUsageXp/scaledSpellDef) - account-wide
+      // per spell id, same idea as companionLevels above.
+      spellLevels: {}
     };
   },
 
@@ -1428,7 +1566,7 @@ const Persistent = {
   getCharacter(classId) {
     const d = this.load();
     if (!d.characters[classId]) {
-      d.characters[classId] = { level: 1, xp: 0, equipped: { spell: null, pet: null, mount: null }, customization: { name: '', hairColor: null, eyeColor: null, armorColor: null } };
+      d.characters[classId] = { level: 1, xp: 0, equipped: { spells: [], pet: null, mount: null }, customization: { name: '' } };
     }
     const rec = d.characters[classId];
     const eq = rec.equipped;
@@ -1440,7 +1578,11 @@ const Persistent = {
     EQUIP_GEAR_KEYS.forEach(key => { if (eq[key] === undefined) eq[key] = null; });
     if (eq.pet === undefined) eq.pet = null;
     if (eq.mount === undefined) eq.mount = null;
-    if (!rec.customization) rec.customization = { name: '', hairColor: null, eyeColor: null, armorColor: null };
+    // Migrate pre-multi-spell saves: the old single equipped.spell slot
+    // becomes the first entry in the new equipped.spells array.
+    if (eq.spell !== undefined) { eq.spells = eq.spell ? [eq.spell] : []; delete eq.spell; }
+    if (!Array.isArray(eq.spells)) eq.spells = [];
+    if (!rec.customization) rec.customization = { name: '' };
     if (!rec.profession) rec.profession = { active: null, levels: {}, xp: {} };
     Object.keys(PROFESSIONS).forEach(id => {
       if (rec.profession.levels[id] === undefined) rec.profession.levels[id] = 1;
@@ -1609,6 +1751,7 @@ function characterSpriteFor(classId, sizePx, weaponSlot) {
 // portraits without caring whether the "enemy" is a monster or a class-trial
 // guardian wearing a class's own look.
 function anyCharacterSvg(id, sizePx, weaponSlot) {
+  if (BOSS_ART[id]) return bossSpriteSvg(id, sizePx);
   return CLASS_LOOKS[id] ? characterSpriteFor(id, sizePx, weaponSlot) : spriteSvg(id, sizePx);
 }
 
@@ -1634,17 +1777,23 @@ function renderCompanionRig(classId, sizePx, companionAnim, weaponSlot) {
   const mountSvg = mountId ? anyCharacterSvg(mountId, Math.round(sizePx * 0.8)) : '';
   const petSvg = petId ? anyCharacterSvg(petId, Math.round(sizePx * 0.5)) : '';
   // A WoW-style floating nameplate above the character's head, if the player
-  // named them in the Sanctuary Character tab.
-  const name = rec.customization && rec.customization.name;
-  const nameplate = name ? `<span class="nameplate">${escapeHtml(name)}</span>` : '';
+  // named them in the Sanctuary Character tab - and the same for a renamed
+  // mount/pet (see the rename input in renderSanctuaryHouse), just smaller
+  // to match their smaller sprite.
+  const name = (rec.customization && rec.customization.name) || CLASSES[classId].name;
+  const nameplate = `<span class="nameplate">${escapeHtml(name)}</span>`;
+  const mountName = mountId ? getCompanionProgress('mount', mountId).name : '';
+  const petName = petId ? getCompanionProgress('pet', petId).name : '';
+  const mountNameplate = mountName ? `<span class="nameplate nameplate-small">${escapeHtml(mountName)}</span>` : '';
+  const petNameplate = petName ? `<span class="nameplate nameplate-small">${escapeHtml(petName)}</span>` : '';
   const actingClass = (kind) => (companionAnim && companionAnim[kind]) ? 'companion-acting' : '';
   const actingStyle = (kind) => {
     const acting = companionAnim && companionAnim[kind];
     return acting ? ` style="--companion-glow:${COMPANION_ROLE_GLOW[acting] || 'var(--accent)'}"` : '';
   };
   return `<span class="companion-row">` +
-    (mountSvg ? `<span class="companion-mount ${actingClass('mount')}"${actingStyle('mount')}>${mountSvg}</span>` : '') +
+    (mountSvg ? `<span class="companion-mount ${actingClass('mount')}"${actingStyle('mount')}>${mountNameplate}${mountSvg}</span>` : '') +
     `<span class="companion-rider">${nameplate}${riderSvg}</span>` +
-    (petSvg ? `<span class="companion-pet ${actingClass('pet')}"${actingStyle('pet')}>${petSvg}</span>` : '') +
+    (petSvg ? `<span class="companion-pet ${actingClass('pet')}"${actingStyle('pet')}>${petNameplate}${petSvg}</span>` : '') +
     `</span>`;
 }

@@ -32,14 +32,17 @@ const Combat = {
         maxHp: hp,
         hp
       },
-      log: [`A ${enemyTemplate.name} appears!`],
+      // Named dungeon/raid final bosses (see BOSS_ART in sprites.js) read
+      // like a proper noun ("Vaelkorath, the Hollow King"), so they skip the
+      // generic "A ___ appears!" article every other encounter uses.
+      log: [BOSS_ART[enemyTemplate.id] ? `${enemyTemplate.name} appears!` : `A ${enemyTemplate.name} appears!`],
       over: false,
       victory: false,
       fled: false,
       locked: false,
       anim: { player: null, enemy: null }
     };
-    Game.player.skill.cooldownLeft = 0;
+    Game.player.skills.forEach(s => { s.cooldownLeft = 0; });
     return this.state;
   },
 
@@ -198,22 +201,24 @@ const Combat = {
     return dmg;
   },
 
-  playerSkill() {
+  playerSkill(index) {
     const s = this.state;
     if (s.over || s.locked) return;
-    const skill = Game.player.skill;
-    if (skill.cooldownLeft > 0) return;
+    const skill = Game.player.skills[index || 0];
+    if (!skill || skill.cooldownLeft > 0) return;
     const stats = Game.effectiveStats();
     const dmg = this.resolveSkillDamage(skill, stats, s.enemy.def) + this.bonusDamageAgainst(s.enemy, stats);
     s.enemy.hp = Math.max(0, s.enemy.hp - dmg);
     skill.cooldownLeft = skill.cooldown;
     s.anim.player = 'skill';
+    s.anim.castSkillId = skill.id;
     this.addLog(`You use ${skill.name} for ${dmg} damage!`);
     if (skill.type === 'drain') {
       const healed = Math.round(dmg * 0.5);
       Game.heal(healed);
       this.addLog(`You drain ${healed} HP.`);
     }
+    grantSpellUsageXp(skill.id);
     this.resolveCompanionAttacks(stats);
     this.resolveAfterPlayerHit(stats.lifesteal, false, dmg);
   },
@@ -269,7 +274,7 @@ const Combat = {
     if (s.over) return;
     s.locked = false;
     s.anim = { player: null, enemy: 'attack' };
-    if (Game.player.skill.cooldownLeft > 0) Game.player.skill.cooldownLeft--;
+    Game.player.skills.forEach(sk => { if (sk.cooldownLeft > 0) sk.cooldownLeft--; });
     const stats = Game.effectiveStats();
     // Positive hpRegen (relics/pets/mounts) heals as usual; negative hpRegen
     // (the Bleeding Wound curse) actually damages - Game.heal() never hurts,

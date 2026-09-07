@@ -85,6 +85,13 @@ button {
    "Change Difficulty (Normal)" read as one consistent column, not a
    staggered stack of different widths. */
 .title-btn { width: 300px; max-width: 100%; }
+.title-skip-tutorials {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  cursor: pointer;
+}
 
 /* ---------- Ornate buttons (beveled metal/wood, carved-text look) ---------- */
 .btn-primary {
@@ -272,144 +279,32 @@ button {
 
 .map-scroll { position: relative; width: 320px; max-width: 100%; margin: 0 auto; }
 
-/* Per-act theme backdrop (see ACT_THEMES in data.js / renderMap in map.js) -
-   a handful of drifting particles behind the node graph, plus a small label
-   naming the current stretch. */
-.map-ground {
+/* The zone's PixelLab-generated top-down overworld map (see
+   renderZoneTopdownMap in map.js) - fills .map-container exactly (a fixed
+   320x500 viewport, not a scrollable one), landmarks confined to its own top
+   quarter so they stay clear of the node graph below. background-position
+   keeps that top edge anchored so cover-cropping only ever eats into the
+   open ground at the bottom, never the landmarks. */
+.map-topdown-bg {
   position: absolute; inset: 0;
-  background-repeat: repeat;
-  background-size: 32px 32px;
+  background-size: cover;
+  background-position: top center;
   image-rendering: pixelated;
-  opacity: 0.45;
   z-index: 0;
 }
-.map-skyline { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
-.map-skyline .zone-skyline { width: 100%; height: 100%; display: block; }
-
-/* A fully painted third-person scene for zones with one (see
-   ZONE_SCENE_READY/renderZoneScene in map.js) - a plain CSS gradient sky
-   plus the zone's own ground tileset as a land strip, with a pulsing
-   sun/moon, two clouds drifting at different speeds, and a pair of
-   foreground props swaying (or bobbing) in the wind layered on top so the
-   scene reads as alive rather than a single frozen frame. */
-.map-scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
-.map-scene-sky { position: absolute; inset: 0; }
-/* The walkable dirt path/clearing between the two framing trees - sized to
-   sit within the tree corridor (not the full container width, so it doesn't
-   bleed out past the treeline into open ground) with only a short mask fade
-   at its top edge so the seam into the sky stays crisp rather than smearing
-   the texture upward. Cycles with the trees (see leaveForegroundTrees /
-   bloomForegroundTrees in map.js) so the whole corridor reads as one plane
-   sliding away and back, not just the trees. */
-.map-scene-path {
-  position: absolute; left: 27%; right: 27%; bottom: 0; height: 30%;
-  background-repeat: repeat-x;
-  background-position: bottom;
-  background-size: auto 100%;
-  image-rendering: pixelated;
-  transform-origin: bottom center;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+/* Brief zoom-and-fade travel cues (see leaveForegroundTrees/
+   bloomForegroundTrees in map.js) standing in for the old walk animation -
+   "leaving" pushes the world away as you set out, "blooming" brings the new
+   stretch back into focus on arrival. */
+.map-topdown-bg.map-topdown-bg-leaving { animation: topdownBgLeave 0.5s ease-in forwards; }
+.map-topdown-bg.map-topdown-bg-blooming { animation: topdownBgBloom 0.6s cubic-bezier(0.3, 1.2, 0.5, 1) forwards; }
+@keyframes topdownBgLeave {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.12); opacity: 0.35; }
 }
-.map-scene-path.path-leaving { animation: pathLeave 0.5s ease-in forwards; }
-.map-scene-path.path-blooming { animation: pathBloom 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) forwards; }
-@keyframes pathLeave {
-  0% { transform: translateY(0); opacity: 1; }
-  100% { transform: translateY(120%); opacity: 0; }
-}
-@keyframes pathBloom {
-  0% { transform: scaleY(0.05); opacity: 0; }
-  60% { transform: scaleY(1.08); opacity: 1; }
-  100% { transform: scaleY(1); opacity: 1; }
-}
-.map-scene-sky-body {
-  position: absolute;
-  top: 5%; right: 10%;
-  width: 16%; height: auto;
-  image-rendering: pixelated;
-  animation: sceneSunPulse 4s ease-in-out infinite;
-}
-@keyframes sceneSunPulse {
-  0%, 100% { filter: brightness(1) drop-shadow(0 0 6px rgba(255,200,80,0.5)); transform: scale(1); }
-  50% { filter: brightness(1.18) drop-shadow(0 0 16px rgba(255,200,80,0.85)); transform: scale(1.05); }
-}
-.map-scene-cloud { position: absolute; width: 24%; height: auto; image-rendering: pixelated; opacity: 0.92; }
-.map-scene-cloud-1 { top: 8%; animation: sceneCloudDrift1 42s linear infinite; }
-.map-scene-cloud-2 { top: 16%; width: 17%; animation: sceneCloudDrift2 58s linear infinite reverse; }
-@keyframes sceneCloudDrift1 { from { left: -26%; } to { left: 106%; } }
-@keyframes sceneCloudDrift2 { from { left: -20%; } to { left: 110%; } }
-.map-scene-fg {
-  position: absolute;
-  bottom: -2%;
-  width: 40%; height: auto;
-  image-rendering: pixelated;
-  transform-origin: bottom center;
-}
-.map-scene-fg-left { left: -9%; }
-.map-scene-fg-right { right: -9%; }
-.map-scene-fg-sway-left { animation: sceneFgSwayLeft 3.4s ease-in-out infinite; }
-.map-scene-fg-sway-right { animation: sceneFgSwayRight 3.7s ease-in-out infinite; animation-delay: 0.4s; }
-.map-scene-fg-bob-left { animation: sceneFgBobLeft 3.6s ease-in-out infinite; }
-.map-scene-fg-bob-right { animation: sceneFgBobRight 4s ease-in-out infinite; animation-delay: 0.3s; }
-@keyframes sceneFgSwayLeft { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
-@keyframes sceneFgSwayRight { 0%, 100% { transform: scaleX(-1) rotate(-1.6deg); } 50% { transform: scaleX(-1) rotate(1.6deg); } }
-@keyframes sceneFgBobLeft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3%); } }
-@keyframes sceneFgBobRight { 0%, 100% { transform: scaleX(-1) translateY(0); } 50% { transform: scaleX(-1) translateY(-3%); } }
-
-/* Played each time the player selects their next encounter (see
-   cycleForegroundTrees in map.js) - the compound selector (two classes)
-   outweighs the single-class sway/bob rules above regardless of source
-   order, so this cleanly takes over the `animation` property for one run
-   and hands it back once the class is removed. */
-.map-scene-fg-left.fg-leaving { animation: fgLeaveLeft 0.5s ease-in forwards; }
-.map-scene-fg-right.fg-leaving { animation: fgLeaveRight 0.5s ease-in forwards; }
-.map-scene-fg-left.fg-blooming { animation: fgBloomLeft 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
-.map-scene-fg-right.fg-blooming { animation: fgBloomRight 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
-@keyframes fgLeaveLeft {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(160%) rotate(8deg); opacity: 0; }
-}
-@keyframes fgLeaveRight {
-  0% { transform: scaleX(-1) translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: scaleX(-1) translateY(160%) rotate(8deg); opacity: 0; }
-}
-/* transform-origin is bottom-center (see .map-scene-fg above), so scaling
-   up from ~0 reads as sprouting out of the ground rather than fading in;
-   the overshoot past 1 and settle back gives it a springy "pop". */
-@keyframes fgBloomLeft {
-  0% { transform: scale(0.05, 0.08) rotate(0deg); opacity: 0; }
-  55% { transform: scale(1.12, 1.06) rotate(-1deg); opacity: 1; }
-  75% { transform: scale(0.96, 1.02) rotate(1deg); opacity: 1; }
-  100% { transform: scale(1, 1) rotate(0deg); opacity: 1; }
-}
-@keyframes fgBloomRight {
-  0% { transform: scale(-0.05, 0.08) rotate(0deg); opacity: 0; }
-  55% { transform: scale(-1.12, 1.06) rotate(1deg); opacity: 1; }
-  75% { transform: scale(-0.96, 1.02) rotate(-1deg); opacity: 1; }
-  100% { transform: scale(-1, 1) rotate(0deg); opacity: 1; }
-}
-.map-particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
-.map-particle { position: absolute; font-size: 13px; opacity: 0; text-shadow: 0 0 4px rgba(0,0,0,0.6); }
-.particle-drift-down .map-particle { top: -22px; animation: particleDriftDown linear infinite; }
-.particle-drift-up .map-particle { bottom: -22px; animation: particleDriftUp linear infinite; }
-.particle-drift-side .map-particle { left: -22px; animation: particleDriftSide linear infinite; }
-@keyframes particleDriftDown {
-  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-  10% { opacity: 0.8; }
-  90% { opacity: 0.8; }
-  100% { transform: translate(var(--particle-drift, 15px), 520px) rotate(50deg); opacity: 0; }
-}
-@keyframes particleDriftUp {
-  0% { transform: translate(0, 0); opacity: 0; }
-  10% { opacity: 0.8; }
-  90% { opacity: 0.8; }
-  100% { transform: translate(var(--particle-drift, -15px), -520px); opacity: 0; }
-}
-@keyframes particleDriftSide {
-  0% { transform: translate(0, 0); opacity: 0; }
-  10% { opacity: 0.8; }
-  90% { opacity: 0.8; }
-  100% { transform: translate(360px, var(--particle-drift, 15px)); opacity: 0; }
+@keyframes topdownBgBloom {
+  0% { transform: scale(1.12); opacity: 0.35; }
+  100% { transform: scale(1); opacity: 1; }
 }
 .map-theme-label {
   position: absolute;
@@ -434,9 +329,14 @@ button {
 }
 @keyframes pathFlow { to { stroke-dashoffset: -26; } }
 .map-line-hit { stroke: transparent; stroke-width: 22; cursor: pointer; }
+/* Applied to every node/line except the one just picked (see animateTravel
+   in map.js) - the road not taken falls away while the chosen node travels
+   in to meet the player, instead of just vanishing on the next render. */
+.map-fading-out { transition: opacity 0.3s ease; opacity: 0 !important; }
 
-/* The traveler marker: your class's own sprite, standing on the path at your
-   current node and walking to the next one when you pick a route. */
+/* The traveler marker: your class's own sprite, always dead center - the
+   chosen node travels in to meet it rather than the other way around (see
+   animateTravel in map.js). */
 .map-traveler {
   position: absolute;
   transform: translate(-50%, -100%) scale(var(--traveler-scale, 1));
@@ -446,19 +346,11 @@ button {
 }
 .map-traveler svg, .map-traveler img { image-rendering: pixelated; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.6)); }
 .map-traveler.facing-left svg, .map-traveler.facing-left img { transform: scaleX(-1); }
-.map-traveler.walking svg, .map-traveler.walking img { animation: travelerWalk 0.28s ease-in-out infinite alternate; }
-@keyframes travelerWalk {
-  0% { transform: translateY(0) rotate(-3deg); }
-  100% { transform: translateY(-4px) rotate(3deg); }
-}
-.map-traveler.walking.facing-left svg, .map-traveler.walking.facing-left img { animation: travelerWalkLeft 0.28s ease-in-out infinite alternate; }
-@keyframes travelerWalkLeft {
-  0% { transform: scaleX(-1) translateY(0) rotate(-3deg); }
-  100% { transform: scaleX(-1) translateY(-4px) rotate(3deg); }
-}
-/* Played once on arrival (see animateTravel in map.js) instead of the
-   looping walk-cycle - a little hop that buys time for the treeline/path
-   bloom-in to actually be seen before the screen cuts to the encounter. */
+/* Played once on arrival (see animateTravel in map.js) - the player never
+   walks (they're always dead center; the chosen node travels in to meet
+   them instead), so this landing hop is the only traveler animation left,
+   buying time for the treeline/path bloom-in to actually be seen before the
+   screen cuts to the encounter. */
 .map-traveler.jumping svg, .map-traveler.jumping img { animation: travelerJump 0.6s ease-out 1; }
 .map-traveler.jumping.facing-left svg, .map-traveler.jumping.facing-left img { animation: travelerJumpLeft 0.6s ease-out 1; }
 @keyframes travelerJump {
@@ -761,6 +653,7 @@ button {
 .companion-row svg, .companion-row img { display: block; image-rendering: pixelated; max-width: 100%; height: auto; }
 .companion-mount svg, .companion-pet svg, .companion-mount img, .companion-pet img { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
 .companion-mount { opacity: 0.92; }
+.companion-mount, .companion-pet { position: relative; }
 
 /* A recruited companion "acting" in sync with the player's own turn (see
    renderCompanionParty/renderRecruitedCompanionRig in main.js) - a quick
@@ -798,6 +691,9 @@ button {
   text-shadow: 0 1px 2px #000, 0 0 4px #000, 0 0 4px #000;
   pointer-events: none;
 }
+/* A named mount/pet's nameplate (see companion-mount/companion-pet above) -
+   same idea, scaled down to match their smaller sprite. */
+.nameplate-small { font-size: 0.56rem; top: -10px; }
 .combatant .name { font-weight: bold; margin: 6px 0 4px; }
 .combatant.enemy.elite { border-color: var(--bad); }
 .combatant.enemy.boss { border-color: var(--accent); }
@@ -808,6 +704,38 @@ button {
 @keyframes legendaryPanelPulse {
   0%, 100% { box-shadow: inset 0 0 0 1px rgba(212,175,90,0.1), 0 0 12px rgba(212,175,90,0.3); }
   50% { box-shadow: inset 0 0 0 1px rgba(212,175,90,0.15), 0 0 26px rgba(212,175,90,0.6); }
+}
+
+/* Jess's encounter (see enterWitchJess in main.js) - a soft magenta/orange
+   panel pulse echoing her own glow, plus the portrait itself pulsing a
+   brighter, tighter glow so she visibly radiates rather than just being lit
+   from outside. */
+.panel.witch-jess-encounter { border-color: #e08a3c; animation: jessPanelPulse 3s ease-in-out infinite; }
+@keyframes jessPanelPulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(224,138,60,0.12), 0 0 14px rgba(161,60,224,0.35); }
+  50% { box-shadow: inset 0 0 0 1px rgba(224,138,60,0.18), 0 0 28px rgba(224,138,60,0.55); }
+}
+/* The 7 RARE_NPCS encounters (see enterRareNpc in main.js) - a plain,
+   un-animated portrait (unlike Jess's magical glow, which is hers alone) in
+   a mildly accented panel so each still reads as a special one-off. */
+.panel.rare-npc-encounter { border-color: var(--accent-2); }
+.npc-portrait-wrap { text-align: center; margin-bottom: 4px; }
+.npc-portrait {
+  width: 160px;
+  height: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+}
+.jess-portrait-wrap { text-align: center; margin-bottom: 4px; }
+.jess-portrait {
+  width: 160px;
+  height: auto;
+  image-rendering: pixelated;
+  animation: jessGlow 2.6s ease-in-out infinite;
+}
+@keyframes jessGlow {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 10px rgba(224,138,60,0.6)) drop-shadow(0 0 18px rgba(161,60,224,0.4)); }
+  50% { filter: brightness(1.12) drop-shadow(0 0 18px rgba(224,138,60,0.85)) drop-shadow(0 0 30px rgba(161,60,224,0.6)); }
 }
 .gauntlet-banner {
   text-align: center;
@@ -1061,6 +989,42 @@ button {
 @keyframes autoToastIn { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes autoToastOut { from { opacity: 1; } to { opacity: 0; transform: translate(-50%, -8px); } }
 
+/* Kyle the Bard's in-run tutorial (see maybeShowTutorial/showKyleOverlay in
+   main.js) - a full-screen tap-catcher (so ANY tap dismisses it, not just a
+   close button) with his portrait and a speech-bubble-style textbox docked
+   to the bottom, over whatever screen it was called from. */
+.kyle-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 16px;
+  cursor: pointer;
+}
+.kyle-card {
+  display: flex; align-items: flex-end; gap: 10px;
+  max-width: 480px;
+  animation: kyleSlideUp 0.35s ease-out;
+}
+.kyle-portrait {
+  width: 108px; height: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+  flex-shrink: 0;
+}
+.kyle-textbox {
+  background: var(--bg-panel);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  cursor: default;
+}
+.kyle-name { color: var(--accent); font-weight: bold; margin-bottom: 4px; }
+.kyle-textbox p { margin: 0 0 6px; font-size: 0.85rem; line-height: 1.4; }
+.kyle-textbox p:last-of-type { margin-bottom: 0; }
+.kyle-hint { margin-top: 8px; font-size: 0.7rem; color: var(--text-dim); text-align: right; }
+@keyframes kyleSlideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
 .auto-toggle {
   display: flex;
   align-items: center;
@@ -1228,6 +1192,20 @@ button {
 
 .house-feed { display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 160px; }
 .house-row { flex-wrap: wrap; }
+.companion-name-input {
+  display: block;
+  margin-top: 5px;
+  background: var(--bg-panel-2);
+  border: 2px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  width: 160px;
+  max-width: 100%;
+}
+.companion-name-input:focus { outline: none; border-color: var(--accent); }
 
 .sanctuary-body {
   background: var(--bg-panel);

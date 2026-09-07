@@ -35,7 +35,6 @@ const Game = {
   newRun(classId, startingAct) {
     const cls = CLASSES[classId];
     const charRecord = Persistent.getCharacter(classId);
-    const spellId = charRecord.equipped.spell || cls.defaultSpell;
     this.gauntlet = null;
     this.player = {
       classId,
@@ -45,7 +44,7 @@ const Game = {
       baseAtk: cls.atk,
       baseDef: cls.def,
       baseSpeed: cls.speed,
-      skill: { ...SPELLS[spellId], cooldownLeft: 0 },
+      skills: buildSkillInstances(classId, charRecord),
       gold: 20,
       items: [...cls.startItems],
       relics: [],
@@ -77,7 +76,6 @@ const Game = {
   buildRaidPlayer(classId) {
     const cls = CLASSES[classId];
     const charRecord = Persistent.getCharacter(classId);
-    const spellId = charRecord.equipped.spell || cls.defaultSpell;
     return {
       classId,
       className: cls.name,
@@ -86,11 +84,12 @@ const Game = {
       baseAtk: cls.atk,
       baseDef: cls.def,
       baseSpeed: cls.speed,
-      skill: { ...SPELLS[spellId], cooldownLeft: 0 },
+      skills: buildSkillInstances(classId, charRecord),
       gold: 0,
       items: [],
       relics: [],
-      curses: []
+      curses: [],
+      tempEffects: []
     };
   },
 

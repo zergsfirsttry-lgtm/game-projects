@@ -363,8 +363,56 @@ const CREATURE_ART_IDS = new Set([
   'dragonWhelpling', 'direwolfPup', 'pseudodragon', 'impFamiliar', 'moonkinHatchling', 'mechanicalSquirrel',
   'owlFamiliar', 'pixieSprite', 'ironshellTortle', 'direhornRaptor', 'faerieDragonling',
   'netherdrake', 'griffonMount', 'frostwolfMount', 'warKodo', 'hippogriffMount', 'nightmareSteed',
-  'unicornMount', 'spectralTiger'
+  'unicornMount', 'spectralTiger',
+  'emberTabby', 'shadowPouncer', 'luckyCalico', 'starlitKitten', 'witchlightKitten',
+  'ryker', 'landryDuckling', 'monkey', 'chopper', 'izzoCorvette', 'robin'
 ]);
+
+// Full PixelLab character treatment (create_character v3 + a text-guided
+// animate_character attack) for dungeon/raid FINAL bosses only - unlike
+// CREATURE_ART_IDS's single static image, each entry here also has a
+// multi-frame attack animation that plays during its turn in combat (see
+// playBossAttackAnimation in main.js). Keyed by the dungeon/raid's own id
+// (DUNGEONS/RAID_BOSSES in data.js), not a separate boss-name id, since
+// that's what Combat renders enemy portraits by (s.enemy.id).
+function _bossArt(id, name) {
+  return [id, {
+    name,
+    idle: `assets/sprites/bosses/${id}_idle.png`,
+    attackFrames: [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `assets/sprites/bosses/${id}_attack_${i}.png`)
+  }];
+}
+const BOSS_ART = Object.fromEntries([
+  _bossArt('icecrownCitadel', 'Vaelkorath, the Hollow King'),
+  _bossArt('deadmines', 'Captain Blacktide Vane'),
+  _bossArt('shadowfangKeep', 'Alaric the Wolflord'),
+  _bossArt('razorfenDowns', 'Warboar Chief Tuskram'),
+  _bossArt('blackfathomDeeps', 'Naga Highpriestess Coraleth'),
+  _bossArt('scarletMonastery', 'Inquisitor Vayle'),
+  _bossArt('direMaul', 'King Grimtusk the Bloated'),
+  _bossArt('zulFarrak', 'Sandshaper Zurga'),
+  _bossArt('maraudon', "Vortexlord Thal'kesh"),
+  _bossArt('moltenCore', 'Cindermaw, the Molten Titan'),
+  _bossArt('blackwingLair', 'Nightscale, the Black Wyrm'),
+  _bossArt('naxxramas', 'The Plaguebound Countess'),
+  _bossArt('karazhan', 'Maestro Nightwhisper'),
+  _bossArt('blackTemple', "Xal'gorath the Betrayer"),
+  _bossArt('scholomance', 'Archlich Mordrenna'),
+  _bossArt('cullingOfStratholme', 'Deathlord Ashgrave'),
+  _bossArt('sunwellPlateau', 'Radiant Malvexis'),
+  _bossArt('ulduar', 'The Forgewarden Prime'),
+  _bossArt('burningThrone', "Xoth'rath, the Void King"),
+  _bossArt('ahnQiraj', "Queen Anub'khepra")
+]);
+
+// The boss's idle portrait - anyCharacterSvg (progression.js) checks BOSS_ART
+// before falling through to spriteSvg, so this is what shows outside of the
+// brief attack-animation window.
+function bossSpriteSvg(id, sizePx) {
+  const art = BOSS_ART[id];
+  if (!art) return null;
+  return `<img class="boss-portrait-sprite" src="${art.idle}" width="${sizePx}" height="${sizePx}" style="image-rendering:pixelated" alt="${art.name}">`;
+}
 
 function spriteSvg(id, sizePx) {
   if (CREATURE_ART_IDS.has(id)) {
