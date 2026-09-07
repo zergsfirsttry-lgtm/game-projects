@@ -1609,7 +1609,14 @@ const Persistent = {
       // pvp_* entries in data.js) - unlike the pvpWins quest's questProgress
       // entry, this is never deleted when a quest is claimed, so a title
       // earned once stays earned.
-      pvpWinsTotal: 0
+      pvpWinsTotal: 0,
+      // First-time discovery popups (see showDiscoveryPopup/checkXDiscovery
+      // in main.js) - defIds/ids seen at least once, so the same weapon,
+      // armor piece, or enemy doesn't re-trigger its reveal popup every
+      // subsequent drop/encounter. Pets/mounts/spells reuse their existing
+      // ownedPets/ownedMounts/unlockedSpells arrays for the same check
+      // instead of a separate set.
+      seenGearDefIds: [], seenEnemyIds: []
     };
   },
 

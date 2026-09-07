@@ -484,6 +484,7 @@ const App = {
     grantReputation(getActTheme(Game.act).id, 15);
     Persistent.save();
     this.showAutoToast(combatReward ? this.autoToastSummary(`${reward.def.icon} ${reward.def.name} tamed!`, combatReward) : `<strong>${reward.def.icon} ${reward.def.name} tamed!</strong><div class="small-text">${alreadyOwned ? 'Bond reaffirmed' : `Joins you as a ${reward.kind}`} - visit the Sanctuary to equip it.</div>`);
+    if (!alreadyOwned) this.queuePetMountDiscovery(reward.kind, reward.id);
     this.showMap();
   },
 
@@ -537,6 +538,7 @@ const App = {
         for (let i = 0; i < price; i++) Game.player.relics.splice(rand(0, Game.player.relics.length - 1), 1);
         pdata.ownedPets.push(id);
         Persistent.save();
+        this.queuePetMountDiscovery('pet', id);
         this.renderWitchJessScreen(node);
       });
     });
@@ -589,19 +591,24 @@ const App = {
       : npc.rewardKind === 'mount' ? MOUNTS[npc.rewardId] : PETS[npc.rewardId];
     const pdata = Persistent.load();
     pdata.metRareNpcs.push(node.rareNpcId);
+    let discoverGear = null, discoverPetMount = null;
     if (npc.rewardKind === 'legendary') {
+      const alreadyOwned = pdata.ownedLegendaries.includes(npc.rewardId);
       pdata.ownedLegendaries.push(npc.rewardId);
       const item = instantiateLegendary(npc.rewardId);
       pdata.inventory.push(item);
+      if (!alreadyOwned) discoverGear = item;
       if (Persistent.getCharacter(Game.player.classId).autoEquip) this.autoEquipBestGear(Game.player.classId);
     } else if (npc.rewardKind === 'mount') {
-      if (!pdata.ownedMounts.includes(npc.rewardId)) pdata.ownedMounts.push(npc.rewardId);
+      if (!pdata.ownedMounts.includes(npc.rewardId)) { pdata.ownedMounts.push(npc.rewardId); discoverPetMount = ['mount', npc.rewardId]; }
     } else {
-      if (!pdata.ownedPets.includes(npc.rewardId)) pdata.ownedPets.push(npc.rewardId);
+      if (!pdata.ownedPets.includes(npc.rewardId)) { pdata.ownedPets.push(npc.rewardId); discoverPetMount = ['pet', npc.rewardId]; }
     }
     Game.grantProfessionXp(rand(4, 9));
     grantReputation(getActTheme(Game.act).id, 15);
     Persistent.save();
+    if (discoverGear) this.queueGearDiscovery(discoverGear);
+    if (discoverPetMount) this.queuePetMountDiscovery(discoverPetMount[0], discoverPetMount[1]);
     this.showAutoToast(`<strong>${npc.name} rewards you!</strong><div class="small-text">${rewardDef.icon} ${rewardDef.name}</div>`);
     this.showMap();
   },
@@ -787,6 +794,7 @@ const App = {
       : `${rewardDef.icon} ${rewardDef.name} (already owned)`;
     const titleLine = titleIsNew ? `Title earned: ${TITLES[we.titleKey].name}` : '';
     this.showAutoToast(`<strong>${we.name}</strong><div class="small-text">${rewardLine}${titleLine ? ` · ${titleLine}` : ''}</div>`, 4200);
+    if (rewardIsNew) this.queuePetMountDiscovery(we.rewardKind, we.rewardId);
     this.showMap();
   },
 
@@ -1064,6 +1072,7 @@ const App = {
     this.currentCombatNode = node; // so the shared HUD's AUTO toggle (see init) can resume auto-play from anywhere
     Combat.start(enemyTemplate);
     this.renderCombatScreen(node);
+    this.checkEnemyDiscovery(enemyTemplate);
     if (this.autoCombat) this.performAutoAction(node);
   },
 
@@ -1465,6 +1474,137 @@ const App = {
     this._autoToastTimer = setTimeout(() => { el.classList.add('auto-toast-hide'); }, durationMs || 3200);
   },
 
+  // ---------------- First-time discovery popups ----------------
+  // A big Pokedex-style reveal (large art, lore, stats) the first time the
+  // player ever obtains a given pet/mount/weapon/armor piece, or ever
+  // encounters a given enemy - see queuePetMountDiscovery/queueGearDiscovery/
+  // checkEnemyDiscovery below for the per-category entry points. Queued
+  // rather than shown immediately so multiple reveals in one moment (say, a
+  // taming that also happens to be a new-enemy encounter) show one at a
+  // time instead of stacking overlays.
+  queueDiscovery(entry) {
+    this._discoveryQueue = this._discoveryQueue || [];
+    this._discoveryQueue.push(entry);
+    if (this._discoveryQueue.length === 1) this.showNextDiscovery();
+  },
+
+  showNextDiscovery() {
+    const entry = this._discoveryQueue && this._discoveryQueue[0];
+    if (!entry) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const artHtml = entry.idle
+      ? `<img id="discovery-art-img" src="${entry.idle}" width="${entry.sizePx || 128}" height="${entry.sizePx || 128}" style="image-rendering:pixelated" alt="">`
+      : entry.iconHtml || '';
+    overlay.innerHTML = `
+      <div class="panel modal-panel discovery-popup">
+        <div class="discovery-kind">${entry.kindLabel}</div>
+        <div class="discovery-art">${artHtml}</div>
+        <h3${entry.color ? ` style="color:${entry.color}"` : ''}>${escapeHtml(entry.title)}</h3>
+        ${entry.subtitle ? `<div class="small-text">${escapeHtml(entry.subtitle)}</div>` : ''}
+        ${entry.lore ? `<p class="flavor">${escapeHtml(entry.lore)}</p>` : ''}
+        ${entry.statLines && entry.statLines.length ? `<div class="discovery-stats">${entry.statLines.map(s => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''}
+        <button class="btn-primary" id="btn-close-discovery">Nice!</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    if (entry.idle && entry.frames && entry.frames.length) {
+      this.playLoopingAnimation(overlay.querySelector('#discovery-art-img'), entry.frames, 220);
+    }
+    const close = () => {
+      overlay.remove();
+      this._discoveryQueue.shift();
+      this.showNextDiscovery();
+    };
+    overlay.querySelector('#btn-close-discovery').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  },
+
+  // Pet/mount reveal - call with the kind and id right after confirming it
+  // wasn't already in ownedPets/ownedMounts (the caller already needs that
+  // check for its own "already owned" toast wording, so it's passed in
+  // rather than re-derived here). PET_MOUNT_ATTACK_ANIM supplies the attack-
+  // swing loop for the preview when that creature has one.
+  queuePetMountDiscovery(kind, id) {
+    const def = (kind === 'pet' ? PETS : MOUNTS)[id];
+    if (!def) return;
+    const anim = PET_MOUNT_ATTACK_ANIM[id];
+    this.queueDiscovery({
+      kindLabel: kind === 'pet' ? '🐾 New Pet' : '🐴 New Mount',
+      title: def.name,
+      subtitle: def.universe,
+      lore: def.desc,
+      idle: `assets/sprites/${id}.png`,
+      frames: anim ? anim.attackFrames : null,
+      sizePx: 128
+    });
+  },
+
+  // Weapon/armor reveal - checks + records pdata.seenGearDefIds itself
+  // (unlike the pet/mount version) since gear has no existing "already
+  // owned" array to piggyback on. Scoped to combat loot drops and the rare
+  // NPC legendary reward - genuine surprise moments - rather than every
+  // gear-granting path (shop/reputation purchases and crafting already show
+  // the player exactly what they're getting before they commit, so a reveal
+  // popup there would be redundant).
+  queueGearDiscovery(item) {
+    if (!item || !item.defId) return;
+    const pdata = Persistent.load();
+    if (pdata.seenGearDefIds.includes(item.defId)) return;
+    pdata.seenGearDefIds.push(item.defId);
+    Persistent.save();
+    const legendary = LEGENDARY_ITEMS[item.defId];
+    this.queueDiscovery({
+      kindLabel: item.slot === 'weapon' ? '⚔️ New Weapon' : '🛡️ New Gear',
+      title: item.name,
+      subtitle: `${RARITIES[item.rarity].label}${legendary ? ` · ${legendary.universe}` : ''}`,
+      color: RARITIES[item.rarity].color,
+      lore: legendary ? legendary.desc : null,
+      iconHtml: item.icon,
+      statLines: [this.describeItemStats(item)]
+    });
+  },
+
+  // Spell reveal - call right after confirming `id` wasn't already in
+  // pdata.unlockedSpells (same piggyback pattern as the pet/mount version).
+  queueSpellDiscovery(id) {
+    const sp = SPELLS[id];
+    if (!sp) return;
+    this.queueDiscovery({
+      kindLabel: '📖 New Spell',
+      title: sp.name,
+      subtitle: `Cooldown ${sp.cooldown}`,
+      iconHtml: `<img src="${sp.icon}" width="72" height="72" style="image-rendering:pixelated" alt="">`,
+      statLines: [sp.desc]
+    });
+  },
+
+  // Enemy reveal - fires from enterCombat for any enemy id not yet in
+  // pdata.seenEnemyIds. Skips PvP/Rival Ghost opponents (a random class
+  // reskin regenerated every fight, not a real bestiary entry). A
+  // class-trial guardian (id is a class id, e.g. 'paladin') has no plain
+  // creature sprite at assets/sprites/<id>.png the way a monster does, so it
+  // renders through characterSpriteFor (the same gear-aware class portrait
+  // the Sanctuary uses) instead of the idle/frames path.
+  checkEnemyDiscovery(enemy) {
+    if (!enemy || !enemy.id || enemy.pvpGhost || enemy.rivalGhost) return;
+    const pdata = Persistent.load();
+    if (pdata.seenEnemyIds.includes(enemy.id)) return;
+    pdata.seenEnemyIds.push(enemy.id);
+    Persistent.save();
+    const bossArt = BOSS_ART[enemy.id];
+    const monsterAnim = MONSTER_ATTACK_ANIM[enemy.id] || PET_MOUNT_ATTACK_ANIM[enemy.id];
+    const isClassLook = !bossArt && CLASS_LOOKS[enemy.id];
+    this.queueDiscovery({
+      kindLabel: enemy.boss ? '☠️ New Boss' : enemy.elite ? '👹 New Elite' : '⚔️ New Enemy',
+      title: bossArt ? bossArt.name : enemy.name,
+      statLines: [`HP ${enemy.hp}`, `ATK ${enemy.atk}`, `DEF ${enemy.def || 0}`, `SPD ${enemy.speed}`],
+      idle: isClassLook ? null : (bossArt ? bossArt.idle : `assets/sprites/${enemy.id}.png`),
+      frames: isClassLook ? null : (bossArt ? bossArt.attackFrames : (monsterAnim ? monsterAnim.attackFrames : null)),
+      iconHtml: isClassLook ? characterSpriteFor(enemy.id, 128) : null,
+      sizePx: 128
+    });
+  },
+
   // Compact "what just happened" line for the toast - the same facts
   // rewardLines() spells out in full sentences, just condensed to one row.
   autoToastSummary(title, reward) {
@@ -1552,6 +1692,7 @@ const App = {
         if (loot) pdata.inventory.push(loot);
         if (material) pdata.materials[material.kind] += material.amount;
         if (recipeItem) pdata.inventory.push(recipeItem);
+        if (loot) this.queueGearDiscovery(loot);
         if (loot && Persistent.getCharacter(Game.player.classId).autoEquip) this.autoEquipBestGear(Game.player.classId);
         Persistent.save();
       }
@@ -3142,6 +3283,7 @@ const App = {
           pdata.bankGold -= entry.price;
           pdata.unlockedSpells.push(id);
           Persistent.save();
+          this.queueSpellDiscovery(id);
           refresh();
         });
       });

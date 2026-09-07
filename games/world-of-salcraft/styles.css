@@ -1520,6 +1520,59 @@ button {
 @keyframes modalPopIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .armory-picker { margin: 0; }
 
+/* First-time discovery popup (see queueDiscovery/showNextDiscovery in
+   main.js) - a bigger, more ceremonial reveal than the plain list modals
+   above: large centered art, a kind label, lore, and a stat/ability
+   summary, for the first time a pet/mount/weapon/armor/spell is obtained
+   or an enemy is encountered. */
+.discovery-popup { max-width: 380px; text-align: center; }
+.discovery-kind {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(212,175,90,0.12);
+  border: 1px solid rgba(212,175,90,0.35);
+  border-radius: 20px;
+  padding: 3px 12px;
+  margin-bottom: 10px;
+}
+.discovery-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 128px;
+  margin-bottom: 10px;
+  /* Baseline for a plain-emoji icon (the 9 hand-placed GEAR_TEMPLATES and
+     every LEGENDARY_ITEMS entry use a bare emoji, not an image) - scales it
+     up to fill the art area instead of rendering at normal text size. */
+  font-size: 4.5rem;
+  line-height: 1;
+}
+.discovery-art img { max-width: 100%; }
+/* Gear/spell icons that ARE pre-built <img> tags (the procedural gear pool's
+   gearIconImg() output, spell icons) - scaled up here rather than
+   re-fetching a larger asset, since none exists at a bigger size. */
+.discovery-art .gear-icon { width: 96px !important; height: 96px !important; }
+.discovery-popup h3 { margin: 4px 0 2px; text-wrap: balance; }
+.discovery-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0;
+}
+.discovery-stats span {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+}
+.discovery-popup .btn-primary { margin-top: 8px; }
+
 .tutorial-steps { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
 .tutorial-step { display: flex; gap: 10px; align-items: flex-start; }
 .tutorial-step-icon { font-size: 1.4rem; flex-shrink: 0; line-height: 1.3; }
