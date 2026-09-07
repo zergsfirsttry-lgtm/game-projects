@@ -287,6 +287,22 @@ button {
   pointer-events: none;
   z-index: 4;
 }
+/* The impact beat when a charging node and the traveler meet (see
+   shakeScreen in map.js) - the whole viewport jolts once, distinct from
+   either combatant's own attack-swing animation. */
+.map-container.map-impact-shake { animation: mapImpactShake 0.32s ease-out; }
+@keyframes mapImpactShake {
+  0% { transform: translate(0, 0); }
+  15% { transform: translate(-7px, 3px); }
+  32% { transform: translate(6px, -4px); }
+  50% { transform: translate(-5px, 3px); }
+  68% { transform: translate(4px, -2px); }
+  84% { transform: translate(-2px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-container.map-impact-shake { animation: none; }
+}
 
 .map-scroll { position: relative; width: 320px; max-width: 100%; margin: 0 auto; }
 
@@ -484,7 +500,7 @@ button {
   transform: translateX(-50%);
   width: auto;
   height: 140%;
-  max-width: 200%;
+  max-width: 170%;
   object-fit: contain;
   image-rendering: pixelated;
   filter: drop-shadow(0 3px 2px rgba(0,0,0,0.5));

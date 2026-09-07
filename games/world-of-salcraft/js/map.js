@@ -380,6 +380,16 @@ const ANCHOR_Y_CLOSE = VIEW_HEIGHT * 0.78;
 const ROW_GAP_CLOSE = 145;
 const SCALE_STEP_CLOSE = 0.22;
 
+// Where a chosen node's charge animation actually meets the player (see
+// animateTravel) - the player starts at the anchor near the bottom and the
+// node starts wherever it currently sits (generally above, since future
+// rows unfold upward), and each one only closes HALF the gap to
+// IMPACT_Y, stopping short by IMPACT_GAP on their own side so the two
+// sprites visibly charge at each other without ever touching, whatever
+// either one's current art size happens to be.
+const IMPACT_Y = VIEW_HEIGHT * 0.5;
+const IMPACT_GAP = 34;
+
 function perspectiveScale(depth, scaleStep) {
   return Math.max(MIN_SCALE, 1 / (1 + Math.abs(depth) * scaleStep));
 }
@@ -392,16 +402,51 @@ function computeScreenPositions(map, currentRow, closeCam) {
   const rowGap = closeCam ? ROW_GAP_CLOSE : ROW_GAP_START;
   const scaleStep = closeCam ? SCALE_STEP_CLOSE : SCALE_STEP_START;
   const screen = {};
+  // The immediately-reachable row (depth===1) renders its node art much
+  // bigger than the plain type-icon circle this spacing math predates (see
+  // .map-node.has-art) - up to ~110px wide before it's even at full scale.
+  // Fanning depth-1 nodes out from center by an extra 35% (clamped back
+  // inside the viewport, same NODE_EDGE_MARGIN the map-generation jitter
+  // itself respects) keeps 2-4 reachable choices visibly separated instead
+  // of their art crowding/overlapping, without touching node.x itself
+  // (which the connecting lines and every other row still key off).
+  const NODE_EDGE_MARGIN = 40;
   const project = (node, depth, sy) => {
     const scale = perspectiveScale(depth, scaleStep);
-    screen[node.id] = { sx: centerX + (node.x - centerX) * scale, sy, scale };
+    const spread = depth === 1 ? 1.35 : 1;
+    let sx = centerX + (node.x - centerX) * scale * spread;
+    sx = clamp(sx, NODE_EDGE_MARGIN, MAP_WIDTH - NODE_EDGE_MARGIN);
+    screen[node.id] = { sx, sy, scale };
   };
 
   let cumUp = 0;
   for (let r = currentRow + 1; r <= currentRow + ROWS_AHEAD && r < map.rows.length; r++) {
     const depth = r - currentRow;
     cumUp += rowGap * perspectiveScale(depth, scaleStep);
-    (map.rows[r] || []).forEach(node => project(node, depth, anchorY - cumUp));
+    const rowNodes = map.rows[r] || [];
+    rowNodes.forEach(node => project(node, depth, anchorY - cumUp));
+    // Guarantee a real minimum gap between this reachable row's nodes - node
+    // art here can run up to ~95px wide (see .map-node-art), so the spread
+    // factor above alone isn't always enough, especially with 3-4
+    // simultaneous choices. When the row's natural (spread) span is too
+    // tight for MIN_NODE_GAP between every neighbor, it's redistributed to
+    // EXACTLY that minimum spacing, evenly, centered on where it naturally
+    // sat - a deterministic single pass rather than iterative nudging, so it
+    // can't leave a still-too-tight pair behind. Re-clamped to stay inside
+    // the viewport either way.
+    if (depth === 1 && rowNodes.length > 1) {
+      const MIN_NODE_GAP = 76;
+      const sorted = rowNodes.map(n => screen[n.id]).sort((a, b) => a.sx - b.sx);
+      const requiredSpan = (sorted.length - 1) * MIN_NODE_GAP;
+      const currentSpan = sorted[sorted.length - 1].sx - sorted[0].sx;
+      if (currentSpan < requiredSpan) {
+        const mean = sorted.reduce((s, p) => s + p.sx, 0) / sorted.length;
+        const start = clamp(mean - requiredSpan / 2, NODE_EDGE_MARGIN, MAP_WIDTH - NODE_EDGE_MARGIN - requiredSpan);
+        sorted.forEach((pos, i) => { pos.sx = start + i * MIN_NODE_GAP; });
+      } else {
+        sorted.forEach(pos => { pos.sx = clamp(pos.sx, NODE_EDGE_MARGIN, MAP_WIDTH - NODE_EDGE_MARGIN); });
+      }
+    }
   }
   let cumDown = 0;
   for (let r = currentRow - 1; r >= currentRow - ROWS_BEHIND && r >= 0; r--) {
@@ -579,12 +624,44 @@ function bloomForegroundTrees(container) {
 // to fully play out instead of getting cut off.
 const ARRIVAL_BUFFER_MS = 650;
 
-// The player never moves - instead, the chosen node's own marker travels
-// IN to meet the fixed, dead-center anchor (shrinking toward scale 1 as it
-// "arrives"), while every other node/line from this choice fades away.
-// Once it reaches the player, that's "arrival": the same leave/bloom (trees,
-// path) and landing-jump cues as before, just now triggered by the road
-// coming to you rather than you walking down it.
+// A brief camera-shake at the moment of impact (see animateTravel) - toggles
+// a class on the whole map viewport rather than the traveler/node
+// individually, since the "hit" should read as the ground/camera jolting,
+// not either combatant's own sprite jittering (that's what their attack
+// animations are for).
+function shakeScreen(container) {
+  container.classList.remove('map-impact-shake');
+  // Force reflow so re-adding the class restarts the animation even if a
+  // previous shake's tail end somehow overlaps this one (rapid clicking).
+  void container.offsetWidth;
+  container.classList.add('map-impact-shake');
+  container.addEventListener('animationend', () => container.classList.remove('map-impact-shake'), { once: true });
+}
+
+// The player's own attack-swing animation (the exact same WEAPON_ATTACK_ANIM
+// frames combat uses, see the analogous trigger in renderCombatScreen) - the
+// map traveler's rider gets this at the same impact moment the node's own
+// art plays its attack flourish, so the charge reads as two real
+// combatants clashing rather than one side just standing there.
+function playPlayerImpactSwing(traveler) {
+  if (!traveler || !Game.player) return;
+  const classId = Game.player.classId;
+  const weaponVisual = currentWeaponVisual(classId);
+  const anim = WEAPON_ATTACK_ANIM[`${classId}_${weaponVisual}`];
+  const riderImg = traveler.querySelector('.companion-rider .player-weapon-sprite');
+  if (anim && riderImg) playFrames(riderImg, anim.attackFrames, 90, false);
+}
+
+// The chosen node and the player both charge toward IMPACT_Y from their own
+// side (see the constant above) rather than the old "node travels the whole
+// way to a stationary player" - each stops short by IMPACT_GAP so the two
+// sprites visibly close the distance without ever touching. Every other
+// node/line from this choice fades away the same as before. Once both
+// arrive, that's "impact": a screen shake, the player's own attack swing,
+// and (for combat/elite/boss) the enemy's real attack flourish (see
+// nodePreviewArt) all fire together, then the same leave/bloom (trees,
+// path) and landing-jump cues bring the map back before the encounter
+// screen takes over.
 function animateTravel(container, targetPos, centerPos, nodeId, onSelect, map) {
   const traveler = container.querySelector('#map-traveler');
   const nodeEl = container.querySelector(`.map-node[data-node-id="${nodeId}"]`);
@@ -602,32 +679,42 @@ function animateTravel(container, targetPos, centerPos, nodeId, onSelect, map) {
     if (el !== nodeEl) el.classList.add('map-fading-out');
   });
 
-  const dist = Math.hypot(targetPos.sx - centerPos.sx, targetPos.sy - centerPos.sy);
+  const meetNodeY = IMPACT_Y - IMPACT_GAP;
+  const meetTravelerY = IMPACT_Y + IMPACT_GAP;
+  const dist = Math.hypot(targetPos.sx - centerPos.sx, targetPos.sy - meetNodeY);
   const duration = Math.round(clamp(dist * 2.6, 450, 1100));
 
   if (traveler) {
     traveler.classList.toggle('facing-left', targetPos.sx < centerPos.sx);
     traveler.classList.remove('idle-bob');
     traveler.classList.add('walking');
+    traveler.style.transition = `left ${duration}ms ease-in, top ${duration}ms ease-in`;
+    requestAnimationFrame(() => {
+      traveler.style.left = `${centerPos.sx}px`;
+      traveler.style.top = `${meetTravelerY}px`;
+    });
   }
   nodeEl.style.zIndex = '5';
   nodeEl.style.transition = `left ${duration}ms ease-in, top ${duration}ms ease-in, transform ${duration}ms ease-in`;
   requestAnimationFrame(() => {
     nodeEl.style.left = `${centerPos.sx}px`;
-    nodeEl.style.top = `${centerPos.sy}px`;
+    nodeEl.style.top = `${meetNodeY}px`;
     nodeEl.style.setProperty('--node-scale', '1');
   });
 
   setTimeout(() => {
-    // Arrived - the path has reached the player. Play the landing jump and
-    // bring the treeline/path back in while they actually watch it happen,
-    // instead of getting yanked straight into the next screen. A combat/
-    // elite/boss node also gets one playthrough of its enemy's actual attack
-    // swing right here (see nodePreviewArt) - held on for as long as
-    // needed instead of the plain ARRIVAL_BUFFER_MS, so the flourish is
-    // never cut off mid-swing before the encounter screen takes over.
+    // Impact - both sides have closed the distance. Play the landing jump,
+    // the player's own swing, the screen shake, and bring the treeline/path
+    // back in while they actually watch it happen, instead of getting
+    // yanked straight into the next screen. A combat/elite/boss node also
+    // gets one playthrough of its enemy's actual attack swing right here
+    // (see nodePreviewArt) - held on for as long as needed instead of the
+    // plain ARRIVAL_BUFFER_MS, so the flourish is never cut off mid-swing
+    // before the encounter screen takes over.
     if (traveler) { traveler.classList.remove('walking'); traveler.classList.add('jumping'); }
     bloomForegroundTrees(container);
+    shakeScreen(container);
+    playPlayerImpactSwing(traveler);
     const node = map && map.nodes[nodeId];
     const art = node && nodePreviewArt(node, map.act);
     const artImg = nodeEl.querySelector('.map-node-art');
