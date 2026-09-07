@@ -303,6 +303,18 @@ button {
   image-rendering: pixelated;
   z-index: 0;
 }
+/* Small landmark art scattered down the map's guaranteed-node-free side
+   margins (see renderZoneDecorations, map.js) - fills out the zone without
+   ever sitting under a node or path line. */
+.map-decorations { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.map-decoration {
+  position: absolute;
+  width: 24px;
+  height: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+  opacity: 0.92;
+}
 /* Brief zoom-and-fade travel cues (see leaveForegroundTrees/
    bloomForegroundTrees in map.js) standing in for the old walk animation -
    "leaving" pushes the world away as you set out, "blooming" brings the new
@@ -636,11 +648,36 @@ button {
   gap: 16px;
   align-items: flex-start;
   position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 10px;
+  margin: -10px -10px 0;
+}
+/* The current act's own zone map art (see .map-topdown-bg, map.js) reused
+   as the combat backdrop, so a fight visibly happens IN that zone rather
+   than on a flat panel background - set inline per-render (renderCombatScreen,
+   main.js) since the theme depends on Game.act. A soft dark scrim on top
+   keeps the HP bars/labels readable over busy artwork without hiding it. */
+.combat-arena-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: top center;
+  image-rendering: pixelated;
+  z-index: 0;
+}
+.combat-arena-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(10,7,3,0.32);
 }
 .combatant {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
-  background: var(--bg-panel-2);
+  background: rgba(45,35,18,0.85);
   border: 2px solid var(--border);
   border-radius: 6px;
   padding: 14px;
@@ -701,12 +738,25 @@ button {
 /* A WoW-style floating nameplate above the character's own head (not the
    mount/pet) - see renderCompanionRig() in progression.js. */
 .companion-rider { position: relative; }
+/* Wraps instead of a single nowrap line, and caps its width well below any
+   combatant column's own width - a long custom name plus an equipped title
+   (see displayCharacterName in progression.js) could otherwise render 200px+
+   wide on one line, which a narrow mobile combatant column (or the mount/pet
+   name tags' much narrower wrappers) can't contain, pushing part of the text
+   off the actual browser viewport. Centering (left:50%/translateX(-50%)) still
+   keeps it aligned above whichever sprite it's nested against - it just wraps
+   to 2-3 short lines instead of drifting wide when the name is long. */
 .nameplate {
   position: absolute;
   top: -15px;
   left: 50%;
   transform: translateX(-50%);
-  white-space: nowrap;
+  width: max-content;
+  max-width: min(120px, 38vw);
+  white-space: normal;
+  overflow-wrap: break-word;
+  text-align: center;
+  line-height: 1.15;
   font-size: 0.68rem;
   font-weight: 700;
   color: #ffd94a;
@@ -715,7 +765,7 @@ button {
 }
 /* A named mount/pet's nameplate (see companion-mount/companion-pet above) -
    same idea, scaled down to match their smaller sprite. */
-.nameplate-small { font-size: 0.56rem; top: -10px; }
+.nameplate-small { font-size: 0.56rem; top: -10px; max-width: min(80px, 30vw); }
 .combatant.enemy.elite { border-color: var(--bad); }
 .combatant.enemy.boss { border-color: var(--accent); }
 .combatant.enemy.spectral { border-color: var(--accent-2); box-shadow: 0 0 14px rgba(138,95,214,0.5); }

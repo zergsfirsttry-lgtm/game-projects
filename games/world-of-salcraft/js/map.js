@@ -240,6 +240,30 @@ function renderZoneTopdownMap(theme) {
   return `<div class="map-topdown-bg" style="background-image:url('assets/zone_maps/${theme.id}.png')"></div>`;
 }
 
+// The old side-view "3rd person scene" system's per-zone landmark art
+// (assets/scenes/<id>/fg.png - a single lone tree/plant/rock formation)
+// went unused once the map backdrop became one full-zone PixelLab painting
+// (renderZoneTopdownMap above) - scattered small down the map's own left/
+// right margins here instead of just sitting orphaned, filling out the
+// zone without competing with the painted backdrop's own landmarks (those
+// stay confined to the art's top quarter). Node x positions are always
+// clamped to [30, MAP_WIDTH-30] (see pickType/generateMap), so these two
+// ~28px-wide strips are guaranteed clear of every node and connecting line
+// at any depth/perspective scale - safe to decorate without ever blocking
+// the path or an encounter node. Scaled down to 24px wide, close to how
+// small the painted backdrop's own distant border trees read at this
+// viewport size.
+const MAP_DECORATION_Y_STEP = 72;
+function renderZoneDecorations(theme) {
+  const src = `assets/scenes/${theme.id}/fg.png`;
+  let html = '';
+  for (let y = 26; y < VIEW_HEIGHT; y += MAP_DECORATION_Y_STEP) {
+    html += `<img class="map-decoration" src="${src}" style="left:4px; top:${y}px" alt="">`;
+    html += `<img class="map-decoration" src="${src}" style="left:${MAP_WIDTH - 28}px; top:${y + MAP_DECORATION_Y_STEP / 2}px" alt="">`;
+  }
+  return `<div class="map-decorations">${html}</div>`;
+}
+
 // Two camera profiles: a wider establishing shot for the very first choice
 // (nothing chosen yet - `currentRow` is -1), and a tighter, closer-in
 // over-the-shoulder framing once the player has actually set out down the
@@ -383,6 +407,7 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
 
   container.innerHTML = `
     ${renderZoneTopdownMap(theme)}
+    ${renderZoneDecorations(theme)}
     <div class="map-scroll" style="height:${VIEW_HEIGHT}px">
       <div class="map-theme-label">${theme.name} · Act ${map.act}</div>
       <svg class="map-svg" width="${MAP_WIDTH}" height="${VIEW_HEIGHT}">${svgLines}${svgHitAreas}</svg>

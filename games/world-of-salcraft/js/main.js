@@ -1257,6 +1257,7 @@ const App = {
         ` : ''}
         ${this.renderCompanionParty(!!s.anim.player)}
         <div class="combat-arena">
+          <div class="combat-arena-bg" style="background-image:url('assets/zone_maps/${theme.id}.png')"></div>
           <div class="combatant player">
             <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE, companionAnim, weaponSlot)}</div>
             <div class="hp-bar-container">
@@ -1838,9 +1839,6 @@ const App = {
       <div class="sanctuary">
         <div class="sanctuary-header">
           <h2>Sanctuary</h2>
-          <div class="bank-summary">
-            <span>🎖️ ${pdata.honor} Honor</span>
-          </div>
         </div>
         ${classPicker}
         ${xpBar}
@@ -2634,7 +2632,7 @@ const App = {
     const foodItems = pdata.inventory.filter(i => i.slot === 'food');
     return `
       ${extraRows || ''}
-      ${this.categoryButtonRow('inv-bank', '🏦', 'Resource Bank', `${pdata.bankGold} gold and every material you've gathered`)}
+      ${this.categoryButtonRow('inv-bank', '🏦', 'Resource Bank', `${pdata.bankGold} gold, ${pdata.honor} Honor, and every material you've gathered`)}
       ${this.categoryButtonRow('inv-weapons', '⚔️', 'Weapons', `${weapons.length} owned - main hand/off hand/ranged`)}
       ${this.categoryButtonRow('inv-armor', '🛡️', 'Armor & Accessories', `${armor.length} owned - chest, helm, shoulders, cloak, rings, trinkets, and more`)}
       ${this.categoryButtonRow('inv-containers', '🎁', 'Containers', `${containers.length} owned`)}
@@ -2675,7 +2673,7 @@ const App = {
     this.showListModal('🏦 Resource Bank', () => {
       const pdata = Persistent.load();
       const rows = [
-        ['🪙', 'Gold', pdata.bankGold], ['⛏️', 'Ore', pdata.materials.ore], ['🧵', 'Leather', pdata.materials.leather],
+        ['🪙', 'Gold', pdata.bankGold], ['🎖️', 'Honor', pdata.honor], ['⛏️', 'Ore', pdata.materials.ore], ['🧵', 'Leather', pdata.materials.leather],
         ['🔮', 'Essence', pdata.materials.essence], ['🌿', 'Herbs', pdata.materials.herbs], ['🪵', 'Wood', pdata.materials.wood],
         ['🐟', 'Fish', pdata.materials.fish], ['✨', 'Dust', pdata.materials.dust], ['🔹', 'Shard', pdata.materials.shard], ['💠', 'Crystal', pdata.materials.crystal]
       ];
