@@ -1377,7 +1377,7 @@ const EFFECT_LEVER_LABELS = {
 const EFFECT_LEVER_IS_PERCENT = { critBonus: true, goldBonus: true, potionHealBonus: true, spellPower: true };
 function describeEffectLever(key, value) {
   const label = EFFECT_LEVER_LABELS[key] || key;
-  const shown = EFFECT_LEVER_IS_PERCENT[key] ? Math.round(value * 100) : value;
+  const shown = Math.round(EFFECT_LEVER_IS_PERCENT[key] ? value * 100 : value);
   return `${shown >= 0 ? '+' : ''}${shown}${label}`;
 }
 

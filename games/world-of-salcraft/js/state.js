@@ -198,10 +198,15 @@ const Game = {
       speed: Math.max(1, Math.round(Math.max(1, p.baseSpeed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + curse.speed + talent.speed + title.speed + moral.speed) * diffStatMult)),
       critBonus: boost(gear.critBonus + bonus.critBonus + companion.critBonus + buff.critBonus) + curse.critBonus + talent.critBonus + title.critBonus + pvpGear.critBonus + moral.critBonus,
       goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + curse.goldBonus + talent.goldBonus + title.goldBonus + reputation.goldBonus + moral.goldBonus,
-      lifesteal: boost(gear.lifesteal + bonus.lifesteal + companion.lifesteal + buff.lifesteal) + curse.lifesteal + talent.lifesteal + title.lifesteal + pvpGear.lifesteal + moral.lifesteal,
-      hpRegen: boost(gear.hpRegen + bonus.hpRegen + companion.hpRegen + buff.hpRegen) + curse.hpRegen + talent.hpRegen + title.hpRegen + moral.hpRegen,
-      executeBonus: boost(gear.executeBonus + bonus.executeBonus + companion.executeBonus + buff.executeBonus) + curse.executeBonus + talent.executeBonus + title.executeBonus + moral.executeBonus,
-      eliteSlayerAtk: boost(gear.eliteSlayerAtk + bonus.eliteSlayerAtk + companion.eliteSlayerAtk + buff.eliteSlayerAtk) + curse.eliteSlayerAtk + talent.eliteSlayerAtk + title.eliteSlayerAtk + moral.eliteSlayerAtk,
+      // These four are flat HP/damage amounts (like atk/def), not
+      // percentages - rounded here for the same reason atk/def/maxHp/speed
+      // are: the Gear Set Bonus's `boost()` multiplier is a continuous
+      // fraction (e.g. 34.7%), so a flat integer source (relic "+2 lifesteal")
+      // would otherwise drift into a non-integer display/combat value.
+      lifesteal: Math.round(boost(gear.lifesteal + bonus.lifesteal + companion.lifesteal + buff.lifesteal) + curse.lifesteal + talent.lifesteal + title.lifesteal + pvpGear.lifesteal + moral.lifesteal),
+      hpRegen: Math.round(boost(gear.hpRegen + bonus.hpRegen + companion.hpRegen + buff.hpRegen) + curse.hpRegen + talent.hpRegen + title.hpRegen + moral.hpRegen),
+      executeBonus: Math.round(boost(gear.executeBonus + bonus.executeBonus + companion.executeBonus + buff.executeBonus) + curse.executeBonus + talent.executeBonus + title.executeBonus + moral.executeBonus),
+      eliteSlayerAtk: Math.round(boost(gear.eliteSlayerAtk + bonus.eliteSlayerAtk + companion.eliteSlayerAtk + buff.eliteSlayerAtk) + curse.eliteSlayerAtk + talent.eliteSlayerAtk + title.eliteSlayerAtk + moral.eliteSlayerAtk),
       potionHealBonus: boost(gear.potionHealBonus + bonus.potionHealBonus + companion.potionHealBonus + buff.potionHealBonus) + curse.potionHealBonus + talent.potionHealBonus + title.potionHealBonus + profession.potionHealBonus + moral.potionHealBonus,
       spellPower: boost(gear.spellPower + bonus.spellPower + companion.spellPower + buff.spellPower) + curse.spellPower + talent.spellPower + title.spellPower + moral.spellPower,
       // Gear-enchant only for now (see Combat.comboChanceFor, ENCHANTS.savageMomentum) -

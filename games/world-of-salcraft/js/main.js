@@ -83,7 +83,7 @@ const App = {
   showWelcomeBack(result) {
     const cls = CLASSES[result.classId];
     const hours = result.elapsedMs / 3600000;
-    const timeLabel = hours < 1 ? `${Math.round(hours * 60)} minutes` : `${hours.toFixed(1)} hours`;
+    const timeLabel = hours < 1 ? `${Math.round(hours * 60)} minutes` : `${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'}`;
     const rec = Persistent.getCharacter(result.classId);
     const materialLines = Object.entries(result.materialsGained).map(([k, v]) => `+${v} ${k}`).join(', ');
     const itemLines = result.itemsGained.map(i => `<div>${i.icon} <span style="color:${RARITIES[i.rarity].color}">${RARITIES[i.rarity].label} ${i.name}</span></div>`).join('');
@@ -488,10 +488,19 @@ const App = {
     this.autoDialogueIfEnabled('.choice-list .choice-btn');
   },
 
+  // A wrong answer means fighting the actual creature you were trying to
+  // tame, not some unrelated random monster - PETS/MOUNTS entries carry no
+  // combat stats of their own (they're stat-bonus items, not enemy
+  // templates), so a random regular ENEMIES entry supplies the numeric
+  // baseline (kept within normal difficulty range) while id/name/icon are
+  // overridden to the real creature, so its own sprite and attack animation
+  // (see MONSTER_ATTACK_ANIM/PET_MOUNT_ATTACK_ANIM) show correctly in combat.
   resolveTamingDecisions(node) {
     if (node.tamingWrong === 0) { this.grantTamingReward(node); return; }
     node.tamingCombat = true;
-    this.enterCombat(node, scaleEnemy(ENEMIES[rand(0, ENEMIES.length - 1)], Game.act));
+    const reward = node.tamingReward;
+    const baseline = ENEMIES[rand(0, ENEMIES.length - 1)];
+    this.enterCombat(node, scaleEnemy({ ...baseline, id: reward.id, name: reward.def.name, icon: reward.def.icon }, Game.act));
   },
 
   grantTamingReward(node, combatReward) {
@@ -3568,7 +3577,7 @@ const App = {
         const pct = next ? Math.min(100, Math.round(((rep - tier.threshold) / (next.threshold - tier.threshold)) * 100)) : 100;
         return `<div class="gear-row">
           <div class="desc"><span>${theme.particle}</span><div>
-            <strong style="color:${theme.accent}">${theme.name}</strong> <span class="small-text">${tier.name}${idx > 0 ? ` (+${(idx * REPUTATION_GOLD_BONUS_PER_TIER * 100).toFixed(1)}% gold)` : ''}</span>
+            <strong style="color:${theme.accent}">${theme.name}</strong> <span class="small-text">${tier.name}${idx > 0 ? ` (+${Math.round(idx * REPUTATION_GOLD_BONUS_PER_TIER * 100)}% gold)` : ''}</span>
             <div class="xp-bar-wrap" style="margin-top:4px;width:180px"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
             <div class="small-text">${next ? `${rep} / ${next.threshold} to ${next.name}` : `${rep} rep - Exalted (max)`}</div>
           </div></div>
