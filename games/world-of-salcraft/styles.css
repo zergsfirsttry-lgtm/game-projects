@@ -1086,10 +1086,15 @@ button {
 /* AUTO's small "here's what just happened" toast (see showAutoToast in
    main.js) - stands in for the full-screen victory/reward panel so a fully
    automated run never needs a click. Fixed to the viewport (not the app
-   root) so it survives whatever screen re-renders underneath it. */
+   root) so it survives whatever screen re-renders underneath it. Docked to
+   the BOTTOM of the viewport rather than the top - every screen this fires
+   on (combat, events, world events, taming...) puts its artwork and
+   dialogue/log up top and its action buttons right after, so anchoring low
+   is the one spot that stays clear of both regardless of which screen is
+   underneath. */
 .auto-toast {
   position: fixed;
-  top: 14px;
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   max-width: 90vw;
@@ -1104,8 +1109,8 @@ button {
   pointer-events: none;
 }
 .auto-toast.auto-toast-hide { animation: autoToastOut 0.4s ease-in forwards; }
-@keyframes autoToastIn { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
-@keyframes autoToastOut { from { opacity: 1; } to { opacity: 0; transform: translate(-50%, -8px); } }
+@keyframes autoToastIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes autoToastOut { from { opacity: 1; } to { opacity: 0; transform: translate(-50%, 8px); } }
 
 /* Kyle the Bard's in-run tutorial (see maybeShowTutorial/showKyleOverlay in
    main.js) - a full-screen tap-catcher (so ANY tap dismisses it, not just a

@@ -131,7 +131,15 @@ const App = {
   showClassSelect() {
     this.selectedClass = null;
     const bestAct = Meta.load().bestAct;
-    const cards = Object.values(CLASSES).map(c => {
+    // Unlocked classes first (so the ones you can actually play aren't
+    // buried among locked cards), locked ones after - stable within each
+    // group, so the original CLASSES ordering still holds inside each half.
+    const orderedClasses = Object.values(CLASSES).slice().sort((a, b) => {
+      const aLocked = isClassUnlocked(a.id) ? 0 : 1;
+      const bLocked = isClassUnlocked(b.id) ? 0 : 1;
+      return aLocked - bLocked;
+    });
+    const cards = orderedClasses.map(c => {
       const unlocked = isClassUnlocked(c.id);
       const rec = Persistent.getCharacter(c.id);
       // The character's ACTUAL current stats (level, gear, talents, relics,
@@ -926,6 +934,23 @@ const App = {
     const healAmount = Math.round(stats.maxHp * 0.35 * restHealMult);
     const cookHealAmount = Math.round(stats.maxHp * 0.15 * restHealMult);
     const fishOwned = pdata.materials.fish;
+    // Meditate permanently lowers cooldowns toward a floor of 1 - once every
+    // equipped skill is already there, it would be a dead no-op, so it's
+    // hidden rather than left clickable-but-useless. Cooking is hidden
+    // outright (not just disabled) when there's no fish to cook at all.
+    const canMeditate = Game.player.skills.some(sk => sk.cooldown > 1);
+    const canCook = fishOwned > 0;
+    // Nothing useful left to offer at this campfire (full HP, nothing to
+    // meditate down, nothing to cook) - skip the screen entirely rather than
+    // show a fire with every option grayed out, and hand over a relic
+    // instead so the node isn't a complete dead stop.
+    if (Game.player.hp >= stats.maxHp && !canMeditate && !canCook) {
+      this.autoRelicChoice(() => {
+        this.showMap();
+        this.showAutoToast(`<strong>Nothing left for this fire to offer you.</strong><div class="small-text">You press on and find a relic along the way.</div>`);
+      });
+      return;
+    }
     this.root.innerHTML = `
       ${this.renderHud()}
       <div class="panel">
@@ -935,14 +960,16 @@ const App = {
           <div class="desc">🔥 Rest and recover ${healAmount} HP</div>
           <button class="btn-secondary" id="btn-rest-heal">Choose</button>
         </div>
+        ${canMeditate ? `
         <div class="rest-option">
           <div class="desc">⏱️ Meditate: reduce your skill's cooldown by 1 (min 1) permanently</div>
           <button class="btn-secondary" id="btn-rest-skill">Choose</button>
-        </div>
+        </div>` : ''}
+        ${canCook ? `
         <div class="rest-option">
-          <div class="desc">🍳 Cook a fish over the fire: +${cookHealAmount} HP and bonus Cooking XP ${fishOwned ? `(${fishOwned} 🐟 owned)` : '(no fish owned)'}</div>
-          <button class="btn-secondary" id="btn-rest-cook" ${fishOwned ? '' : 'disabled'}>Choose</button>
-        </div>
+          <div class="desc">🍳 Cook a fish over the fire: +${cookHealAmount} HP and bonus Cooking XP (${fishOwned} 🐟 owned)</div>
+          <button class="btn-secondary" id="btn-rest-cook">Choose</button>
+        </div>` : ''}
         <div id="outcome-slot"></div>
       </div>`;
     // Picking any option returns straight to the map - no separate Continue
@@ -968,7 +995,8 @@ const App = {
       const caught = tryCatchFish();
       finish(`You rest by the fire. +${healAmount} HP.${caught ? ' You catch a fish while resting!' : ''}`);
     });
-    document.getElementById('btn-rest-skill').addEventListener('click', () => {
+    const skillBtn = document.getElementById('btn-rest-skill');
+    if (skillBtn) skillBtn.addEventListener('click', () => {
       Game.player.skills.forEach(sk => { sk.cooldown = Math.max(1, sk.cooldown - 1); });
       Game.grantProfessionXp(rand(4, 9));
       const caught = tryCatchFish();
@@ -1433,12 +1461,6 @@ const App = {
     }
     el.classList.remove('auto-toast-hide');
     el.innerHTML = html;
-    // Docks just below the HUD (whatever screen is under it) rather than a
-    // fixed viewport offset, since the HUD's own height varies (it wraps
-    // curses/buffs/relics onto extra rows on a narrow screen) - a fixed
-    // offset would otherwise overlap the HUD on those rows.
-    const hud = document.querySelector('.hud');
-    el.style.top = hud ? `${Math.round(hud.getBoundingClientRect().bottom) + 8}px` : '14px';
     clearTimeout(this._autoToastTimer);
     this._autoToastTimer = setTimeout(() => { el.classList.add('auto-toast-hide'); }, durationMs || 3200);
   },
@@ -2525,7 +2547,6 @@ const App = {
     const weapons = pdata.inventory.filter(i => i.slot === 'weapon');
     const armor = pdata.inventory.filter(i => this.armorSlotKeys().includes(i.slot));
     const containers = pdata.inventory.filter(i => i.slot === 'container');
-    const recipeItems = pdata.inventory.filter(i => i.slot === 'recipe');
     const foodItems = pdata.inventory.filter(i => i.slot === 'food');
     return `
       ${extraRows || ''}
@@ -2533,7 +2554,6 @@ const App = {
       ${this.categoryButtonRow('inv-weapons', '⚔️', 'Weapons', `${weapons.length} owned - main hand/off hand/ranged`)}
       ${this.categoryButtonRow('inv-armor', '🛡️', 'Armor & Accessories', `${armor.length} owned - chest, helm, shoulders, cloak, rings, trinkets, and more`)}
       ${this.categoryButtonRow('inv-containers', '🎁', 'Containers', `${containers.length} owned`)}
-      ${this.categoryButtonRow('inv-recipes', '📜', 'Recipes', `${recipeItems.length} owned - consumed to permanently upgrade a Crafting recipe`)}
       ${this.categoryButtonRow('inv-food', '🍗', 'Food', `${foodItems.length} owned - eat for a 1-hour buff, or feed to a pet/mount at the House`)}
       ${this.categoryButtonRow('inv-spells', '🔮', 'Spells', `for ${cls.name}`)}
       ${this.categoryButtonRow('inv-relics', '💠', 'Permanent Relics', `${pdata.permanentRelics.length} owned - always active, every run, every class`)}
@@ -2554,7 +2574,6 @@ const App = {
       'inv-weapons': () => this.showInvWeaponsModal(classId, onClose),
       'inv-armor': () => this.showInvArmorModal(classId, onClose),
       'inv-containers': () => this.showInvContainersModal(classId, onClose),
-      'inv-recipes': () => this.showInvRecipesModal(classId, onClose),
       'inv-food': () => this.showInvFoodModal(classId, onClose),
       'inv-spells': () => this.showInvSpellsModal(classId, onClose),
       'inv-relics': () => this.showInvRelicsModal(classId, onClose),
@@ -2574,8 +2593,13 @@ const App = {
         ['🔮', 'Essence', pdata.materials.essence], ['🌿', 'Herbs', pdata.materials.herbs], ['🪵', 'Wood', pdata.materials.wood],
         ['🐟', 'Fish', pdata.materials.fish], ['✨', 'Dust', pdata.materials.dust], ['🔹', 'Shard', pdata.materials.shard], ['💠', 'Crystal', pdata.materials.crystal]
       ];
-      return rows.map(([icon, label, amount]) => `<div class="gear-row"><div class="desc"><span>${icon}</span><div><strong>${label}</strong></div></div><div class="small-text">${amount}</div></div>`).join('');
-    }, () => {}, onClose);
+      const recipeCount = pdata.inventory.filter(i => i.slot === 'recipe').length;
+      return rows.map(([icon, label, amount]) => `<div class="gear-row"><div class="desc"><span>${icon}</span><div><strong>${label}</strong></div></div><div class="small-text">${amount}</div></div>`).join('')
+        + this.categoryButtonRow('bank-recipes', '📜', 'Recipes', `${recipeCount} owned - consumed to permanently upgrade a Crafting recipe`);
+    }, (overlay, refresh) => {
+      const btn = overlay.querySelector('[data-open-category="bank-recipes"]');
+      if (btn) btn.addEventListener('click', () => this.showInvRecipesModal(classId, refresh));
+    }, onClose);
   },
 
   showInvWeaponsModal(classId, onClose) {

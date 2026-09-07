@@ -10,10 +10,10 @@
 // each); `playerStatMult` (only Extreme touches this) scales the player's
 // own final atk/def/maxHp/speed down (see the end of effectiveStats()).
 const DIFFICULTIES = {
-  easy: { id: 'easy', name: 'Easy', resourceMult: 1.5, enemyMult: 1, playerStatMult: 1, desc: '+50% resources, experience, and gold gained.' },
+  easy: { id: 'easy', name: 'Easy', resourceMult: 1.25, enemyMult: 1, playerStatMult: 1, desc: '+25% resources, experience, and gold gained.' },
   normal: { id: 'normal', name: 'Normal', resourceMult: 1, enemyMult: 1, playerStatMult: 1, desc: 'The game as designed - no modifiers.' },
-  hard: { id: 'hard', name: 'Hard', resourceMult: 0.5, enemyMult: 1.5, playerStatMult: 1, desc: '-50% resources, experience, and gold gained. Enemies get +50% health, damage, and defense.' },
-  extreme: { id: 'extreme', name: 'Extreme', resourceMult: 0.25, enemyMult: 2, playerStatMult: 0.85, desc: '-75% resources, experience, and gold gained. Your stats are reduced by 15%. Enemies get +100% health, damage, and defense.' }
+  hard: { id: 'hard', name: 'Hard', resourceMult: 1.5, enemyMult: 1.5, playerStatMult: 1, desc: '+50% resources, experience, and gold gained. Enemies get +50% health, damage, and defense.' },
+  extreme: { id: 'extreme', name: 'Extreme', resourceMult: 1.75, enemyMult: 2, playerStatMult: 0.85, desc: '+75% resources, experience, and gold gained. Your stats are reduced by 15%. Enemies get +100% health, damage, and defense.' }
 };
 
 // Spell catalog. `type` drives the generic damage-resolution formula in combat.js:
