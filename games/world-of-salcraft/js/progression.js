@@ -1857,8 +1857,8 @@ function renderCompanionRig(classId, sizePx, companionAnim, weaponSlot) {
   // smaller sprite.
   const name = displayCharacterName(classId);
   const nameplate = `<span class="nameplate">${escapeHtml(name)}</span>`;
-  const mountName = mountId ? getCompanionProgress('mount', mountId).name : '';
-  const petName = petId ? getCompanionProgress('pet', petId).name : '';
+  const mountName = mountId ? companionDisplayName('mount', mountId, MOUNTS[mountId]) : '';
+  const petName = petId ? companionDisplayName('pet', petId, PETS[petId]) : '';
   const mountNameplate = mountName ? `<span class="nameplate nameplate-small">${escapeHtml(mountName)}</span>` : '';
   const petNameplate = petName ? `<span class="nameplate nameplate-small">${escapeHtml(petName)}</span>` : '';
   const actingClass = (kind) => (companionAnim && companionAnim[kind]) ? 'companion-acting' : '';

@@ -61,6 +61,9 @@ const Game = {
     // Jakesteel (see enterJakesteelEncounter in main.js) can only be offered
     // once per run, win/lose/sacrifice - reset fresh on every new run.
     this.jakesteelOfferedThisRun = false;
+    // A World Event (see generateMap in map.js) can appear on at most one
+    // act's map per run, not once per act - reset fresh on every new run.
+    this.worldEventPlacedThisRun = false;
     this.player.hp = this.effectiveStats().maxHp;
     // Persistent side-effects (XP/levels, loot, materials, tamed pets/mounts,
     // trial unlocks, quest progress) all save immediately as they happen

@@ -423,13 +423,45 @@ button {
   50% { box-shadow: 0 0 13px rgba(138,95,214,0.8); }
 }
 
+/* The map key, collapsed under a single centered toggle (native
+   <details>/<summary>, same no-JS pattern as .shop-category) instead of a
+   permanently-visible row of 15 icon/label pairs eating vertical space
+   above the map's own action buttons. */
+.map-legend-details {
+  margin-top: 10px;
+  text-align: center;
+}
+.map-legend-details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel-2);
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.map-legend-details summary::-webkit-details-marker { display: none; }
+.map-legend-details summary::after { content: '▸'; transition: transform 0.15s ease; }
+.map-legend-details[open] summary::after { transform: rotate(90deg); }
+.map-legend-details summary:hover { border-color: var(--accent); color: var(--text); }
 .map-legend {
   display: flex;
-  gap: 12px;
+  justify-content: center;
+  gap: 10px 16px;
   flex-wrap: wrap;
   font-size: 0.72rem;
   color: var(--text-dim);
-  margin-top: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 .btn-abandon-run { margin-top: 10px; width: 100%; opacity: 0.85; }
@@ -680,7 +712,11 @@ button {
   background: rgba(45,35,18,0.85);
   border: 2px solid var(--border);
   border-radius: 6px;
-  padding: 14px;
+  /* Extra top clearance (vs. 14px on every other side) so a 3-line
+     nameplate (long custom name + a long title - see .nameplate) always
+     has headroom above this box's own top edge, even for a boss sprite
+     tall enough to leave little empty space above it in the portrait box. */
+  padding: 34px 14px 14px;
   text-align: center;
   box-shadow: inset 0 0 0 1px rgba(212,175,90,0.08);
 }
@@ -748,7 +784,7 @@ button {
    to 2-3 short lines instead of drifting wide when the name is long. */
 .nameplate {
   position: absolute;
-  top: -15px;
+  top: -8px;
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -757,7 +793,11 @@ button {
   overflow-wrap: break-word;
   text-align: center;
   line-height: 1.15;
-  font-size: 0.68rem;
+  /* Scales with the combatant column's own width (same min(...,vw) proxy
+     the max-width above uses) instead of a fixed size, so it shrinks
+     gracefully on a narrow phone instead of forcing a long name+title to
+     wrap onto extra lines and push higher above the sprite. */
+  font-size: clamp(0.58rem, 2.6vw, 0.68rem);
   font-weight: 700;
   color: #ffd94a;
   text-shadow: 0 1px 2px #000, 0 0 4px #000, 0 0 4px #000;
@@ -765,7 +805,7 @@ button {
 }
 /* A named mount/pet's nameplate (see companion-mount/companion-pet above) -
    same idea, scaled down to match their smaller sprite. */
-.nameplate-small { font-size: 0.56rem; top: -10px; max-width: min(80px, 30vw); }
+.nameplate-small { font-size: clamp(0.48rem, 2.1vw, 0.56rem); top: -6px; max-width: min(80px, 30vw); }
 .combatant.enemy.elite { border-color: var(--bad); }
 .combatant.enemy.boss { border-color: var(--accent); }
 .combatant.enemy.spectral { border-color: var(--accent-2); box-shadow: 0 0 14px rgba(138,95,214,0.5); }

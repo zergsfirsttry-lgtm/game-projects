@@ -325,12 +325,12 @@ const App = {
     this.root.innerHTML = `
       ${this.renderHud()}
       <div class="map-container" id="map-container"></div>
-      <div class="map-legend">
-        <span>⚔️ Battle</span><span>👹 Elite</span><span>❓ Unknown</span>
-        <span>🔥 Rest</span><span>💰 Shop</span><span>🎁 Treasure</span>
-        <span>🌟 Class Trial</span><span>👑 Legendary</span><span>🐾 Wild Creature</span><span>🐈 Glowing Witch</span>
-        <span>🎭 Rare Encounter</span><span>🐕 Legendary Creature</span><span>☠️ Boss</span>
-      </div>
+      <details class="map-legend-details">
+        <summary>🗝️ Legend</summary>
+        <div class="map-legend">
+          ${Object.values(NODE_TYPES).map(t => `<span>${t.icon} ${t.label}</span>`).join('')}
+        </div>
+      </details>
       <button class="btn-secondary" id="btn-inrun-inventory">🎒 Inventory</button>
       <button class="btn-secondary btn-abandon-run" id="btn-abandon-run">🏠 Return to Sanctuary</button>`;
     const container = document.getElementById('map-container');
@@ -479,12 +479,12 @@ const App = {
   },
 
   resolveTamingDecisions(node) {
-    if (node.tamingWrong === 0) { this.grantTamingReward(node, true); return; }
+    if (node.tamingWrong === 0) { this.grantTamingReward(node); return; }
     node.tamingCombat = true;
     this.enterCombat(node, scaleEnemy(ENEMIES[rand(0, ENEMIES.length - 1)], Game.act));
   },
 
-  grantTamingReward(node, autoTamed, combatReward) {
+  grantTamingReward(node, combatReward) {
     const reward = node.tamingReward;
     const pdata = Persistent.load();
     const owned = reward.kind === 'pet' ? pdata.ownedPets : pdata.ownedMounts;
@@ -493,29 +493,8 @@ const App = {
     Game.grantProfessionXp(rand(4, 9));
     grantReputation(getActTheme(Game.act).id, 15);
     Persistent.save();
-    if (this.autoCombat) {
-      this.showAutoToast(combatReward ? this.autoToastSummary(`${reward.def.icon} ${reward.def.name} tamed!`, combatReward) : `<strong>${reward.def.icon} ${reward.def.name} tamed!</strong>`);
-      this.showMap();
-      return;
-    }
-    const lines = [
-      autoTamed
-        ? 'Reading its every move perfectly, you win its trust completely - it is tamed without a fight.'
-        : `After a hard-fought battle, the ${reward.def.name} accepts you as its companion.`,
-      ...(combatReward ? this.rewardLines(combatReward) : []),
-      `${reward.def.icon} <strong>${reward.def.name}</strong> (${reward.def.universe}) ${alreadyOwned ? 'reaffirms its bond with you' : `joins you permanently as a ${reward.kind}`}.`,
-      reward.def.desc,
-      'Visit the Sanctuary to equip it.'
-    ];
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel taming-encounter">
-        <h2>Tamed!</h2>
-        <div class="outcome-box">${lines.join('<br>')}</div>
-        <button class="btn-primary" id="btn-continue">Continue</button>
-      </div>`;
-    document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+    this.showAutoToast(combatReward ? this.autoToastSummary(`${reward.def.icon} ${reward.def.name} tamed!`, combatReward) : `<strong>${reward.def.icon} ${reward.def.name} tamed!</strong><div class="small-text">${alreadyOwned ? 'Bond reaffirmed' : `Joins you as a ${reward.kind}`} - visit the Sanctuary to equip it.</div>`);
+    this.showMap();
   },
 
   // ---------------- Jess (rare cat/kitten vendor) ----------------
@@ -609,6 +588,8 @@ const App = {
 
   claimRareNpcReward(node) {
     const npc = RARE_NPCS[node.rareNpcId];
+    const rewardDef = npc.rewardKind === 'legendary' ? LEGENDARY_ITEMS[npc.rewardId]
+      : npc.rewardKind === 'mount' ? MOUNTS[npc.rewardId] : PETS[npc.rewardId];
     const pdata = Persistent.load();
     pdata.metRareNpcs.push(node.rareNpcId);
     if (npc.rewardKind === 'legendary') {
@@ -624,11 +605,7 @@ const App = {
     Game.grantProfessionXp(rand(4, 9));
     grantReputation(getActTheme(Game.act).id, 15);
     Persistent.save();
-    if (this.autoCombat) {
-      this.showAutoToast(`<strong>${npc.name} rewards you!</strong>`);
-      this.showMap();
-      return;
-    }
+    this.showAutoToast(`<strong>${npc.name} rewards you!</strong><div class="small-text">${rewardDef.icon} ${rewardDef.name}</div>`);
     this.showMap();
   },
 
@@ -711,15 +688,8 @@ const App = {
 
   sacrificeToJakesteel(node) {
     Game.player.relics = [];
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel">
-        <h2>Jakesteel</h2>
-        <div class="outcome-box">Jakesteel steps aside without a word, hefting his axe back onto his shoulder as you pass. Every relic you carried is gone - the toll's been paid.</div>
-        <button class="btn-primary" id="btn-continue">Continue</button>
-      </div>`;
-    document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+    this.showAutoToast(`<strong>Jakesteel steps aside.</strong><div class="small-text">The toll is paid - every relic you carried is gone.</div>`);
+    this.showMap();
   },
 
   // Mirrors the account's own strongest character ("champion") at the
@@ -789,15 +759,8 @@ const App = {
     const zoneId = getActTheme(Game.act).id;
     const theme = ACT_THEMES.find(t => t.id === zoneId);
     grantReputation(zoneId, 60);
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel">
-        <h2>${we.name}</h2>
-        <div class="outcome-box">You step in and stop it before it can finish. Word spreads fast - your standing with ${theme.name} grows.<br>+60 Reputation.</div>
-        <button class="btn-primary" id="btn-continue">Continue</button>
-      </div>`;
-    document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+    this.showAutoToast(`<strong>${we.name} averted.</strong><div class="small-text">+60 Reputation with ${theme.name}</div>`, 4200);
+    this.showMap();
   },
 
   // Letting the event play out grants no reputation - instead a unique,
@@ -817,20 +780,11 @@ const App = {
     Persistent.save();
     const rewardDef = (we.rewardKind === 'pet' ? PETS : MOUNTS)[we.rewardId];
     const rewardLine = rewardIsNew
-      ? `${rewardDef.icon} <strong>${rewardDef.name}</strong> joins your Sanctuary - visit the House tab.`
-      : `${rewardDef.icon} ${rewardDef.name} is already yours.`;
-    const titleLine = titleIsNew
-      ? `Title earned: <strong>${TITLES[we.titleKey].name}</strong> - equip it from the Character tab.`
-      : '';
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel">
-        <h2>${we.name}</h2>
-        <div class="outcome-box">${we.allowFlavor}<br>${rewardLine}${titleLine ? `<br>${titleLine}` : ''}</div>
-        <button class="btn-primary" id="btn-continue">Continue</button>
-      </div>`;
-    document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
+      ? `${rewardDef.icon} ${rewardDef.name} joins your Sanctuary`
+      : `${rewardDef.icon} ${rewardDef.name} (already owned)`;
+    const titleLine = titleIsNew ? `Title earned: ${TITLES[we.titleKey].name}` : '';
+    this.showAutoToast(`<strong>${we.name}</strong><div class="small-text">${rewardLine}${titleLine ? ` · ${titleLine}` : ''}</div>`, 4200);
+    this.showMap();
   },
 
   // A rare map encounter that offers to permanently unlock a bonus class. The
@@ -899,36 +853,19 @@ const App = {
   },
 
   showWaveCleared(g, reward) {
-    const lines = [`Wave ${g.waveIndex - 1} of ${g.totalWaves} cleared.`, ...this.rewardLines(reward), 'A short respite heals you before the next wave.'];
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel legendary-encounter">
-        <h2>Legendary Encounter - Wave ${g.waveIndex} of ${g.totalWaves}</h2>
-        <div class="outcome-box">${lines.join('<br>')}</div>
-        <button class="btn-primary" id="btn-next-wave">Continue the Gauntlet</button>
-      </div>`;
-    document.getElementById('btn-next-wave').addEventListener('click', () => this.showRelicChoice(() => this.startGauntletWave()));
+    this.showAutoToast(this.autoToastSummary(`Wave ${g.waveIndex - 1} of ${g.totalWaves} cleared`, reward));
+    const nextWave = () => this.startGauntletWave();
+    if (this.autoCombat) this.autoRelicChoice(nextWave);
+    else this.showRelicChoice(nextWave);
   },
 
   showLegendaryReward(item, reward) {
     const def = LEGENDARY_ITEMS[item.defId];
-    const lines = [
-      `You have cleared the gauntlet!`,
-      ...this.rewardLines(reward),
-      `<strong style="color:${RARITIES.legendary.color}">${item.icon} ${item.name}</strong> (${def.universe}) is yours.`,
-      def.desc,
-      'Visit the Sanctuary to equip it.'
-    ];
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel legendary-encounter">
-        <h2>Legendary!</h2>
-        <div class="outcome-box">${lines.join('<br>')}</div>
-        <button class="btn-primary" id="btn-continue">Continue</button>
-      </div>`;
-    document.getElementById('btn-continue').addEventListener('click', () => this.showRelicChoice(() => this.showMap()));
+    let toastHtml = this.autoToastSummary('Gauntlet cleared!', reward);
+    toastHtml += `<div class="small-text" style="color:${RARITIES.legendary.color}">${item.icon} ${item.name}</div>`;
+    this.showAutoToast(toastHtml, 4200);
+    if (this.autoCombat) this.autoRelicChoice(() => this.showMap());
+    else this.showRelicChoice(() => this.showMap());
   },
 
   // ---------------- Event ----------------
@@ -944,7 +881,6 @@ const App = {
         <div class="choice-list" id="choice-list">
           ${event.choices.map((c, i) => `<button class="choice-btn" data-idx="${i}">${c.label}</button>`).join('')}
         </div>
-        <div id="outcome-slot"></div>
       </div>`;
     this.root.querySelectorAll('.choice-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -953,10 +889,7 @@ const App = {
         const lines = applyOutcome(outcome);
         Game.grantProfessionXp(rand(4, 9));
         this.refreshHud();
-        this.root.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
-        document.getElementById('outcome-slot').innerHTML = `
-          <div class="outcome-box">${lines.join('<br>')}</div>
-          <button class="btn-primary" id="btn-continue" style="margin-top:10px">Continue</button>`;
+        this.showAutoToast(`<div class="small-text">${lines.join('<br>')}</div>`, 4200);
         this.checkDeathThen(() => this.showMap());
       });
     });
@@ -966,31 +899,15 @@ const App = {
   // ---------------- Treasure ----------------
   showTreasure(node) {
     const reward = generateTreasureReward();
-    const lines = applyOutcome({ text: 'You discover a cache of treasure.', gold: reward.gold, relic: reward.relic, item: reward.item });
-    if (reward.bonusRelic) {
-      Game.player.relics.push(reward.bonusRelic);
-      lines.push(`Your archaeological eye spots something buried deeper: ${RELICS[reward.bonusRelic].name}!`);
-    }
+    applyOutcome({ text: 'You discover a cache of treasure.', gold: reward.gold, relic: reward.relic, item: reward.item });
+    if (reward.bonusRelic) Game.player.relics.push(reward.bonusRelic);
     Game.grantProfessionXp(rand(4, 9));
-    if (this.autoCombat) {
-      const parts = [`+${reward.gold}🪙`];
-      if (reward.relic) parts.push(RELICS[reward.relic].name);
-      if (reward.item) parts.push(ITEMS[reward.item].name);
-      if (reward.bonusRelic) parts.push(RELICS[reward.bonusRelic].name);
-      this.showAutoToast(`<strong>Treasure!</strong><div class="small-text">${parts.join(' · ')}</div>`);
-      this.showMap();
-      return;
-    }
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel">
-        <h2>Treasure</h2>
-        <div class="outcome-box">${lines.join('<br>')}</div>
-        <button class="btn-primary" id="btn-continue">Continue</button>
-      </div>`;
-    document.getElementById('btn-continue').addEventListener('click', () => this.showMap());
-    this.maybeShowTutorial('treasure');
+    const parts = [`+${reward.gold}🪙`];
+    if (reward.relic) parts.push(RELICS[reward.relic].name);
+    if (reward.item) parts.push(ITEMS[reward.item].name);
+    if (reward.bonusRelic) parts.push(RELICS[reward.bonusRelic].name);
+    this.showAutoToast(`<strong>Treasure!</strong><div class="small-text">${parts.join(' · ')}</div>`);
+    this.showMap();
   },
 
   // ---------------- Rest ----------------
@@ -1285,9 +1202,7 @@ const App = {
 
         <div class="combat-log" id="combat-log">${s.log.map(l => `<div>${l}</div>`).join('')}</div>
 
-        ${s.over ? (this.autoCombat ? '' : `
-          <button class="btn-primary" id="btn-combat-continue">Continue</button>
-        `) : `
+        ${s.over ? '' : `
           <div class="combat-actions">
             <button id="act-attack" ${inputLocked ? 'disabled' : ''}>Attack</button>
             ${p.skills.map((skill, i) => `
@@ -1349,8 +1264,7 @@ const App = {
     }
 
     if (s.over) {
-      if (this.autoCombat) setTimeout(() => { if (Game.player && Combat.state === s) this.resolveCombatEnd(node); }, 500);
-      else document.getElementById('btn-combat-continue').addEventListener('click', () => this.resolveCombatEnd(node));
+      setTimeout(() => { if (Game.player && Combat.state === s) this.resolveCombatEnd(node); }, 500);
       return;
     }
 
@@ -1516,6 +1430,12 @@ const App = {
     }
     el.classList.remove('auto-toast-hide');
     el.innerHTML = html;
+    // Docks just below the HUD (whatever screen is under it) rather than a
+    // fixed viewport offset, since the HUD's own height varies (it wraps
+    // curses/buffs/relics onto extra rows on a narrow screen) - a fixed
+    // offset would otherwise overlap the HUD on those rows.
+    const hud = document.querySelector('.hud');
+    el.style.top = hud ? `${Math.round(hud.getBoundingClientRect().bottom) + 8}px` : '14px';
     clearTimeout(this._autoToastTimer);
     this._autoToastTimer = setTimeout(() => { el.classList.add('auto-toast-hide'); }, durationMs || 3200);
   },
@@ -1567,7 +1487,7 @@ const App = {
         const goldReward = Game.addGold(rand(s.enemy.gold[0], s.enemy.gold[1]));
         const xpReward = Math.max(4, Math.round(s.enemy.maxHp * 0.6));
         const levelResult = Game.grantXp(xpReward);
-        this.grantTamingReward(node, false, { goldReward, xpReward, levelResult });
+        this.grantTamingReward(node, { goldReward, xpReward, levelResult });
         return;
       }
       if (node.jakesteelDuel) {
@@ -1624,21 +1544,9 @@ const App = {
     if (!pdata.unlockedClasses.includes(classId)) pdata.unlockedClasses.push(classId);
     const goldReward = Game.addGold(rand(enemy.gold[0], enemy.gold[1]));
     Persistent.save();
-    if (this.autoCombat) {
-      this.showAutoToast(`<strong>${CLASSES[classId].name} unlocked!</strong><div class="small-text">+${goldReward}🪙</div>`);
-      this.autoRelicChoice(() => this.showMap());
-      return;
-    }
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel">
-        <h2>Trial Complete!</h2>
-        <div class="outcome-box">You have proven yourself worthy of the ${CLASSES[classId].name}.<br>
-        <strong>${CLASSES[classId].name} unlocked!</strong> Choose it on your next adventure.<br>+${goldReward} Gold.</div>
-        <button class="btn-primary" id="btn-continue">Continue</button>
-      </div>`;
-    document.getElementById('btn-continue').addEventListener('click', () => this.showRelicChoice(() => this.showMap()));
+    this.showAutoToast(`<strong>${CLASSES[classId].name} unlocked!</strong><div class="small-text">+${goldReward}🪙 · choose it on your next adventure</div>`);
+    if (this.autoCombat) this.autoRelicChoice(() => this.showMap());
+    else this.showRelicChoice(() => this.showMap());
   },
 
   // Shown after every successful combat encounter (regular fights, bosses,
@@ -1689,21 +1597,9 @@ const App = {
   },
 
   showCombatReward(reward, enemy) {
-    if (this.autoCombat) {
-      this.showAutoToast(this.autoToastSummary(`Defeated ${enemy.name}`, reward));
-      this.autoRelicChoice(() => this.showMap());
-      return;
-    }
-    const lines = [`Defeated ${enemy.name}.`, ...this.rewardLines(reward)];
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel">
-        <h2>Victory</h2>
-        <div class="outcome-box">${lines.join('<br>')}</div>
-        <button class="btn-primary" id="btn-continue">Continue</button>
-      </div>`;
-    document.getElementById('btn-continue').addEventListener('click', () => this.showRelicChoice(() => this.showMap()));
+    this.showAutoToast(this.autoToastSummary(`Defeated ${enemy.name}`, reward));
+    if (this.autoCombat) this.autoRelicChoice(() => this.showMap());
+    else this.showRelicChoice(() => this.showMap());
   },
 
   // The adventure is limitless - there's no final act. Every act completed
@@ -1718,37 +1614,12 @@ const App = {
       Game.player.curses.push(curseId);
       cursedThisAct = CURSES[curseId];
     }
-    const advance = () => {
-      this.autoRelicChoice(() => {
-        Game.act += 1;
-        Game.startAct();
-        this.showMap();
-      });
-    };
-    if (this.autoCombat) {
-      let toastHtml = this.autoToastSummary(`Act ${Game.act} Complete`, reward);
-      if (cursedThisAct) toastHtml += `<div class="small-text" style="color:#c0392b">Cursed: ${cursedThisAct.icon} ${cursedThisAct.name}</div>`;
-      this.showAutoToast(toastHtml);
-      advance();
-      return;
-    }
-    const lines = ['You struck down the act boss.', ...this.rewardLines(reward)];
-    if (cursedThisAct) lines.push(`<strong style="color:#c0392b">A curse falls upon you: ${cursedThisAct.icon} ${cursedThisAct.name}</strong> - ${cursedThisAct.desc}`);
-    this.root.innerHTML = `
-      ${this.renderHud()}
-      ${this.renderZoneBanner()}
-      <div class="panel">
-        <h2>Act ${Game.act} Complete</h2>
-        <div class="outcome-box">${lines.join('<br>')}</div>
-        <button class="btn-primary" id="btn-next">Adventure Onward</button>
-      </div>`;
-    document.getElementById('btn-next').addEventListener('click', () => {
-      this.showRelicChoice(() => {
-        Game.act += 1;
-        Game.startAct();
-        this.showMap();
-      });
-    });
+    const nextAct = () => { Game.act += 1; Game.startAct(); this.showMap(); };
+    let toastHtml = this.autoToastSummary(`Act ${Game.act} Complete`, reward);
+    if (cursedThisAct) toastHtml += `<div class="small-text" style="color:#c0392b">Cursed: ${cursedThisAct.icon} ${cursedThisAct.name}</div>`;
+    this.showAutoToast(toastHtml, 4200);
+    if (this.autoCombat) this.autoRelicChoice(nextAct);
+    else this.showRelicChoice(nextAct);
   },
 
   // ---------------- Game over ----------------
@@ -4287,16 +4158,12 @@ const App = {
   },
 
   checkDeathThen(fn) {
-    const btn = document.getElementById('btn-continue');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      if (Game.isDead()) {
-        Game.recordRunEnd(false);
-        this.showGameOver(false);
-      } else {
-        fn();
-      }
-    });
+    if (Game.isDead()) {
+      Game.recordRunEnd(false);
+      this.showGameOver(false);
+    } else {
+      fn();
+    }
   }
 };
 

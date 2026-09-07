@@ -47,7 +47,7 @@ function pickType(rowIndex) {
   if (roll < 0.39) return 'combat';
   if (roll < 0.49) return 'elite';
   if (roll < 0.66) return 'event';
-  if (roll < 0.70) return 'worldEvent'; // capped to 1 per act in generateMap regardless of how many nodes roll this
+  if (roll < 0.70) return 'worldEvent'; // capped to 1 per RUN in generateMap regardless of how many nodes roll this
   if (roll < 0.78) return 'rest';
   if (roll < 0.86) return 'shop';
   if (roll < 0.94) return 'treasure';
@@ -63,11 +63,13 @@ function pickType(rowIndex) {
 function generateMap(act) {
   const rows = [];
   let idCounter = 0;
-  // At most one World Event node per act (see WORLD_EVENTS in data.js) -
-  // capped here at generation time (the whole map's nodes all get their
-  // type rolled up front, unlike Jakesteel's once-per-run cap, which has to
-  // resolve at visit time since only one branch of the map is ever walked).
-  let worldEventPlaced = false;
+  // At most one World Event node across the WHOLE RUN, not once per act -
+  // capped here at generation time via the run-scoped Game.worldEventPlacedThisRun
+  // flag (see newRun in state.js), same idea as Jakesteel's once-per-run cap
+  // except this one resolves at map-generation time since the whole map's
+  // nodes all get their type rolled up front (Jakesteel instead resolves at
+  // visit time since only one branch of the map is ever walked).
+  let worldEventPlaced = Game.worldEventPlacedThisRun;
 
   for (let r = 0; r < REGULAR_ROWS; r++) {
     const count = r === REGULAR_ROWS - 1 ? 2 : rand(3, 4);
@@ -78,7 +80,7 @@ function generateMap(act) {
       let type = pickType(r);
       if (type === 'worldEvent') {
         if (worldEventPlaced) type = 'event';
-        else worldEventPlaced = true;
+        else { worldEventPlaced = true; Game.worldEventPlacedThisRun = true; }
       }
       nodes.push({
         id: `n${idCounter++}`,
