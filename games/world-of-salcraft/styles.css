@@ -152,6 +152,17 @@ button {
 .class-card h3 { margin: 6px 0 4px; }
 .class-card p { font-size: 0.8rem; color: var(--text-dim); margin: 4px 0; }
 .class-card .class-stats { font-size: 0.78rem; color: var(--accent); margin-top: 8px; }
+.class-card .class-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px 12px;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(212,175,90,0.15);
+}
 .class-card.locked { cursor: not-allowed; opacity: 0.55; filter: grayscale(0.6); }
 .class-card.locked:hover { transform: none; border-color: var(--border); }
 
@@ -676,6 +687,17 @@ button {
 }
 .companion-mount.companion-acting, .companion-pet.companion-acting { animation: companionAttackLunge 0.5s ease; }
 
+/* Pet/mount art (see CREATURE_ART_IDS) is drawn facing left, correct for an
+   enemy on the right side of the arena facing the player - but the same art
+   on the PLAYER's side (their own equipped mount/pet) would then face away
+   from the enemy, so it's mirrored here. Applied to the img/svg itself
+   rather than the .companion-mount/.companion-pet wrapper so it doesn't
+   fight the lunge animation's own `transform` above. */
+.combatant.player .companion-mount img, .combatant.player .companion-mount svg,
+.combatant.player .companion-pet img, .combatant.player .companion-pet svg {
+  transform: scaleX(-1);
+}
+
 /* A WoW-style floating nameplate above the character's own head (not the
    mount/pet) - see renderCompanionRig() in progression.js. */
 .companion-rider { position: relative; }
@@ -694,7 +716,6 @@ button {
 /* A named mount/pet's nameplate (see companion-mount/companion-pet above) -
    same idea, scaled down to match their smaller sprite. */
 .nameplate-small { font-size: 0.56rem; top: -10px; }
-.combatant .name { font-weight: bold; margin: 6px 0 4px; }
 .combatant.enemy.elite { border-color: var(--bad); }
 .combatant.enemy.boss { border-color: var(--accent); }
 .combatant.enemy.spectral { border-color: var(--accent-2); box-shadow: 0 0 14px rgba(138,95,214,0.5); }

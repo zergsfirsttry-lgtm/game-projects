@@ -121,7 +121,7 @@ const App = {
         <button class="btn-secondary title-btn" id="btn-how-to-play">❔ How to Play</button>
         <label class="title-skip-tutorials">
           <input type="checkbox" id="chk-skip-tutorials" ${pdata.skipTutorials ? 'checked' : ''}>
-          Skip Tutorials (Kyle the Bard's in-run tips)
+          Skip Tutorials
         </label>
       </div>`;
     document.getElementById('btn-new-run').addEventListener('click', () => this.showClassSelect());
@@ -144,7 +144,6 @@ const App = {
     const cards = Object.values(CLASSES).map(c => {
       const unlocked = isClassUnlocked(c.id);
       const rec = Persistent.getCharacter(c.id);
-      const spells = equippedSpellIds(rec, c).map(id => SPELLS[id]);
       // The character's ACTUAL current stats (level, gear, talents, relics,
       // Gear Set Bonus, everything) - not the class's flat base numbers, so
       // this screen reflects who that character really is right now.
@@ -155,8 +154,10 @@ const App = {
         <h3>${c.name} ${unlocked ? `<span class="small-text">Lv.${rec.level}</span>` : ''}</h3>
         ${unlocked ? `
           <p>${c.blurb}</p>
-          <div class="class-stats">HP ${stats.maxHp} · ATK ${stats.atk} · DEF ${stats.def} · SPD ${stats.speed}</div>
-          ${spells.map(spell => `<div class="class-stats">${spell.name}: ${spell.desc}</div>`).join('')}
+          <div class="class-stat-grid">
+            <span>HP ${stats.maxHp}</span><span>ATK ${stats.atk}</span>
+            <span>DEF ${stats.def}</span><span>SPD ${stats.speed}</span>
+          </div>
         ` : `
           <p class="small-text">🔒 Locked</p>
           <p class="small-text">Win this class's Class Trial (a rare map encounter) to unlock it.</p>
@@ -1079,7 +1080,6 @@ const App = {
         <div class="combat-arena">
           <div class="combatant player">
             <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE, companionAnim, weaponSlot)}</div>
-            <div class="name">${p.className}</div>
             <div class="hp-bar-container">
               <div class="hp-bar-wrap ${hpFlashClass('player')}"${hpFlashStyleAttr('player')}><div class="hp-bar-fill" style="width:${Math.round((p.hp/stats.maxHp)*100)}%"></div></div>
             </div>
@@ -1087,9 +1087,9 @@ const App = {
           </div>
           <div class="combatant enemy ${s.enemy.elite ? 'elite' : ''} ${s.enemy.boss ? 'boss' : ''} ${s.enemy.spectral ? 'spectral' : ''}">
             <div class="portrait ${this.animClass(s.anim.enemy, false)}" style="${!s.enemy.spectral ? `filter:${theme.enemyTint}` : ''}">
+              <span class="nameplate">${escapeHtml(s.enemy.name)}</span>
               ${anyCharacterSvg(s.enemy.id, epicEnemySize(s.enemy))}
             </div>
-            <div class="name">${s.enemy.name}</div>
             <div class="hp-bar-container">
               <div class="hp-bar-wrap ${hpFlashClass('enemy')}"${hpFlashStyleAttr('enemy')}><div class="hp-bar-fill" style="width:${Math.round((s.enemy.hp/s.enemy.maxHp)*100)}%"></div></div>
               ${critText ? `<div class="floating-crit">CRITICAL!<br>-${critText.dmg}</div>` : ''}

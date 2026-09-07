@@ -235,11 +235,17 @@ function renderZoneTopdownMap(theme) {
 // rather than the player walking out to it), so there's no "camera trailing
 // behind a moving character" anymore, just a fixed point the road unfolds
 // around.
-const ANCHOR_Y_START = VIEW_HEIGHT / 2;
+// Anchored low rather than dead center so the player visibly starts at the
+// bottom of the screen and each future row unfolds upward toward the top of
+// the frame - matching the zone art (see renderZoneTopdownMap), which always
+// puts its landmarks in the top quarter and open road below. The one row
+// behind (ROWS_BEHIND) can crop against the bottom edge (.map-container's
+// overflow:hidden) rather than push the anchor back toward center.
+const ANCHOR_Y_START = VIEW_HEIGHT * 0.78;
 const ROW_GAP_START = 118;
 const SCALE_STEP_START = 0.17;
 
-const ANCHOR_Y_CLOSE = VIEW_HEIGHT / 2;
+const ANCHOR_Y_CLOSE = VIEW_HEIGHT * 0.78;
 const ROW_GAP_CLOSE = 145;
 const SCALE_STEP_CLOSE = 0.22;
 
