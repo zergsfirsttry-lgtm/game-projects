@@ -157,16 +157,30 @@ const App = {
       // Gear Set Bonus, everything) - not the class's flat base numbers, so
       // this screen reflects who that character really is right now.
       const stats = unlocked ? previewClassStats(c.id) : null;
+      // Custom name + equipped title (displayCharacterName, falls back to
+      // the plain class name with no title) plus equipped pet/mount, if
+      // any - so this screen shows who this character actually IS right
+      // now, not just which class slot they occupy. Class name moves to a
+      // subtitle only when a custom name/title makes it worth repeating.
+      const displayName = unlocked ? displayCharacterName(c.id) : c.name;
+      const showClassSubtitle = unlocked && displayName !== c.name;
+      const petId = unlocked ? rec.equipped.pet : null;
+      const mountId = unlocked ? rec.equipped.mount : null;
+      const companionParts = [];
+      if (mountId && MOUNTS[mountId]) companionParts.push(`🐴 ${escapeHtml(companionDisplayName('mount', mountId, MOUNTS[mountId]))}`);
+      if (petId && PETS[petId]) companionParts.push(`🐾 ${escapeHtml(companionDisplayName('pet', petId, PETS[petId]))}`);
       return `
       <button type="button" class="class-card ${unlocked ? '' : 'locked'}" data-class="${c.id}" ${unlocked ? '' : 'disabled'}>
         <div class="class-icon">${characterSpriteFor(c.id, 88)}</div>
-        <h3>${c.name} ${unlocked ? `<span class="small-text">Lv.${rec.level}</span>` : ''}</h3>
+        <h3>${escapeHtml(displayName)} ${unlocked ? `<span class="small-text">Lv.${rec.level}</span>` : ''}</h3>
+        ${showClassSubtitle ? `<p class="small-text class-subtitle">${c.name}</p>` : ''}
         ${unlocked ? `
           <p>${c.blurb}</p>
           <div class="class-stat-grid">
             <span>HP ${stats.maxHp}</span><span>ATK ${stats.atk}</span>
             <span>DEF ${stats.def}</span><span>SPD ${stats.speed}</span>
           </div>
+          ${companionParts.length ? `<div class="small-text class-companions">${companionParts.join(' · ')}</div>` : ''}
         ` : `
           <p class="small-text">🔒 Locked</p>
           <p class="small-text">Win this class's Class Trial (a rare map encounter) to unlock it.</p>
@@ -357,7 +371,10 @@ const App = {
       if (rank > bestRank) { bestRank = rank; bestId = id; }
     });
     const el = container.querySelector(`.map-node[data-node-id="${bestId}"]`);
-    if (el) setTimeout(() => el.click(), 400);
+    // Re-check autoCombat at fire time, not just when this was scheduled -
+    // the player can uncheck it during this 400ms beat, and without this
+    // the queued click would still walk them into a node they never chose.
+    if (el) setTimeout(() => { if (this.autoCombat && el.isConnected) el.click(); }, 400);
   },
 
   // A stripped-down equip screen reachable mid-adventure - re-gearing between
@@ -1476,7 +1493,11 @@ const App = {
     const buttons = Array.from(this.root.querySelectorAll(selector)).filter(b => !b.disabled);
     if (!buttons.length) return;
     const pick = buttons[rand(0, buttons.length - 1)];
-    setTimeout(() => { if (pick.isConnected) pick.click(); }, 550);
+    // Re-check autoDialogue (not just at the top of this function) at fire
+    // time too - the player can uncheck it during this 550ms beat, and
+    // without this the queued click would fire anyway, silently overriding
+    // a decision they just made to take back manual control.
+    setTimeout(() => { if (this.autoDialogue && pick.isConnected) pick.click(); }, 550);
   },
 
   decideAutoAction() {
@@ -1577,6 +1598,15 @@ const App = {
   // taming that also happens to be a new-enemy encounter) show one at a
   // time instead of stacking overlays.
   queueDiscovery(entry) {
+    // Auto Combat means the player isn't necessarily watching the screen -
+    // a modal that blocks input (and queues up further reveals behind it,
+    // see showNextDiscovery) would just interrupt an unattended run for no
+    // one to see. The existing toast notifications (Defeated/tamed/etc.)
+    // already surface the same moment, so just skip the popup outright -
+    // the caller has already updated the "seen" tracking (seenEnemyIds,
+    // seenGearDefIds, ownedPets/ownedMounts) before reaching here, so this
+    // never shows later either; that's fine, it's a first-time reveal.
+    if (this.autoCombat) return;
     this._discoveryQueue = this._discoveryQueue || [];
     this._discoveryQueue.push(entry);
     if (this._discoveryQueue.length === 1) this.showNextDiscovery();
