@@ -1427,6 +1427,11 @@ const App = {
     this.renderCombatScreen(node);
     const s = Combat.state;
     if (!s.over && s.locked) {
+      // Auto Combat runs unattended, so it defaults to the same pacing as a
+      // manual fight - but that reads as a blur when there's no one clicking
+      // between rounds. Stretching the enemy-reply beat (see
+      // continueAutoIfEnabled's own beat below) while Auto Combat is on
+      // slows the whole loop down enough to actually follow.
       setTimeout(() => {
         // The run/match this timer belongs to may have already ended (e.g.
         // the player abandoned the run) before this fires - Combat.state is
@@ -1436,7 +1441,7 @@ const App = {
         Combat.resolveEnemyTurn();
         this.renderCombatScreen(node);
         this.continueAutoIfEnabled(node);
-      }, 700);
+      }, this.autoCombat ? 1200 : 700);
     } else {
       this.continueAutoIfEnabled(node);
     }
@@ -1475,7 +1480,9 @@ const App = {
 
   continueAutoIfEnabled(node) {
     if (this.autoCombat && Combat.state && !Combat.state.over) {
-      setTimeout(() => this.performAutoAction(node), 500);
+      // Slowed to match runPlayerAction's own auto-only pacing above - a
+      // longer beat before Auto throws the next round's action.
+      setTimeout(() => this.performAutoAction(node), 900);
     }
   },
 

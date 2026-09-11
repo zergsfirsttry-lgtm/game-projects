@@ -422,12 +422,19 @@ function renderZoneTopdownMap(theme) {
 // puts its landmarks in the top quarter and open road below. The one row
 // behind (ROWS_BEHIND) can crop against the bottom edge (.map-container's
 // overflow:hidden) rather than push the anchor back toward center.
-const ANCHOR_Y_START = VIEW_HEIGHT * 0.78;
-const ROW_GAP_START = 118;
+// Pushed further toward the true bottom/top edges than the original 0.78/
+// 118-145 values - the current node should read as standing at the very
+// bottom of the view frame with the reachable row stationed at the very
+// top, not just "lower/higher within a mostly-centered frame". Safe to push
+// this far because .map-traveler anchors by its FEET (translate(-50%,-100%),
+// see styles.css) rather than its center, so raising anchorY only eats into
+// headroom above it, never clips its bottom.
+const ANCHOR_Y_START = VIEW_HEIGHT * 0.94;
+const ROW_GAP_START = 440;
 const SCALE_STEP_START = 0.17;
 
-const ANCHOR_Y_CLOSE = VIEW_HEIGHT * 0.78;
-const ROW_GAP_CLOSE = 145;
+const ANCHOR_Y_CLOSE = VIEW_HEIGHT * 0.94;
+const ROW_GAP_CLOSE = 460;
 const SCALE_STEP_CLOSE = 0.22;
 
 // Where a chosen node's charge animation actually meets the player (see
@@ -469,23 +476,46 @@ function computeScreenPositions(map, currentRow, closeCam) {
     screen[node.id] = { sx, sy, scale };
   };
 
+  // Reachable-row art size scales UP the fewer choices there are to fit -
+  // "same size as the player, up to 100% larger" (see .map-node-art in
+  // styles.css) is only geometrically possible when there's room: 4
+  // simultaneous ~106px-wide sprites can't all fit non-overlapping in the
+  // 240px-wide usable span (NODE_EDGE_MARGIN each side of MAP_WIDTH=320) no
+  // matter the gap, so a single choice gets to run big while a packed
+  // 4-choice row stays close to its old size. Each tier's own gap is sized
+  // to roughly the same width/gap tolerance the original 170%/76px pairing
+  // already shipped with (real sprite art rarely fills its full bounding
+  // box, so a little numeric overlap tolerance was already the norm) -
+  // never LESS spacing than that original 76px, and clamped so
+  // (count-1)*gap can never exceed the 240px usable span.
+  const ART_SIZE_TIERS = {
+    1: { w: 360, h: 295, gap: 76 },
+    2: { w: 285, h: 235, gap: 128 },
+    3: { w: 230, h: 190, gap: 102 },
+    4: { w: 190, h: 156, gap: 80 }
+  };
+
   let cumUp = 0;
   for (let r = currentRow + 1; r <= currentRow + ROWS_AHEAD && r < map.rows.length; r++) {
     const depth = r - currentRow;
     cumUp += rowGap * perspectiveScale(depth, scaleStep);
     const rowNodes = map.rows[r] || [];
     rowNodes.forEach(node => project(node, depth, anchorY - cumUp));
+    if (depth === 1) {
+      const tier = ART_SIZE_TIERS[clamp(rowNodes.length, 1, 4)];
+      rowNodes.forEach(node => { screen[node.id].artW = tier.w; screen[node.id].artH = tier.h; });
+    }
     // Guarantee a real minimum gap between this reachable row's nodes - node
-    // art here can run up to ~95px wide (see .map-node-art), so the spread
-    // factor above alone isn't always enough, especially with 3-4
+    // art here can run well past 100px wide at the smaller-row tiers above,
+    // so the spread factor alone isn't always enough, especially with 3-4
     // simultaneous choices. When the row's natural (spread) span is too
-    // tight for MIN_NODE_GAP between every neighbor, it's redistributed to
-    // EXACTLY that minimum spacing, evenly, centered on where it naturally
-    // sat - a deterministic single pass rather than iterative nudging, so it
-    // can't leave a still-too-tight pair behind. Re-clamped to stay inside
-    // the viewport either way.
+    // tight for this tier's own gap between every neighbor, it's
+    // redistributed to EXACTLY that spacing, evenly, centered on where it
+    // naturally sat - a deterministic single pass rather than iterative
+    // nudging, so it can't leave a still-too-tight pair behind. Re-clamped
+    // to stay inside the viewport either way.
     if (depth === 1 && rowNodes.length > 1) {
-      const MIN_NODE_GAP = 76;
+      const MIN_NODE_GAP = ART_SIZE_TIERS[clamp(rowNodes.length, 1, 4)].gap;
       const sorted = rowNodes.map(n => screen[n.id]).sort((a, b) => a.sx - b.sx);
       const requiredSpan = (sorted.length - 1) * MIN_NODE_GAP;
       const currentSpan = sorted[sorted.length - 1].sx - sorted[0].sx;
@@ -605,7 +635,12 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
       : art
         ? `<img class="map-node-art" src="${art.idle}" alt="${info.label}" data-frames-ready="${art.kind === 'ambient' ? '0' : '1'}">`
         : `<span class="map-node-icon">${info.icon}</span>`;
-    nodesHtml += `<div class="${classes.join(' ')} ${art ? 'has-art' : ''}" style="left:${pos.sx}px; top:${pos.sy}px; --node-scale:${pos.scale.toFixed(3)}" data-node-id="${node.id}" title="${info.label}"
+    // Row-density-scaled art size (see ART_SIZE_TIERS in computeScreenPositions)
+    // only applies to the reachable row itself - falls back to .map-node-art's
+    // own CSS default for the current/boss node, which never shares a row
+    // with other choices to worry about crowding.
+    const artSizeVars = pos.artW ? ` --node-art-w:${pos.artW}%; --node-art-h:${pos.artH}%;` : '';
+    nodesHtml += `<div class="${classes.join(' ')} ${art ? 'has-art' : ''}" style="left:${pos.sx}px; top:${pos.sy}px; --node-scale:${pos.scale.toFixed(3)};${artSizeVars}" data-node-id="${node.id}" title="${info.label}"
       ${isAvailable ? 'role="button" tabindex="0"' : ''}>
       ${iconHtml}
     </div>`;
@@ -742,10 +777,25 @@ function animateTravel(container, targetPos, centerPos, nodeId, onSelect, map) {
     if (el !== nodeEl) el.classList.add('map-fading-out');
   });
 
-  const meetNodeY = IMPACT_Y - IMPACT_GAP;
-  const meetTravelerY = IMPACT_Y + IMPACT_GAP;
+  // A sparse reachable row (see ART_SIZE_TIERS, computeScreenPositions)
+  // renders its node up to ~2x the baseline size - the fixed IMPACT_GAP
+  // tuned for that baseline isn't enough clearance for the bigger art, so
+  // it scales up with however much taller this specific node's art is
+  // (targetPos.artH, set per-tier above; 156 is tier 4's baseline height%,
+  // i.e. no scale-up for the common crowded-row case). The 1.2x pad is
+  // slack for the sprite's own extent beyond its plain bounding box
+  // (drop-shadow, the companion rig's mount/pet reaching past the rider).
+  const artSizeFactor = targetPos.artH ? Math.max(1, (targetPos.artH / 156) * 1.2) : 1;
+  const impactGap = Math.round(IMPACT_GAP * artSizeFactor);
+  const meetNodeY = IMPACT_Y - impactGap;
+  const meetTravelerY = IMPACT_Y + impactGap;
   const dist = Math.hypot(targetPos.sx - centerPos.sx, targetPos.sy - meetNodeY);
-  const duration = Math.round(clamp(dist * 2.6, 450, 1100));
+  // Auto Combat runs the map unattended (see autoPickPath, main.js) - at
+  // normal speed the charge-to-center animation reads as a blur with no one
+  // clicking between hops, so it's stretched while Auto Combat is on to
+  // match the same slowdown applied to combat's own round pacing
+  // (runPlayerAction/continueAutoIfEnabled, main.js).
+  const duration = Math.round(clamp(dist * 2.6, 450, 1100) * (App.autoCombat ? 1.6 : 1));
 
   if (traveler) {
     traveler.classList.toggle('facing-left', targetPos.sx < centerPos.sx);
