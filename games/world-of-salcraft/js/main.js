@@ -1089,8 +1089,11 @@ const App = {
   // (always worth it while affordable, no HP dependency), then healing
   // items scaled to how low current HP actually is (skipped entirely once
   // HP is mostly full), then anything else left over as long as it doesn't
-  // spend the player's last GOLD_RESERVE gold. Re-renders once at the end
-  // if it bought anything, so the buttons reflect what's left.
+  // spend the player's last GOLD_RESERVE gold. Once it's made every
+  // purchase it's going to make for this visit, the shop closes itself
+  // (back to the map) instead of sitting open for a "Leave Shop" click
+  // that won't come in an unattended run - same idea as suppressing
+  // discovery popups under Auto Combat (see queueDiscovery).
   autoShopHealItemIds: ['potion', 'bigPotion', 'antidote'],
   autoShopReserveGold: 20,
   autoBuyShopItems() {
@@ -1099,7 +1102,6 @@ const App = {
     if (!node.stock) return;
     const stats = Game.effectiveStats();
     const hpPct = Game.player.hp / stats.maxHp;
-    let bought = false;
     const tryBuy = (entry) => {
       if (entry.bought || Game.player.gold < entry.price) return false;
       Game.player.gold -= entry.price;
@@ -1108,17 +1110,15 @@ const App = {
       else Game.player.relics.push(entry.id);
       return true;
     };
-    node.stock.filter(e => e.kind === 'relic').forEach(entry => { if (tryBuy(entry)) bought = true; });
+    node.stock.filter(e => e.kind === 'relic').forEach(entry => tryBuy(entry));
     if (hpPct < 0.85) {
-      node.stock.filter(e => e.kind === 'item' && this.autoShopHealItemIds.includes(e.id)).forEach(entry => {
-        if (tryBuy(entry)) bought = true;
-      });
+      node.stock.filter(e => e.kind === 'item' && this.autoShopHealItemIds.includes(e.id)).forEach(entry => tryBuy(entry));
     }
     node.stock.filter(e => e.kind === 'item' && !this.autoShopHealItemIds.includes(e.id)).forEach(entry => {
       if (entry.bought || Game.player.gold - entry.price < this.autoShopReserveGold) return;
-      if (tryBuy(entry)) bought = true;
+      tryBuy(entry);
     });
-    if (bought) this.renderShopScreen(node);
+    this.showMap();
   },
 
   renderShopScreen(node) {
