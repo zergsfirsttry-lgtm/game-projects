@@ -141,8 +141,16 @@ function generateMap(act) {
   // flag (see newRun in state.js), same idea as Jakesteel's once-per-run cap
   // except this one resolves at map-generation time since the whole map's
   // nodes all get their type rolled up front (Jakesteel instead resolves at
-  // visit time since only one branch of the map is ever walked).
+  // visit time since only one branch of the map is ever walked). On top of
+  // that per-run cap, World Event and Witch Jess are now also gated by a
+  // cross-run cooldown (see isRareEncounterReady in data.js) - "special, not
+  // regular" - so even a run that WOULD roll one skips it if it showed up
+  // too recently. Downgrades to a plain 'event' when gated, same fallback
+  // worldEvent already used for the per-run cap.
   let worldEventPlaced = Game.worldEventPlacedThisRun;
+  const worldEventReady = isRareEncounterReady('worldEvent', 5);
+  let witchJessPlaced = Game.witchJessPlacedThisRun;
+  const witchJessReady = isRareEncounterReady('witchJess', 10);
 
   for (let r = 0; r < REGULAR_ROWS; r++) {
     const count = r === REGULAR_ROWS - 1 ? 2 : rand(3, 4);
@@ -151,9 +159,13 @@ function generateMap(act) {
       const baseX = (MAP_WIDTH / (count + 1)) * (i + 1);
       const jitter = rand(-18, 18);
       let type = pickType(r);
+      if (type === 'witchJess') {
+        if (witchJessPlaced || !witchJessReady) type = 'event';
+        else { witchJessPlaced = true; Game.witchJessPlacedThisRun = true; markRareEncounterSeen('witchJess'); }
+      }
       if (type === 'worldEvent') {
-        if (worldEventPlaced) type = 'event';
-        else { worldEventPlaced = true; Game.worldEventPlacedThisRun = true; }
+        if (worldEventPlaced || !worldEventReady) type = 'event';
+        else { worldEventPlaced = true; Game.worldEventPlacedThisRun = true; markRareEncounterSeen('worldEvent'); }
       }
       nodes.push({
         id: `n${idCounter++}`,
@@ -171,17 +183,18 @@ function generateMap(act) {
 
   // Force guarantees so a long act still has reliable pacing: rests at the
   // midpoint and just before the boss, a couple of shops and treasures spread out.
-  // Both guaranteed rests are exempt from the no-two-rests-in-a-row pass
-  // below (forcedRestIds) so that pass can never undo them.
-  const forcedRestIds = new Set();
+  // Every one of these forced placements is exempt from the
+  // no-same-type-twice-in-a-row pass below (forcedNodeIds) so that pass can
+  // never undo a guarantee this section just made.
+  const forcedNodeIds = new Set();
   const lastRow = rows[REGULAR_ROWS - 1];
   const lastRestNode = lastRow[rand(0, lastRow.length - 1)];
   lastRestNode.type = 'rest';
-  forcedRestIds.add(lastRestNode.id);
+  forcedNodeIds.add(lastRestNode.id);
   const midpointRow = rows[Math.floor(REGULAR_ROWS / 2)];
   const midRestNode = midpointRow[rand(0, midpointRow.length - 1)];
   midRestNode.type = 'rest';
-  forcedRestIds.add(midRestNode.id);
+  forcedNodeIds.add(midRestNode.id);
 
   // Excludes the midpoint row itself - otherwise this could pick that same
   // row for a shop/treasure and overwrite its one guaranteed rest node
@@ -198,7 +211,9 @@ function generateMap(act) {
     }
     usedRowIndexes.add(idx);
     const row = midRows[idx];
-    row[rand(0, row.length - 1)].type = type;
+    const forcedNode = row[rand(0, row.length - 1)];
+    forcedNode.type = type;
+    forcedNodeIds.add(forcedNode.id);
   };
   forceTypeInFreshRow('shop');
   forceTypeInFreshRow('shop');
@@ -244,28 +259,53 @@ function generateMap(act) {
   const allNodes = {};
   rows.forEach(row => row.forEach(n => { allNodes[n.id] = n; }));
 
-  // No two campsites back-to-back on the same path - each row's type rolls
-  // independently of what connects into it, so this is a real risk. Walking
-  // rows in order (so an earlier row's own fix-ups are final before its
-  // outgoing edges are checked), fix any rest-into-rest edge by rerolling
-  // whichever end ISN'T one of the two guaranteed rests above (which this
-  // must never undo) - normally that's the target, but a guaranteed rest
-  // can just as easily be the one some earlier, randomly-rolled rest
-  // happens to connect INTO, in which case the source has to give instead.
-  rows.forEach(row => row.forEach(node => {
-    if (node.type !== 'rest') return;
-    node.connections.forEach(targetId => {
-      const target = allNodes[targetId];
-      if (target.type !== 'rest') return;
-      const toFix = forcedRestIds.has(target.id) ? node : target;
-      if (forcedRestIds.has(toFix.id)) return; // both ends forced - leave be
-      let reroll = pickType(toFix.row);
-      let attempts = 0;
-      while ((reroll === 'rest' || (reroll === 'worldEvent' && worldEventPlaced)) && attempts < 5) { reroll = pickType(toFix.row); attempts++; }
-      if (reroll === 'worldEvent') worldEventPlaced = true;
-      toFix.type = reroll === 'rest' ? 'combat' : reroll;
-    });
-  }));
+  // No two of the SAME encounter type back-to-back on the same path - each
+  // row's type rolls independently of what connects into it, so this is a
+  // real risk for any type, not just campsites. Walking rows in order (so an
+  // earlier row's own fix-ups are final before its outgoing edges are
+  // checked), fix any same-type edge by rerolling whichever end ISN'T one of
+  // the guarantees forced above (forcedNodeIds - two rests, two shops, two
+  // treasures) - normally that's the target, but a forced node can just as
+  // easily be the one some earlier, randomly-rolled node happens to connect
+  // INTO, in which case the source has to give instead. boss is exempt (only
+  // one, final row, nothing to repeat against); the reroll itself avoids
+  // landing back on 'rest' (falls back to 'combat' instead, same as before)
+  // so this pass can never accidentally invent a NEW same-type conflict
+  // against the node it's fixing FROM - but fixing node B to satisfy an
+  // A-B edge can still coincidentally collide with some other node C that
+  // also connects to B (checked in an earlier row and already considered
+  // settled), so the whole pass runs a few times until nothing's left to
+  // fix rather than assuming one sweep converges.
+  for (let pass = 0; pass < 4; pass++) {
+    let fixedAny = false;
+    rows.forEach(row => row.forEach(node => {
+      if (node.type === 'boss') return;
+      node.connections.forEach(targetId => {
+        const target = allNodes[targetId];
+        if (target.type !== node.type) return;
+        const nodeForced = forcedNodeIds.has(node.id);
+        const targetForced = forcedNodeIds.has(target.id);
+        // A guaranteed REST pairing (the two forced above) is the one thing
+        // this pass must never undo - but two forced shops or two forced
+        // treasures landing adjacent is fair game: fixing one still leaves
+        // "at least one shop/treasure exists" satisfied by the other.
+        if (nodeForced && targetForced && node.type === 'rest') return;
+        const toFix = (targetForced && !nodeForced) ? node : target;
+        const conflictType = node.type;
+        let reroll = pickType(toFix.row);
+        let attempts = 0;
+        while ((reroll === conflictType || reroll === 'rest' || (reroll === 'worldEvent' && worldEventPlaced) || (reroll === 'witchJess' && witchJessPlaced)) && attempts < 8) {
+          reroll = pickType(toFix.row);
+          attempts++;
+        }
+        if (reroll === 'worldEvent') { worldEventPlaced = true; Game.worldEventPlacedThisRun = true; markRareEncounterSeen('worldEvent'); }
+        else if (reroll === 'witchJess') { witchJessPlaced = true; Game.witchJessPlacedThisRun = true; markRareEncounterSeen('witchJess'); }
+        toFix.type = (reroll === conflictType || reroll === 'rest') ? 'combat' : reroll;
+        fixedAny = true;
+      });
+    }));
+    if (!fixedAny) break;
+  }
 
   // Resolves each node's SPECIFIC content (which enemy, which world event,
   // which taming reward...) at generation time instead of visit time, so the
@@ -296,8 +336,18 @@ function generateMap(act) {
       const locked = getLockedClassIds();
       if (locked.length) node.trialClassId = locked[rand(0, locked.length - 1)];
     } else if (node.type === 'rareNpc') {
-      const remaining = Object.keys(RARE_NPCS).filter(id => !Persistent.load().metRareNpcs.includes(id));
-      if (remaining.length) node.rareNpcId = remaining[rand(0, remaining.length - 1)];
+      // Each named NPC carries its OWN 5-run cooldown (see
+      // isRareEncounterReady in data.js) rather than a shared one or the old
+      // permanent one-time-ever exclusion - "special, not regular" without
+      // ruling out ever meeting George again, and a lucky run can still
+      // surface more than one of them. Marked seen right here at placement,
+      // not at visit time, so a second rareNpc node rolled later in this
+      // same map (rare, but possible) won't also pick the one just placed.
+      const remaining = Object.keys(RARE_NPCS).filter(id => isRareEncounterReady(id, 5));
+      if (remaining.length) {
+        node.rareNpcId = remaining[rand(0, remaining.length - 1)];
+        markRareEncounterSeen(node.rareNpcId);
+      }
     } else if (node.type === 'legendaryTaming') {
       const pdata = Persistent.load();
       const remaining = Object.keys(LEGENDARY_TAMINGS).filter(key => {

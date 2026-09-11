@@ -64,7 +64,18 @@ const Game = {
     // A World Event (see generateMap in map.js) can appear on at most one
     // act's map per run, not once per act - reset fresh on every new run.
     this.worldEventPlacedThisRun = false;
+    // Witch Jess (see generateMap in map.js) - same once-per-run cap as
+    // World Event, on top of her own 10-run cross-run cooldown.
+    this.witchJessPlacedThisRun = false;
     this.player.hp = this.effectiveStats().maxHp;
+    // Counts this run toward every rare encounter's cross-run cooldown (see
+    // isRareEncounterReady/markRareEncounterSeen in data.js) - incremented
+    // here (before the snapshot below) so, same as Meta.runsPlayed, an
+    // abandoned run doesn't count: abandonRun() restores this pre-run
+    // snapshot, undoing the increment along with everything else.
+    const pdata = Persistent.load();
+    pdata.totalRunsStarted += 1;
+    Persistent.save();
     // Persistent side-effects (XP/levels, loot, materials, tamed pets/mounts,
     // trial unlocks, quest progress) all save immediately as they happen
     // mid-run rather than waiting for the run to end - see grantXp() and the

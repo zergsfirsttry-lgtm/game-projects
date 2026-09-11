@@ -518,12 +518,14 @@ const App = {
   },
 
   // ---------------- Jess (rare cat/kitten vendor) ----------------
-  // A very rare encounter (see pickType in map.js) - a glowing witch who
-  // deals exclusively in her own cats/kittens (JESS_EXCLUSIVE_PETS in
-  // data.js), priced in THIS RUN's temporary relics (spent at random, like
-  // paying a toll) rather than gold, since relics vanish at the end of the
-  // run anyway. The offered stock never changes once generated for this
-  // node, but re-renders each purchase so price/afford/owned states update.
+  // A very rare encounter (see pickType in map.js, capped once per run and
+  // gated to once every 10 runs - see witchJessPlacedThisRun in state.js and
+  // isRareEncounterReady in data.js) - a glowing witch who deals exclusively
+  // in her own cats/kittens (JESS_EXCLUSIVE_PETS in data.js), priced in THIS
+  // RUN's temporary relics (spent at random, like paying a toll) rather than
+  // gold, since relics vanish at the end of the run anyway. She only ever
+  // sells ONE pet per visit - buying closes the encounter and returns to the
+  // map immediately, rather than looping back to browse more stock.
   enterWitchJess(node) {
     if (!node.jessStock) node.jessStock = Object.keys(PETS).filter(id => JESS_EXCLUSIVE_PETS.has(id));
     grantReputation(getActTheme(Game.act).id, 10);
@@ -568,7 +570,11 @@ const App = {
         pdata.ownedPets.push(id);
         Persistent.save();
         this.queuePetMountDiscovery('pet', id);
-        this.renderWitchJessScreen(node);
+        // One purchase and she's done with you for this visit - Jess only
+        // ever sells a single cat/kitten per encounter, so buying closes the
+        // screen immediately rather than looping back to more stock.
+        this.showAutoToast(`<strong>${def.icon} ${def.name} tamed!</strong><div class="small-text">Jess nods and melts back into the trees.</div>`);
+        this.showMap();
       });
     });
     document.getElementById('btn-leave-jess').addEventListener('click', () => this.showMap());
@@ -576,18 +582,18 @@ const App = {
   },
 
   // ---------------- Rare NPCs ----------------
-  // One-time-ever, account-wide (pdata.metRareNpcs) - each NPC (RARE_NPCS in
-  // data.js) always hands out their own signature named reward, never a
-  // random roll. Falls back to an elite fight, same as Class Trial/Legendary
-  // Encounter, once every NPC has already been met.
+  // Gated by a 5-run cooldown PER NPC (see isRareEncounterReady in data.js),
+  // not a shared one and not permanent - each NPC (RARE_NPCS in data.js)
+  // always hands out their own signature named reward, never a random roll.
+  // Falls back to an elite fight, same as Class Trial/Legendary Encounter,
+  // for the rare case no NPC was off cooldown at generation time.
   enterRareNpc(node) {
-    // node.rareNpcId is pre-rolled at map-generation time (see generateMap,
-    // map.js) so the map can preview which NPC this is - re-validated here
-    // since another rareNpc node could've been met first, same fallback as
-    // when the pool was simply empty to begin with.
-    const pdata = Persistent.load();
-    const remaining = Object.keys(RARE_NPCS).filter(id => !pdata.metRareNpcs.includes(id));
-    if (!node.rareNpcId || !remaining.includes(node.rareNpcId)) node.rareNpcId = remaining[rand(0, remaining.length - 1)];
+    // node.rareNpcId is pre-rolled AND marked seen at map-generation time
+    // (see generateMap, map.js) - by the time the player actually reaches
+    // it, that same id is (correctly) back on cooldown, so re-deriving
+    // eligibility here would wrongly reject its own valid assignment. Only
+    // fall back if generation genuinely couldn't assign one at all (every
+    // NPC was already on cooldown that run).
     if (!node.rareNpcId) {
       this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
       return;

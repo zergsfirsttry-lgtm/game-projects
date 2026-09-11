@@ -1014,9 +1014,29 @@ function pickTamingReward() {
   return { kind: pool === PETS ? 'pet' : 'mount', id, def: pool[id] };
 }
 
+// Cross-run rarity gate shared by World Event, Witch Jess, and every named
+// Rare NPC (see generateMap in map.js and enterRareNpc in main.js) - each
+// keeps its OWN cooldown (keyed by whatever string the caller passes: e.g.
+// 'worldEvent', 'witchJess', or a RARE_NPCS id) rather than sharing one, so
+// a lucky run can still surface several at once. `ready` just compares run
+// numbers; `markSeen` is called once the encounter is actually placed on
+// the map (generation time, same convention Game.worldEventPlacedThisRun
+// already used), not when the player happens to walk there.
+function isRareEncounterReady(key, cooldownRuns) {
+  const pdata = Persistent.load();
+  const last = pdata.rareEncounterLastRun[key];
+  return last === undefined || (pdata.totalRunsStarted - last) >= cooldownRuns;
+}
+function markRareEncounterSeen(key) {
+  const pdata = Persistent.load();
+  pdata.rareEncounterLastRun[key] = pdata.totalRunsStarted;
+  Persistent.save();
+}
+
 // --- Rare NPC encounters (see enterRareNpc in main.js) ---
-// One-time-ever, account-wide (pdata.metRareNpcs) - each NPC always hands
-// out their OWN signature named reward (a LEGENDARY_ITEMS weapon/armor, or a
+// Gated by isRareEncounterReady (5-run cooldown per NPC, see generateMap) -
+// each NPC always hands out their OWN signature named reward (a
+// LEGENDARY_ITEMS weapon/armor, or a
 // SIGNATURE_PET_IDS/SIGNATURE_MOUNT_IDS companion), never a random roll. A
 // portrait (assets/sprites/<portrait>.png) and a line of flavor stand in for
 // the multi-step taming/shop flow those other rare encounters use - this one

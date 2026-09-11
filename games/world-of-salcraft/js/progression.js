@@ -1616,7 +1616,16 @@ const Persistent = {
       // subsequent drop/encounter. Pets/mounts/spells reuse their existing
       // ownedPets/ownedMounts/unlockedSpells arrays for the same check
       // instead of a separate set.
-      seenGearDefIds: [], seenEnemyIds: []
+      seenGearDefIds: [], seenEnemyIds: [],
+      // Cross-run rarity gate for the "special, not regular" encounters -
+      // World Event, Witch Jess, and each named Rare NPC individually (see
+      // isRareEncounterReady/markRareEncounterSeen below) - totalRunsStarted
+      // increments once per Game.newRun (see state.js), and
+      // rareEncounterLastRun[key] records which run number last placed that
+      // encounter, so "once every N runs" just compares the two. Independent
+      // per key by design - each named NPC has its own cooldown rather than
+      // all sharing one, so a lucky run can still surface several at once.
+      totalRunsStarted: 0, rareEncounterLastRun: {}
     };
   },
 
