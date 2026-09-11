@@ -363,13 +363,17 @@ button {
 
 /* The traveler marker: your class's own sprite, always dead center - the
    chosen node travels in to meet it rather than the other way around (see
-   animateTravel in map.js). */
+   animateTravel in map.js). Kept above every node, including the one
+   currently charging in (animateTravel bumps that node's own z-index to 5
+   while it travels, so its art doesn't fall behind other still-fading
+   nodes/lines mid-animation) - the player should always read as standing
+   in front of the enemy on this screen, not the other way around. */
 .map-traveler {
   position: absolute;
   transform: translate(-50%, -100%) scale(var(--traveler-scale, 1));
   transform-origin: 50% 100%;
   pointer-events: none;
-  z-index: 3;
+  z-index: 6;
 }
 .map-traveler svg, .map-traveler img { image-rendering: pixelated; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.6)); }
 .map-traveler.facing-left svg, .map-traveler.facing-left img { transform: scaleX(-1); }
