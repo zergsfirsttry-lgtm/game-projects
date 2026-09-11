@@ -588,10 +588,23 @@ function renderMap(container, map, currentNodeId, visitedIds, onSelect, classId)
     // loops its own ambient animation continuously, same as its full
     // encounter screen. Falls back to the plain emoji+circle for every
     // other type, or if this specific node's art isn't resolved yet.
-    const art = revealed ? nodePreviewArt(node, map.act) : null;
-    const iconHtml = art
-      ? `<img class="map-node-art" src="${art.idle}" alt="${info.label}" data-frames-ready="${art.kind === 'ambient' ? '0' : '1'}">`
-      : `<span class="map-node-icon">${info.icon}</span>`;
+    // World Event nodes get a generic animated "earth planet" icon instead
+    // of nodePreviewArt's usual creature/theme art - the actual WORLD_EVENT_ART
+    // scene image (used by the full encounter screen, see renderWorldEventScreen
+    // in main.js) always looked mismatched shrunk down to map-node size,
+    // and every world event shares this one icon rather than each needing
+    // its own. Pure CSS (spinning gradient "surface" clipped to a circle,
+    // pulsing glow) - no new art asset needed. Deliberately skips the
+    // has-art ground-plate treatment below (that's built for a
+    // character-shaped sprite standing on it); a floating planet keeps the
+    // normal round node circle instead, same as the plain emoji icon would.
+    const isWorldEvent = node.type === 'worldEvent' && revealed;
+    const art = (revealed && !isWorldEvent) ? nodePreviewArt(node, map.act) : null;
+    const iconHtml = isWorldEvent
+      ? `<span class="map-node-planet" title="${info.label}"><span class="map-node-planet-surface"></span></span>`
+      : art
+        ? `<img class="map-node-art" src="${art.idle}" alt="${info.label}" data-frames-ready="${art.kind === 'ambient' ? '0' : '1'}">`
+        : `<span class="map-node-icon">${info.icon}</span>`;
     nodesHtml += `<div class="${classes.join(' ')} ${art ? 'has-art' : ''}" style="left:${pos.sx}px; top:${pos.sy}px; --node-scale:${pos.scale.toFixed(3)}" data-node-id="${node.id}" title="${info.label}"
       ${isAvailable ? 'role="button" tabindex="0"' : ''}>
       ${iconHtml}

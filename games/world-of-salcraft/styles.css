@@ -506,6 +506,43 @@ button {
   filter: drop-shadow(0 3px 2px rgba(0,0,0,0.5));
   pointer-events: none;
 }
+/* World Event map-node icon (see the isWorldEvent branch in renderMap,
+   map.js) - a small spinning "earth" rendered entirely in CSS (gradient
+   sphere + a scrolling continent layer clipped to the circle) rather than
+   shrinking down the full encounter screen's own scene art, which read as
+   mismatched at this size. Sits in the plain round node circle like the
+   emoji icon it replaces, not the has-art ground-plate treatment. */
+.map-node-planet {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 35% 30%, #7ec2ee 0%, #2f72ab 45%, #143a5c 100%);
+  box-shadow: inset -4px -4px 6px rgba(0,0,0,0.45), inset 2px 2px 4px rgba(255,255,255,0.25), 0 0 8px rgba(90,170,230,0.5);
+  animation: mapPlanetGlow 3s ease-in-out infinite;
+}
+.map-node-planet-surface {
+  position: absolute;
+  inset: -15% -70% -15% -15%;
+  background-image:
+    radial-gradient(ellipse 26% 40% at 15% 35%, rgba(88,163,70,0.85) 0%, transparent 72%),
+    radial-gradient(ellipse 20% 30% at 45% 68%, rgba(76,148,58,0.8) 0%, transparent 72%),
+    radial-gradient(ellipse 18% 26% at 75% 25%, rgba(96,170,78,0.75) 0%, transparent 72%),
+    radial-gradient(ellipse 16% 24% at 95% 55%, rgba(88,163,70,0.7) 0%, transparent 72%);
+  background-repeat: repeat-x;
+  background-size: 55% 100%;
+  animation: mapPlanetSpin 7s linear infinite;
+}
+@keyframes mapPlanetSpin {
+  from { background-position: 0% 0; }
+  to { background-position: -110% 0; }
+}
+@keyframes mapPlanetGlow {
+  0%, 100% { box-shadow: inset -4px -4px 6px rgba(0,0,0,0.45), inset 2px 2px 4px rgba(255,255,255,0.25), 0 0 8px rgba(90,170,230,0.5); }
+  50% { box-shadow: inset -4px -4px 6px rgba(0,0,0,0.45), inset 2px 2px 4px rgba(255,255,255,0.25), 0 0 14px rgba(90,170,230,0.85); }
+}
 @keyframes fogPulse {
   0%, 100% { box-shadow: 0 0 8px rgba(138,95,214,0.5); }
   50% { box-shadow: 0 0 13px rgba(138,95,214,0.8); }
