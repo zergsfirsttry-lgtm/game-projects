@@ -1681,7 +1681,6 @@ const Persistent = {
       if (rec.profession.xp[id] === undefined) rec.profession.xp[id] = 0;
     });
     if (!rec.disenchanting) rec.disenchanting = { level: 1, xp: 0 };
-    if (rec.autoEquip === undefined) rec.autoEquip = false;
     if (!rec.talents) rec.talents = { ranks: {} };
     if (!rec.pvpEquipped) rec.pvpEquipped = { weapon: null, armor: null, trinket: null };
     // Migrate pre-rarity Honor Shop saves: pvpEquipped used to hold the fixed

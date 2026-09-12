@@ -67,13 +67,8 @@ const App = {
       if (e.target && e.target.closest && e.target.closest('#btn-open-relics')) this.showRunRelicsModal();
     });
     const afkResult = computeAfkProgress();
-    if (afkResult) {
-      if (afkResult.itemsGained.length && Persistent.getCharacter(afkResult.classId).autoEquip) {
-        this.autoEquipBestGear(afkResult.classId);
-        Persistent.save();
-      }
-      this.showWelcomeBack(afkResult);
-    } else this.showTitle();
+    if (afkResult) this.showWelcomeBack(afkResult);
+    else this.showTitle();
   },
 
   // Shown once, at launch, only when computeAfkProgress (progression.js)
@@ -650,7 +645,6 @@ const App = {
       const item = instantiateLegendary(npc.rewardId);
       pdata.inventory.push(item);
       if (!alreadyOwned) discoverGear = item;
-      if (Persistent.getCharacter(Game.player.classId).autoEquip) this.autoEquipBestGear(Game.player.classId);
     } else if (npc.rewardKind === 'mount') {
       if (!pdata.ownedMounts.includes(npc.rewardId)) { pdata.ownedMounts.push(npc.rewardId); discoverPetMount = ['mount', npc.rewardId]; }
     } else {
@@ -914,7 +908,6 @@ const App = {
       pdata.ownedLegendaries.push(g.legendaryId);
       const legendaryItem = instantiateLegendary(g.legendaryId);
       pdata.inventory.push(legendaryItem);
-      if (Persistent.getCharacter(Game.player.classId).autoEquip) this.autoEquipBestGear(Game.player.classId);
       Persistent.save();
       Game.gauntlet = null;
       this.showLegendaryReward(legendaryItem, { goldReward, xpReward, levelResult });
@@ -1824,7 +1817,6 @@ const App = {
         if (material) pdata.materials[material.kind] += material.amount;
         if (recipeItem) pdata.inventory.push(recipeItem);
         if (loot) this.queueGearDiscovery(loot);
-        if (loot && Persistent.getCharacter(Game.player.classId).autoEquip) this.autoEquipBestGear(Game.player.classId);
         Persistent.save();
       }
       const reward = { goldReward, xpReward, levelResult, loot, material, recipeItem };
@@ -2332,10 +2324,7 @@ const App = {
           <input type="text" id="char-name-input" maxlength="16" placeholder="${cls.name}" value="${escapeHtml(custom.name || '')}">
         </label>
       </div>
-      <label class="customize-row" style="max-width:360px;margin-top:12px" title="Automatically equips the strongest available item (from your inventory) into every slot, and re-checks after any new loot arrives.">
-        <span>⚡ Auto Equip Best Gear</span>
-        <input type="checkbox" id="chk-auto-equip" ${rec.autoEquip ? 'checked' : ''}>
-      </label>
+      <button type="button" class="btn-secondary" id="btn-auto-equip-best" style="margin-top:12px" title="Equips the strongest available item (from your inventory) into every slot, right now.">⚡ Equip Best Gear</button>
     `;
   },
 
@@ -2972,7 +2961,6 @@ const App = {
           pdata.inventory.splice(idx, 1);
           const result = openContainer(c.containerId);
           if (result.pvpOnly) pdata.pvpInventory.push(result); else pdata.inventory.push(result);
-          if (!result.pvpOnly && Persistent.getCharacter(classId).autoEquip) this.autoEquipBestGear(classId);
           Persistent.save();
           this.lastContainerResult = `${c.name} contained: ${result.icon} ${result.name} (${result.pvpUnique ? 'Unique' : RARITIES[result.rarity].label})`;
           refresh();
@@ -4382,10 +4370,9 @@ const App = {
         Persistent.save();
         this.showSanctuary(classId, tab);
       });
-      const autoEquipChk = document.getElementById('chk-auto-equip');
-      if (autoEquipChk) autoEquipChk.addEventListener('change', () => {
-        rec.autoEquip = autoEquipChk.checked;
-        if (rec.autoEquip) this.autoEquipBestGear(classId);
+      const autoEquipBtn = document.getElementById('btn-auto-equip-best');
+      if (autoEquipBtn) autoEquipBtn.addEventListener('click', () => {
+        this.autoEquipBestGear(classId);
         Persistent.save();
         this.showSanctuary(classId, tab);
       });
@@ -4479,7 +4466,6 @@ const App = {
       this.root.querySelectorAll('[data-claim-quest]').forEach(btn => {
         btn.addEventListener('click', () => {
           claimQuest(btn.dataset.claimQuest, classId);
-          if (Persistent.getCharacter(classId).autoEquip) this.autoEquipBestGear(classId);
           this.showSanctuary(classId, tab);
         });
       });
@@ -4491,7 +4477,6 @@ const App = {
       const claimAllBtn = this.root.querySelector('[data-claim-all-quests]');
       if (claimAllBtn) claimAllBtn.addEventListener('click', () => {
         completeAllQuests(classId);
-        if (Persistent.getCharacter(classId).autoEquip) this.autoEquipBestGear(classId);
         this.showSanctuary(classId, tab);
       });
     } else if (tab === 'pvp') {
