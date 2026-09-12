@@ -450,7 +450,12 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   // class+weapon-only entry above for any combo not yet covered here, so an
   // unfinished combo never loses its animation entirely, it just doesn't yet
   // reflect the specific armor equipped.
-  'warrior_cloth_sword', 'warrior_leather_sword', 'warrior_mail_sword', 'warrior_plate_sword'
+  // Warrior complete: all 4 armor styles across all 5 weapons it can wield.
+  'warrior_cloth_sword', 'warrior_leather_sword', 'warrior_mail_sword', 'warrior_plate_sword',
+  'warrior_cloth_axe', 'warrior_leather_axe', 'warrior_mail_axe', 'warrior_plate_axe',
+  'warrior_cloth_bow', 'warrior_leather_bow', 'warrior_mail_bow', 'warrior_plate_bow',
+  'warrior_cloth_dagger', 'warrior_leather_dagger', 'warrior_mail_dagger', 'warrior_plate_dagger',
+  'warrior_cloth_mace', 'warrior_leather_mace', 'warrior_mail_mace', 'warrior_plate_mace'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
