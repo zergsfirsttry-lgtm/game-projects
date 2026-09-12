@@ -1359,15 +1359,16 @@ const App = {
     // the weapon-swing frames for a melee-flavored skill (cleave/multiplier/
     // rage/drain) and a dedicated cast animation for a 'flat'-type magic
     // spell (Fireball, Frostbolt, etc. - see SPELLS in data.js), keyed by
-    // currentWeaponVisual (progression.js) so it always matches whatever's
-    // actually equipped. No entry (e.g. an un-covered class) just keeps the
-    // plain CSS swing/glow it always had.
+    // currentWeaponVisual/currentArmorStyle (progression.js) so it always
+    // matches whatever's actually equipped - see resolveWeaponAttackAnim
+    // (sprites.js) for how an armor style with no dedicated combo yet falls
+    // back to the class+weapon-only swing. No entry at all (e.g. an
+    // un-covered class) just keeps the plain CSS swing/glow it always had.
     if (s.anim.player === 'attack' || s.anim.player === 'skill') {
       const castSkill = s.anim.player === 'skill' ? SPELLS[s.anim.castSkillId] : null;
-      const animKey = (castSkill && castSkill.type === 'flat')
-        ? `${p.classId}_cast`
-        : `${p.classId}_${currentWeaponVisual(p.classId, weaponSlot)}`;
-      const anim = WEAPON_ATTACK_ANIM[animKey];
+      const anim = (castSkill && castSkill.type === 'flat')
+        ? WEAPON_ATTACK_ANIM[`${p.classId}_cast`]
+        : resolveWeaponAttackAnim(p.classId, currentArmorStyle(p.classId), currentWeaponVisual(p.classId, weaponSlot));
       if (anim) {
         const playerImg = this.root.querySelector('.combatant.player .player-weapon-sprite');
         if (playerImg) this.playAttackAnimation(playerImg, anim.attackFrames);

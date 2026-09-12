@@ -745,7 +745,7 @@ function playPlayerImpactSwing(traveler) {
   if (!traveler || !Game.player) return;
   const classId = Game.player.classId;
   const weaponVisual = currentWeaponVisual(classId);
-  const anim = WEAPON_ATTACK_ANIM[`${classId}_${weaponVisual}`];
+  const anim = resolveWeaponAttackAnim(classId, currentArmorStyle(classId), weaponVisual);
   const riderImg = traveler.querySelector('.companion-rider .player-weapon-sprite');
   if (anim && riderImg) playFrames(riderImg, anim.attackFrames, 90, false);
 }

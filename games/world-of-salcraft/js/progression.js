@@ -1755,7 +1755,7 @@ function previewClassStats(classId) {
 // Which weapon-visual (see ITEMS[x].visual) a class's body art should show
 // for a given weaponSlot - shared by characterSpriteFor (the static portrait)
 // and the weapon-attack-animation trigger in main.js, which needs this same
-// resolution to look up WEAPON_ATTACK_ANIM[`${classId}_${weaponVisual}`].
+// resolution to look up resolveWeaponAttackAnim (sprites.js).
 function currentWeaponVisual(classId, weaponSlot) {
   const rec = Persistent.getCharacter(classId);
   const eq = rec.equipped;
@@ -1766,6 +1766,16 @@ function currentWeaponVisual(classId, weaponSlot) {
   return (activeWeapon && activeWeapon.visual) || CLASS_ART_DEFAULTS[classId].weaponVisual;
 }
 
+// Which armor-style (see ITEMS[x].visual) a class's body art should show -
+// same "equipped chest piece wins, else the class's default look" resolution
+// currentWeaponVisual does for weapons, shared by characterSpriteFor and the
+// weapon-attack-animation trigger (see resolveWeaponAttackAnim, sprites.js).
+function currentArmorStyle(classId) {
+  const rec = Persistent.getCharacter(classId);
+  const armor = rec.equipped.chest ? Persistent.findItem(rec.equipped.chest) : null;
+  return (armor && armor.visual) || CLASS_ART_DEFAULTS[classId].armorStyle;
+}
+
 function characterSpriteFor(classId, sizePx, weaponSlot) {
   const rec = Persistent.getCharacter(classId);
   const eq = rec.equipped;
@@ -1773,11 +1783,10 @@ function characterSpriteFor(classId, sizePx, weaponSlot) {
   const armor = eq.chest ? Persistent.findItem(eq.chest) : null;
 
   if (CLASS_ART_READY.has(classId)) {
-    const defaults = CLASS_ART_DEFAULTS[classId];
     const rangedItem = eq.ranged ? Persistent.findItem(eq.ranged) : null;
     const useRanged = weaponSlot === 'ranged' && rangedItem && rangedItem.visual;
     const activeWeapon = useRanged ? rangedItem : weapon;
-    const armorStyle = (armor && armor.visual) || defaults.armorStyle;
+    const armorStyle = currentArmorStyle(classId);
     const weaponVisual = currentWeaponVisual(classId, weaponSlot);
     const path = classBodyArtPath(classId, armorStyle, weaponVisual);
     const filter = RARITY_SPRITE_FILTER[maxRarity(activeWeapon && activeWeapon.rarity, armor && armor.rarity)];

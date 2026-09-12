@@ -439,8 +439,28 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'warlock_dagger', 'warlock_mace', 'warlock_staff', 'warlock_sword',
   'barbarian_axe', 'barbarian_bow', 'barbarian_dagger', 'barbarian_mace', 'barbarian_staff', 'barbarian_sword',
   'cleric_axe', 'cleric_dagger', 'cleric_mace', 'cleric_sword',
-  'bard_bow', 'bard_lute', 'bard_mace', 'bard_sword'
+  'bard_bow', 'bard_lute', 'bard_mace', 'bard_sword',
+  // Wave 3 - armor-specific variants, keyed `${classId}_${armorStyle}_${weaponVisual}`
+  // so the swing itself shows whatever armor is actually equipped (see
+  // currentArmorStyle in progression.js) instead of every armor style sharing
+  // the one plain `${classId}_${weaponVisual}` swing above. Filled in
+  // incrementally, combo by combo (164 total across every class - see
+  // classes/<id>/<armorStyle>_<weaponVisual>.png for the full matrix each
+  // class needs); resolveWeaponAttackAnim below falls back to the
+  // class+weapon-only entry above for any combo not yet covered here, so an
+  // unfinished combo never loses its animation entirely, it just doesn't yet
+  // reflect the specific armor equipped.
+  'warrior_cloth_sword', 'warrior_leather_sword', 'warrior_mail_sword', 'warrior_plate_sword'
 ].map(_weaponAttackAnim));
+
+// The single lookup every trigger site should use (see renderCombatScreen in
+// main.js and playPlayerImpactSwing in map.js) - tries the fully-specific
+// class+armor+weapon combo first, falls back to the class+weapon-only entry
+// (or nothing, if even that isn't covered) so incomplete Wave 3 coverage
+// degrades gracefully instead of showing no animation at all.
+function resolveWeaponAttackAnim(classId, armorStyle, weaponVisual) {
+  return WEAPON_ATTACK_ANIM[`${classId}_${armorStyle}_${weaponVisual}`] || WEAPON_ATTACK_ANIM[`${classId}_${weaponVisual}`];
+}
 
 // World Event scene art (see WORLD_EVENTS in data.js, keyed by each event's
 // own `artKey`) - a wide illustration plus a subtle ambient animation loop
