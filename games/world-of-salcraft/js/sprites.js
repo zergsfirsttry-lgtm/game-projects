@@ -477,7 +477,12 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'hunter_cloth_dagger', 'hunter_leather_dagger', 'hunter_mail_dagger', 'hunter_plate_dagger',
   'hunter_cloth_mace', 'hunter_leather_mace', 'hunter_mail_mace', 'hunter_plate_mace',
   'hunter_cloth_staff', 'hunter_leather_staff', 'hunter_mail_staff', 'hunter_plate_staff',
-  'hunter_cloth_sword', 'hunter_leather_sword', 'hunter_mail_sword', 'hunter_plate_sword'
+  'hunter_cloth_sword', 'hunter_leather_sword', 'hunter_mail_sword', 'hunter_plate_sword',
+  // Warlock complete: all 4 armor styles across all 4 weapons it can wield.
+  'warlock_cloth_dagger', 'warlock_leather_dagger', 'warlock_mail_dagger', 'warlock_plate_dagger',
+  'warlock_cloth_mace', 'warlock_leather_mace', 'warlock_mail_mace', 'warlock_plate_mace',
+  'warlock_cloth_staff', 'warlock_leather_staff', 'warlock_mail_staff', 'warlock_plate_staff',
+  'warlock_cloth_sword', 'warlock_leather_sword', 'warlock_mail_sword', 'warlock_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
