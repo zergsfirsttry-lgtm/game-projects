@@ -482,7 +482,14 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'warlock_cloth_dagger', 'warlock_leather_dagger', 'warlock_mail_dagger', 'warlock_plate_dagger',
   'warlock_cloth_mace', 'warlock_leather_mace', 'warlock_mail_mace', 'warlock_plate_mace',
   'warlock_cloth_staff', 'warlock_leather_staff', 'warlock_mail_staff', 'warlock_plate_staff',
-  'warlock_cloth_sword', 'warlock_leather_sword', 'warlock_mail_sword', 'warlock_plate_sword'
+  'warlock_cloth_sword', 'warlock_leather_sword', 'warlock_mail_sword', 'warlock_plate_sword',
+  // Barbarian complete: all 4 armor styles across all 6 weapons it can wield.
+  'barbarian_cloth_axe', 'barbarian_leather_axe', 'barbarian_mail_axe', 'barbarian_plate_axe',
+  'barbarian_cloth_bow', 'barbarian_leather_bow', 'barbarian_mail_bow', 'barbarian_plate_bow',
+  'barbarian_cloth_dagger', 'barbarian_leather_dagger', 'barbarian_mail_dagger', 'barbarian_plate_dagger',
+  'barbarian_cloth_mace', 'barbarian_leather_mace', 'barbarian_mail_mace', 'barbarian_plate_mace',
+  'barbarian_cloth_staff', 'barbarian_leather_staff', 'barbarian_mail_staff', 'barbarian_plate_staff',
+  'barbarian_cloth_sword', 'barbarian_leather_sword', 'barbarian_mail_sword', 'barbarian_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
