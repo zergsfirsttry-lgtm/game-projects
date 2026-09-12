@@ -470,7 +470,14 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'paladin_cloth_axe', 'paladin_leather_axe', 'paladin_mail_axe', 'paladin_plate_axe',
   'paladin_cloth_dagger', 'paladin_leather_dagger', 'paladin_mail_dagger', 'paladin_plate_dagger',
   'paladin_cloth_mace', 'paladin_leather_mace', 'paladin_mail_mace', 'paladin_plate_mace',
-  'paladin_cloth_sword', 'paladin_leather_sword', 'paladin_mail_sword', 'paladin_plate_sword'
+  'paladin_cloth_sword', 'paladin_leather_sword', 'paladin_mail_sword', 'paladin_plate_sword',
+  // Hunter complete: all 4 armor styles across all 6 weapons it can wield.
+  'hunter_cloth_axe', 'hunter_leather_axe', 'hunter_mail_axe', 'hunter_plate_axe',
+  'hunter_cloth_bow', 'hunter_leather_bow', 'hunter_mail_bow', 'hunter_plate_bow',
+  'hunter_cloth_dagger', 'hunter_leather_dagger', 'hunter_mail_dagger', 'hunter_plate_dagger',
+  'hunter_cloth_mace', 'hunter_leather_mace', 'hunter_mail_mace', 'hunter_plate_mace',
+  'hunter_cloth_staff', 'hunter_leather_staff', 'hunter_mail_staff', 'hunter_plate_staff',
+  'hunter_cloth_sword', 'hunter_leather_sword', 'hunter_mail_sword', 'hunter_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
