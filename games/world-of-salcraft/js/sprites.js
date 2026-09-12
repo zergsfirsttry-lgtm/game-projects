@@ -465,7 +465,12 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'mage_cloth_dagger', 'mage_leather_dagger', 'mage_mail_dagger', 'mage_plate_dagger',
   'mage_cloth_mace', 'mage_leather_mace', 'mage_mail_mace', 'mage_plate_mace',
   'mage_cloth_staff', 'mage_leather_staff', 'mage_mail_staff', 'mage_plate_staff',
-  'mage_cloth_sword', 'mage_leather_sword', 'mage_mail_sword', 'mage_plate_sword'
+  'mage_cloth_sword', 'mage_leather_sword', 'mage_mail_sword', 'mage_plate_sword',
+  // Paladin complete: all 4 armor styles across all 4 weapons it can wield.
+  'paladin_cloth_axe', 'paladin_leather_axe', 'paladin_mail_axe', 'paladin_plate_axe',
+  'paladin_cloth_dagger', 'paladin_leather_dagger', 'paladin_mail_dagger', 'paladin_plate_dagger',
+  'paladin_cloth_mace', 'paladin_leather_mace', 'paladin_mail_mace', 'paladin_plate_mace',
+  'paladin_cloth_sword', 'paladin_leather_sword', 'paladin_mail_sword', 'paladin_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
