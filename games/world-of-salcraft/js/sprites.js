@@ -460,7 +460,12 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'rogue_cloth_bow', 'rogue_leather_bow', 'rogue_mail_bow', 'rogue_plate_bow',
   'rogue_cloth_dagger', 'rogue_leather_dagger', 'rogue_mail_dagger', 'rogue_plate_dagger',
   'rogue_cloth_mace', 'rogue_leather_mace', 'rogue_mail_mace', 'rogue_plate_mace',
-  'rogue_cloth_sword', 'rogue_leather_sword', 'rogue_mail_sword', 'rogue_plate_sword'
+  'rogue_cloth_sword', 'rogue_leather_sword', 'rogue_mail_sword', 'rogue_plate_sword',
+  // Mage complete: all 4 armor styles across all 4 weapons it can wield.
+  'mage_cloth_dagger', 'mage_leather_dagger', 'mage_mail_dagger', 'mage_plate_dagger',
+  'mage_cloth_mace', 'mage_leather_mace', 'mage_mail_mace', 'mage_plate_mace',
+  'mage_cloth_staff', 'mage_leather_staff', 'mage_mail_staff', 'mage_plate_staff',
+  'mage_cloth_sword', 'mage_leather_sword', 'mage_mail_sword', 'mage_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
