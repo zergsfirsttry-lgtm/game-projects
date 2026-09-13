@@ -202,7 +202,7 @@ const Game = {
     // any one contributing source.
     const diffStatMult = currentDifficulty().playerStatMult;
 
-    return {
+    const result = {
       atk: Math.round(Math.max(0, Math.round((p.baseAtk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + curse.atk + ghost.atk + talent.atk + title.atk + pvpGear.atk + party.atk + moral.atk) * diffStatMult),
       def: Math.round(Math.max(0, p.baseDef + boost(gear.def + bonus.def + companion.def + buff.def) + curse.def + ghost.def + talent.def + title.def + pvpGear.def + party.def + moral.def) * diffStatMult),
       maxHp: Math.max(1, Math.round((Math.round((p.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + curse.maxHp + ghost.maxHp + talent.maxHp + title.maxHp + pvpGear.maxHp + party.maxHp + moral.maxHp) * diffStatMult)),
@@ -230,6 +230,16 @@ const Game = {
       noPotions: curse.noPotions,
       level: charRecord.level
     };
+    // maxHp is derived fresh every call (gear/curses/buffs can all shrink
+    // it - unequipping a +maxHp item, a temp effect expiring, etc.), but
+    // p.hp is a stored absolute number that only ever changes through
+    // heal()/damage() - nothing re-clamps it down when the ceiling drops.
+    // Enforcing that here, in the one place every hp/maxHp read already
+    // flows through, keeps current HP honestly at or under 100% everywhere
+    // (HUD bar, combat bar, any % check) without having to catch every
+    // individual place maxHp can shrink.
+    p.hp = Math.min(p.hp, result.maxHp);
+    return result;
   },
 
   addGold(amount) {

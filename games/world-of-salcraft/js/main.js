@@ -295,7 +295,7 @@ const App = {
   renderHud() {
     const p = Game.player;
     const stats = Game.effectiveStats();
-    const hpPct = Math.max(0, Math.round((p.hp / stats.maxHp) * 100));
+    const hpPct = clamp(Math.round((p.hp / stats.maxHp) * 100), 0, 100);
     const relicCount = new Set(p.relics).size;
     const curses = (p.curses || []).map(id => `<span title="${CURSES[id].name}: ${CURSES[id].desc}">${CURSES[id].icon}</span>`).join('');
     const now = Date.now();
@@ -1315,9 +1315,9 @@ const App = {
           <div class="combatant player">
             <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE, companionAnim, weaponSlot)}</div>
             <div class="hp-bar-container">
-              <div class="hp-bar-wrap ${hpFlashClass('player')}"${hpFlashStyleAttr('player')}><div class="hp-bar-fill" style="width:${Math.round((p.hp/stats.maxHp)*100)}%"></div></div>
+              <div class="hp-bar-wrap ${hpFlashClass('player')}"${hpFlashStyleAttr('player')}><div class="hp-bar-fill" style="width:${clamp(Math.round((p.hp/stats.maxHp)*100), 0, 100)}%"></div></div>
             </div>
-            <div class="hp-label">${Math.max(0, Math.round((p.hp/stats.maxHp)*100))}%</div>
+            <div class="hp-label">${clamp(Math.round((p.hp/stats.maxHp)*100), 0, 100)}%</div>
           </div>
           <div class="combatant enemy ${s.enemy.elite ? 'elite' : ''} ${s.enemy.boss ? 'boss' : ''} ${s.enemy.spectral ? 'spectral' : ''}">
             <div class="portrait ${this.animClass(s.anim.enemy, false)}" style="${!s.enemy.spectral ? `filter:${theme.enemyTint}` : ''}">
@@ -1325,10 +1325,10 @@ const App = {
               ${s.enemy.pvpGhost ? renderOpponentRig(s.enemy.id, epicEnemySize(s.enemy)) : anyCharacterSvg(s.enemy.id, epicEnemySize(s.enemy))}
             </div>
             <div class="hp-bar-container">
-              <div class="hp-bar-wrap ${hpFlashClass('enemy')}"${hpFlashStyleAttr('enemy')}><div class="hp-bar-fill" style="width:${Math.round((s.enemy.hp/s.enemy.maxHp)*100)}%"></div></div>
+              <div class="hp-bar-wrap ${hpFlashClass('enemy')}"${hpFlashStyleAttr('enemy')}><div class="hp-bar-fill" style="width:${clamp(Math.round((s.enemy.hp/s.enemy.maxHp)*100), 0, 100)}%"></div></div>
               ${critText ? `<div class="floating-crit">CRITICAL!<br>-${critText.dmg}</div>` : ''}
             </div>
-            <div class="hp-label">${Math.max(0, Math.round((s.enemy.hp/s.enemy.maxHp)*100))}%</div>
+            <div class="hp-label">${clamp(Math.round((s.enemy.hp/s.enemy.maxHp)*100), 0, 100)}%</div>
           </div>
           ${ballColor ? `<div class="magic-ball" style="--ball-color:${ballColor}"></div>` : ''}
           ${isFireballCast ? `<div class="fireball-projectile"></div>` : ''}
