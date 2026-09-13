@@ -81,7 +81,19 @@ const App = {
     const timeLabel = hours < 1 ? `${Math.round(hours * 60)} minutes` : `${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'}`;
     const rec = Persistent.getCharacter(result.classId);
     const materialLines = Object.entries(result.materialsGained).map(([k, v]) => `+${v} ${k}`).join(', ');
-    const itemLines = result.itemsGained.map(i => `<div>${i.icon} <span style="color:${RARITIES[i.rarity].color}">${RARITIES[i.rarity].label} ${i.name}</span></div>`).join('');
+    // Collapse repeats (a long AFK stretch can easily roll the same
+    // defId+rarity combo several times) into one row with a "x3"-style
+    // count, same convention as renderStackedRelicRows - one representative
+    // item per group supplies the icon/name/rarity for that row.
+    const itemGroups = {};
+    result.itemsGained.forEach(item => {
+      const key = `${item.defId}_${item.rarity}`;
+      if (!itemGroups[key]) itemGroups[key] = { item, count: 0 };
+      itemGroups[key].count++;
+    });
+    const itemLines = Object.values(itemGroups).map(({ item: i, count }) =>
+      `<div>${i.icon} <span style="color:${RARITIES[i.rarity].color}">${RARITIES[i.rarity].label} ${i.name}</span>${count > 1 ? ` <span class="small-text">×${count}</span>` : ''}</div>`
+    ).join('');
     this.root.innerHTML = `
       <div class="center-screen">
         <h1 class="result-title victory">Welcome Back!</h1>

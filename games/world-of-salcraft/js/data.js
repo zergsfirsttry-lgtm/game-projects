@@ -1045,7 +1045,7 @@ const RARE_NPCS = {
   george: {
     name: 'George',
     portrait: 'george',
-    flavor: "A mountain of a man steps out from the treeline, knuckles dark with old blood, a huge black dog padding silent at his heel. \"Name's George,\" he grunts. \"Don't need a blade. Never have.\" He nods at the dog. \"This is Ryker. Reckon he likes you.\"",
+    flavor: "A mountain of a man crashes out from the treeline, knuckles dark with old blood, a huge black dog padding silent at his heel. He squints at you a long moment, like the thought is heavy work. \"Me George,\" he finally manages, thumping his own chest. He points at the dog. \"This Ryker.\" A longer pause. \"Ryker like you.\" He beams, proud of getting that many words out in a row.",
     rewardKind: 'pet', rewardId: 'ryker'
   },
   landry: {
