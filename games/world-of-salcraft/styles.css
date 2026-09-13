@@ -824,7 +824,12 @@ button {
   text-align: center;
   box-shadow: inset 0 0 0 1px rgba(212,175,90,0.08);
 }
-.combatant .portrait { display: flex; justify-content: center; align-items: flex-end; height: 108px; position: relative; }
+/* Sized to comfortably fit PLAYER_SPRITE_SIZE/EPIC_ENEMY_SPRITE_SIZE
+   (main.js, ~180-190px) plus a mounted rider's extra height and a little
+   breathing room above - the combat screen is meant to read as mostly
+   pixel art now, with the log/action buttons well below it, not a small
+   preview crammed above a big text log. */
+.combatant .portrait { display: flex; justify-content: center; align-items: flex-end; height: 230px; position: relative; }
 /* max-width+height:auto (not just image-rendering) so a narrow mobile
    combatant column shrinks the sprite proportionally instead of squashing
    it sideways - a flex item with an explicit width/height SVG child only

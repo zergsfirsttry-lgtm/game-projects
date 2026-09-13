@@ -8,9 +8,9 @@
 // frame. Only combat/map portraits follow this rule - menu chrome (class
 // select cards, the Armory paperdoll portrait, HUD mini-icons) scales
 // independently since those aren't "encounters."
-const PLAYER_SPRITE_SIZE = 92;
-const EPIC_ENEMY_SPRITE_SIZE = 96;
-const REGULAR_ENEMY_SPRITE_SIZE = 84;
+const PLAYER_SPRITE_SIZE = 180;
+const EPIC_ENEMY_SPRITE_SIZE = 190;
+const REGULAR_ENEMY_SPRITE_SIZE = 165;
 function epicEnemySize(enemy) {
   return (enemy.boss || enemy.elite) ? EPIC_ENEMY_SPRITE_SIZE : REGULAR_ENEMY_SPRITE_SIZE;
 }
