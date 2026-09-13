@@ -489,7 +489,12 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'barbarian_cloth_dagger', 'barbarian_leather_dagger', 'barbarian_mail_dagger', 'barbarian_plate_dagger',
   'barbarian_cloth_mace', 'barbarian_leather_mace', 'barbarian_mail_mace', 'barbarian_plate_mace',
   'barbarian_cloth_staff', 'barbarian_leather_staff', 'barbarian_mail_staff', 'barbarian_plate_staff',
-  'barbarian_cloth_sword', 'barbarian_leather_sword', 'barbarian_mail_sword', 'barbarian_plate_sword'
+  'barbarian_cloth_sword', 'barbarian_leather_sword', 'barbarian_mail_sword', 'barbarian_plate_sword',
+  // Cleric complete: all 4 armor styles across all 4 weapons it can wield.
+  'cleric_cloth_axe', 'cleric_leather_axe', 'cleric_mail_axe', 'cleric_plate_axe',
+  'cleric_cloth_dagger', 'cleric_leather_dagger', 'cleric_mail_dagger', 'cleric_plate_dagger',
+  'cleric_cloth_mace', 'cleric_leather_mace', 'cleric_mail_mace', 'cleric_plate_mace',
+  'cleric_cloth_sword', 'cleric_leather_sword', 'cleric_mail_sword', 'cleric_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
