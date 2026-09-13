@@ -4615,38 +4615,58 @@ const App = {
   }
 };
 
-// How much stronger the player's ACTUAL build (gear, relics, talents, gear
-// set bonus, spell power - everything effectiveStats() folds in) is than a
-// bare "class base stats at this level" baseline, same idea as the Rival
-// Ghost/PvP opponent scaling off Game.effectiveStats() rather than a fixed
-// curve. Only ever scales UP (an under-geared character never gets an
-// easier ride than the act curve already gives them) and is dampened +
-// capped so a huge power spike doesn't spiral the fight into being
-// unwinnable outright. spellPower is folded in at a rough atk-equivalent
-// weight so a caster stacking spell-damage relics/gear also toughens
-// enemies up, not just flat ATK stackers.
+// How much stronger the player's ACTUAL build is than a bare "class base
+// stats at this level" baseline, same idea as the Rival Ghost/PvP opponent
+// scaling off Game.effectiveStats() rather than a fixed curve. Reads
+// Game.effectiveStats() directly rather than re-summing individual sources,
+// so every contributor it already folds in - both weapon slots, all 15
+// armor/accessory slots, this run's temporary relics AND permanently-
+// purchased bank relics (effectiveStats combines both into one `bonus`
+// before this ever sees it), talents, title, profession, buffs, and the
+// Gear Set Bonus multiplier on top of all of it - is automatically covered
+// here too, with no risk of the two drifting out of sync.
+// Only ever scales UP (an under-geared character never gets an easier ride
+// than the act curve already gives them) and is dampened + capped so a huge
+// power spike doesn't spiral the fight into being unwinnable outright.
 // DEF carries the same weight as ATK here - 19 equip slots (each able to
 // roll def) plus the multiplicative Gear Set Bonus can push DEF up far
 // faster than ATK grows, and a mult that only watched ATK/HP left a
 // defense-stacked build effectively unkillable (see mitigatedDamage,
 // combat.js, for the other half of that fix - DEF also can't cancel more
-// than 75% of an incoming hit outright, however big it gets). Dampened at
-// 0.8 (was 0.5) and capped at 6x (was 3x) - both loosened from the original
-// values, which were tuned back when this only ever watched ATK/HP and
-// regularly left even a moderately-geared character's power ratio (and
-// therefore the enemy toughening it should have triggered) understated.
+// than 75% of an incoming hit outright, however big it gets).
+// spellPower/critBonus/lifesteal/hpRegen/executeBonus/eliteSlayerAtk/
+// comboChance are folded in too, each at a rough atk-equivalent weight -
+// relics very commonly grant these INSTEAD of flat atk/def (Eagle's Eye:
+// pure crit, Vampiric Fang: pure lifesteal, Venom-Coated Dagger: pure
+// execute bonus...), so a build stacking several of these could otherwise
+// hit noticeably above its measured "power" and slip past this scaling
+// entirely. Weights are deliberately rough (this is a difficulty-scaling
+// heuristic, not a DPS simulator) - sized off each stat's typical
+// per-relic magnitude (see RELICS in data.js) so a single relic's worth of
+// any of them nudges power a comparable amount, while a real stacked build
+// (several relics deep, which the run relic system explicitly allows via
+// duplicates) moves it meaningfully.
 function playerPowerMult() {
   if (!Game.player) return 1;
   const stats = Game.effectiveStats();
   const cls = CLASSES[Game.player.classId];
   const charRecord = Persistent.getCharacter(Game.player.classId);
   const lvlMult = levelStatMultiplier(charRecord.level);
-  const power = (s) => s.atk + s.def + s.maxHp * 0.15 + s.spellPower * 20;
+  const power = (s) => s.atk + s.def + s.maxHp * 0.15
+    + (s.spellPower || 0) * 20
+    + (s.critBonus || 0) * 15
+    + (s.lifesteal || 0) * 1.5
+    + (s.hpRegen || 0) * 1.5
+    + (s.executeBonus || 0) * 0.5
+    + (s.eliteSlayerAtk || 0) * 0.5
+    + (s.comboChance || 0) * 30;
   // def deliberately skips lvlMult here, mirroring effectiveStats (state.js)
   // itself - only atk/maxHp scale with level there, base def doesn't, so the
   // baseline has to match that or level alone (with zero gear) would skew
-  // the ratio away from the 1x it's supposed to hold at.
-  const baseline = power({ atk: cls.atk * lvlMult, def: cls.def, maxHp: cls.maxHp * lvlMult, spellPower: 0 });
+  // the ratio away from the 1x it's supposed to hold at. Every other field
+  // is left undefined here on purpose - a bare class has none of them, and
+  // power()'s `|| 0` fallbacks treat that the same as an explicit zero.
+  const baseline = power({ atk: cls.atk * lvlMult, def: cls.def, maxHp: cls.maxHp * lvlMult });
   const actual = power(stats);
   const ratio = baseline > 0 ? actual / baseline : 1;
   return clamp(1 + Math.max(0, ratio - 1) * 0.8, 1, 6);
