@@ -494,7 +494,14 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'cleric_cloth_axe', 'cleric_leather_axe', 'cleric_mail_axe', 'cleric_plate_axe',
   'cleric_cloth_dagger', 'cleric_leather_dagger', 'cleric_mail_dagger', 'cleric_plate_dagger',
   'cleric_cloth_mace', 'cleric_leather_mace', 'cleric_mail_mace', 'cleric_plate_mace',
-  'cleric_cloth_sword', 'cleric_leather_sword', 'cleric_mail_sword', 'cleric_plate_sword'
+  'cleric_cloth_sword', 'cleric_leather_sword', 'cleric_mail_sword', 'cleric_plate_sword',
+  // Bard complete: all 4 armor styles across all 4 weapons it can wield -
+  // the last class, closing out the full 164-combo matrix (every class x
+  // armor style x weapon visual it can actually equip) started above.
+  'bard_cloth_bow', 'bard_leather_bow', 'bard_mail_bow', 'bard_plate_bow',
+  'bard_cloth_lute', 'bard_leather_lute', 'bard_mail_lute', 'bard_plate_lute',
+  'bard_cloth_mace', 'bard_leather_mace', 'bard_mail_mace', 'bard_plate_mace',
+  'bard_cloth_sword', 'bard_leather_sword', 'bard_mail_sword', 'bard_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
