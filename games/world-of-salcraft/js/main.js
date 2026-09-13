@@ -4625,31 +4625,48 @@ const App = {
 // unwinnable outright. spellPower is folded in at a rough atk-equivalent
 // weight so a caster stacking spell-damage relics/gear also toughens
 // enemies up, not just flat ATK stackers.
+// DEF carries the same weight as ATK here - 19 equip slots (each able to
+// roll def) plus the multiplicative Gear Set Bonus can push DEF up far
+// faster than ATK grows, and a mult that only watched ATK/HP left a
+// defense-stacked build effectively unkillable (see mitigatedDamage,
+// combat.js, for the other half of that fix - DEF also can't cancel more
+// than 75% of an incoming hit outright, however big it gets). Dampened at
+// 0.8 (was 0.5) and capped at 6x (was 3x) - both loosened from the original
+// values, which were tuned back when this only ever watched ATK/HP and
+// regularly left even a moderately-geared character's power ratio (and
+// therefore the enemy toughening it should have triggered) understated.
 function playerPowerMult() {
   if (!Game.player) return 1;
   const stats = Game.effectiveStats();
   const cls = CLASSES[Game.player.classId];
   const charRecord = Persistent.getCharacter(Game.player.classId);
   const lvlMult = levelStatMultiplier(charRecord.level);
-  const power = (s) => s.atk + s.maxHp * 0.15 + s.spellPower * 20;
-  const baseline = power({ atk: cls.atk * lvlMult, maxHp: cls.maxHp * lvlMult, spellPower: 0 });
+  const power = (s) => s.atk + s.def + s.maxHp * 0.15 + s.spellPower * 20;
+  // def deliberately skips lvlMult here, mirroring effectiveStats (state.js)
+  // itself - only atk/maxHp scale with level there, base def doesn't, so the
+  // baseline has to match that or level alone (with zero gear) would skew
+  // the ratio away from the 1x it's supposed to hold at.
+  const baseline = power({ atk: cls.atk * lvlMult, def: cls.def, maxHp: cls.maxHp * lvlMult, spellPower: 0 });
   const actual = power(stats);
   const ratio = baseline > 0 ? actual / baseline : 1;
-  return clamp(1 + Math.max(0, ratio - 1) * 0.5, 1, 3);
+  return clamp(1 + Math.max(0, ratio - 1) * 0.8, 1, 6);
 }
 
 // Shared by scaleEnemy (act-based encounters) and the dungeon/raid entry
 // points below (fixed-tier encounters with no act of their own) - applies
-// just the player-power dimension to hp/atk on top of whatever base stats
-// the caller already computed.
+// the player-power dimension to hp/atk/def on top of whatever base stats
+// the caller already computed. DEF scales here too (previously only
+// hp/atk did) - static, un-scaled enemy DEF was the other half of "a
+// geared player one-shots everything": ATK growth from gear trivially blew
+// past a handful of fixed points of enemy defense with nothing to check it.
 function applyPlayerPowerScaling(template) {
   const mult = playerPowerMult();
-  return { ...template, hp: Math.round(template.hp * mult), atk: Math.round(template.atk * mult) };
+  return { ...template, hp: Math.round(template.hp * mult), atk: Math.round(template.atk * mult), def: Math.round((template.def || 0) * mult) };
 }
 
 function scaleEnemy(template, act) {
   const mult = 1 + (act - 1) * 0.22;
-  return applyPlayerPowerScaling({ ...template, hp: Math.round(template.hp * mult), atk: Math.round(template.atk * mult) });
+  return applyPlayerPowerScaling({ ...template, hp: Math.round(template.hp * mult), atk: Math.round(template.atk * mult), def: Math.round((template.def || 0) * mult) });
 }
 
 window.addEventListener('DOMContentLoaded', () => App.init());

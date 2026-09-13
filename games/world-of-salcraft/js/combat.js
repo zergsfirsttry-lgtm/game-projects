@@ -9,6 +9,22 @@
 // unlikely) chain.
 const COMBO_MAX_EXTRA_HITS = 5;
 
+// Shared by every damage calc on both sides of a fight (playerAttack,
+// resolveSkillDamage, resolveEnemyTurn) - flat "atk - def" subtraction looks
+// fine near starting-gear stat ranges, but a heavily-geared DEF stat (19
+// equip slots, each able to roll def, multiplied further by the Gear Set
+// Bonus) can climb into the dozens-to-hundreds long before ATK does, which
+// used to let it wipe out incoming damage down to the 1-floor entirely -
+// effectively unkillable regardless of how much enemy ATK scaling tried to
+// compensate. Capping how much of the attacker's own ATK the defender's DEF
+// can cancel (75%) guarantees a real hit always lands - defense still
+// matters a lot, it just can't reduce a fight to auto-win/auto-survive on
+// its own the way unbounded subtraction did.
+const DEF_MITIGATION_CAP = 0.75;
+function mitigatedDamage(atk, def) {
+  return Math.max(1, Math.round(atk - Math.min(Math.max(0, def), atk * DEF_MITIGATION_CAP)));
+}
+
 const Combat = {
   state: null,
 
@@ -160,7 +176,7 @@ const Combat = {
     let totalDmg = 0, hits = 0, lastCrit = false;
     do {
       const crit = this.rollCrit(stats.critBonus);
-      let dmg = Math.max(1, stats.atk - s.enemy.def) + this.bonusDamageAgainst(s.enemy, stats);
+      let dmg = mitigatedDamage(stats.atk, s.enemy.def) + this.bonusDamageAgainst(s.enemy, stats);
       if (crit) dmg = Math.round(dmg * 1.5);
       s.enemy.hp = Math.max(0, s.enemy.hp - dmg);
       totalDmg += dmg;
@@ -181,10 +197,10 @@ const Combat = {
   // `type` means. This is what lets every class (and any bank-shop spell) share
   // one damage formula instead of a name-matched special case per skill.
   resolveSkillDamage(skill, stats, enemyDef) {
-    const baseHit = Math.max(1, stats.atk - enemyDef);
+    const baseHit = mitigatedDamage(stats.atk, enemyDef);
     let dmg;
     if (skill.type === 'flat') dmg = skill.power;
-    else if (skill.type === 'cleave') dmg = Math.max(1, stats.atk - Math.max(0, enemyDef - skill.ignoreDef)) + skill.power;
+    else if (skill.type === 'cleave') dmg = mitigatedDamage(stats.atk, Math.max(0, enemyDef - skill.ignoreDef)) + skill.power;
     else if (skill.type === 'multiplier') dmg = Math.round(baseHit * skill.power);
     else if (skill.type === 'drain') dmg = baseHit + skill.power;
     else if (skill.type === 'rage') {
@@ -295,7 +311,7 @@ const Combat = {
       }
     }
     const useSpecial = s.enemy.elite || s.enemy.boss ? Math.random() < 0.35 : Math.random() < 0.15;
-    let dmg = Math.max(1, s.enemy.atk - stats.def);
+    let dmg = mitigatedDamage(s.enemy.atk, stats.def);
     if (useSpecial) dmg = Math.round(dmg * 1.6);
     // A Tank-role pet's guard (see resolveCompanionAttacks) blunts exactly
     // one incoming hit, then clears - it doesn't stack across rounds.
