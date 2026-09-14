@@ -1988,7 +1988,20 @@ function anyCharacterSvg(id, sizePx, weaponSlot) {
 // landed a hit this round - drives a lunge animation glowing the color of
 // its role (COMPANION_ROLE_GLOW in data.js), or the default accent gold for
 // a plain non-role pet/mount.
-function renderCompanionRig(classId, sizePx, companionAnim, weaponSlot) {
+// opts.topLevelNameplates: the combat portrait's rider now renders at full
+// size, bottom-anchored in a box much taller than it (see .combatant
+// .portrait/.companion-row, styles.css) - a nameplate nested inside
+// .companion-rider/-mount/-pet (the default, still used by the map
+// traveler below, where the row's height already matches its content) would
+// anchor to that small bottom-anchored wrapper and land low enough to
+// overlap the character art instead of floating clearly above it like the
+// enemy's own nameplate does. With this flag, the three nameplates render as
+// siblings of .companion-mount/-rider/-pet (not nested inside them) so they
+// anchor to the full-height .companion-row instead - see the
+// .companion-row > .nameplate* rules in styles.css for the resulting
+// top-of-portrait alignment.
+function renderCompanionRig(classId, sizePx, companionAnim, weaponSlot, opts) {
+  const topLevel = !!(opts && opts.topLevelNameplates);
   const rec = Persistent.getCharacter(classId);
   const mountId = rec.equipped.mount;
   const petId = rec.equipped.pet;
@@ -2001,16 +2014,24 @@ function renderCompanionRig(classId, sizePx, companionAnim, weaponSlot) {
   // rename input in renderSanctuaryHouse), just smaller to match their
   // smaller sprite.
   const name = displayCharacterName(classId);
-  const nameplate = `<span class="nameplate">${escapeHtml(name)}</span>`;
+  const nameplate = `<span class="nameplate${topLevel ? ' nameplate-rider' : ''}">${escapeHtml(name)}</span>`;
   const mountName = mountId ? companionDisplayName('mount', mountId, MOUNTS[mountId]) : '';
   const petName = petId ? companionDisplayName('pet', petId, PETS[petId]) : '';
-  const mountNameplate = mountName ? `<span class="nameplate nameplate-small">${escapeHtml(mountName)}</span>` : '';
-  const petNameplate = petName ? `<span class="nameplate nameplate-small">${escapeHtml(petName)}</span>` : '';
+  const mountNameplate = mountName ? `<span class="nameplate nameplate-small${topLevel ? ' nameplate-mount' : ''}">${escapeHtml(mountName)}</span>` : '';
+  const petNameplate = petName ? `<span class="nameplate nameplate-small${topLevel ? ' nameplate-pet' : ''}">${escapeHtml(petName)}</span>` : '';
   const actingClass = (kind) => (companionAnim && companionAnim[kind]) ? 'companion-acting' : '';
   const actingStyle = (kind) => {
     const acting = companionAnim && companionAnim[kind];
     return acting ? ` style="--companion-glow:${COMPANION_ROLE_GLOW[acting] || 'var(--accent)'}"` : '';
   };
+  if (topLevel) {
+    return `<span class="companion-row">` +
+      nameplate + mountNameplate + petNameplate +
+      (mountSvg ? `<span class="companion-mount ${actingClass('mount')}"${actingStyle('mount')}>${mountSvg}</span>` : '') +
+      `<span class="companion-rider">${riderSvg}</span>` +
+      (petSvg ? `<span class="companion-pet ${actingClass('pet')}"${actingStyle('pet')}>${petSvg}</span>` : '') +
+      `</span>`;
+  }
   return `<span class="companion-row">` +
     (mountSvg ? `<span class="companion-mount ${actingClass('mount')}"${actingStyle('mount')}>${mountNameplate}${mountSvg}</span>` : '') +
     `<span class="companion-rider">${nameplate}${riderSvg}</span>` +

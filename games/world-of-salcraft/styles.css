@@ -954,6 +954,19 @@ button {
 /* A named mount/pet's nameplate (see companion-mount/companion-pet above) -
    same idea, scaled down to match their smaller sprite. */
 .nameplate-small { font-size: clamp(0.48rem, 2.1vw, 0.56rem); top: -6px; max-width: min(80px, 30vw); }
+
+/* Combat portrait only, when renderCompanionRig is called with
+   { topLevelNameplates: true } (see progression.js) - all three nameplates
+   render as direct children of .companion-row instead of nested inside
+   .companion-mount/-rider/-pet, so they anchor against the row's own
+   full-portrait height (see .combatant .companion-row above) rather than
+   each creature's own bottom-anchored wrapper - lands them at the same
+   clear height as the enemy's nameplate instead of low enough to overlap
+   the character art. .nameplate-rider keeps the default centered position;
+   mount/pet shift left/right to stay roughly above their own offset sprite
+   (see .combatant .companion-mount/-pet's left/right above). */
+.combatant .companion-row > .nameplate-mount { left: 24%; }
+.combatant .companion-row > .nameplate-pet { left: auto; right: 6%; transform: none; }
 .combatant.enemy.elite { border-color: var(--bad); }
 .combatant.enemy.boss { border-color: var(--accent); }
 .combatant.enemy.spectral { border-color: var(--accent-2); box-shadow: 0 0 14px rgba(138,95,214,0.5); }

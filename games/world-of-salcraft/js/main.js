@@ -1420,7 +1420,7 @@ const App = {
         <div class="combat-arena">
           <div class="combat-arena-bg" style="background-image:url('assets/zone_maps/${theme.id}.png')"></div>
           <div class="combatant player">
-            <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE, companionAnim, weaponSlot)}</div>
+            <div class="portrait ${this.animClass(s.anim.player, true)}">${renderCompanionRig(p.classId, PLAYER_SPRITE_SIZE, companionAnim, weaponSlot, { topLevelNameplates: true })}</div>
             <div class="hp-bar-container">
               <div class="hp-bar-wrap ${hpFlashClass('player')}"${hpFlashStyleAttr('player')}><div class="hp-bar-fill" style="width:${clamp(Math.round((p.hp/stats.maxHp)*100), 0, 100)}%"></div></div>
             </div>
