@@ -509,7 +509,37 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'deathKnight_cloth_axe', 'deathKnight_leather_axe', 'deathKnight_mail_axe', 'deathKnight_plate_axe',
   'deathKnight_cloth_dagger', 'deathKnight_leather_dagger', 'deathKnight_mail_dagger', 'deathKnight_plate_dagger',
   'deathKnight_cloth_mace', 'deathKnight_leather_mace', 'deathKnight_mail_mace', 'deathKnight_plate_mace',
-  'deathKnight_cloth_sword', 'deathKnight_leather_sword', 'deathKnight_mail_sword', 'deathKnight_plate_sword'
+  'deathKnight_cloth_sword', 'deathKnight_leather_sword', 'deathKnight_mail_sword', 'deathKnight_plate_sword',
+  // Monk complete: staff (or bare-handed) is its only reachable weapon
+  // visual, all 4 armor styles. No _cast entry - Flying Kick isn't
+  // 'flat'-type.
+  'monk_cloth_staff', 'monk_leather_staff', 'monk_mail_staff', 'monk_plate_staff',
+  // Druid complete: staff is its only reachable weapon visual (rogue's gear
+  // pool, staff-only), all 4 armor styles. No _cast entry yet - Wrath IS
+  // 'flat'-type, so it currently falls back to the plain CSS cast effect
+  // (no dedicated animation) same as any class missing one; a druid_cast
+  // entry would need its own generation pass later if wanted.
+  'druid_cloth_staff', 'druid_leather_staff', 'druid_mail_staff', 'druid_plate_staff',
+  // Priest complete: identical weapon pool to its mage donor (sword/mace/
+  // dagger/staff), all 4 armor styles. No _cast entry yet either - Shadow
+  // Word: Pain is 'drain'-type so its own default spell never needs one,
+  // but like Druid, a priest_cast pass would still be worth doing later
+  // since bank-shop 'flat' spells are usable by any class.
+  'priest_cloth_dagger', 'priest_leather_dagger', 'priest_mail_dagger', 'priest_plate_dagger',
+  'priest_cloth_mace', 'priest_leather_mace', 'priest_mail_mace', 'priest_plate_mace',
+  'priest_cloth_staff', 'priest_leather_staff', 'priest_mail_staff', 'priest_plate_staff',
+  'priest_cloth_sword', 'priest_leather_sword', 'priest_mail_sword', 'priest_plate_sword',
+  // Shaman complete: hunter's weapon pool minus ranged (bows), all 4 armor
+  // styles - the largest of the 5 new classes at 20 combos. No _cast entry
+  // yet - Lightning Bolt IS 'flat'-type, same situation as Druid's Wrath.
+  // This closes out every combo the Legendary Classes art pipeline set out
+  // to cover (Death Knight 16 + Monk 4 + Druid 4 + Priest 16 + Shaman 20 =
+  // 60 combos total, matching the ~60-70 estimate from the original plan).
+  'shaman_cloth_axe', 'shaman_leather_axe', 'shaman_mail_axe', 'shaman_plate_axe',
+  'shaman_cloth_dagger', 'shaman_leather_dagger', 'shaman_mail_dagger', 'shaman_plate_dagger',
+  'shaman_cloth_mace', 'shaman_leather_mace', 'shaman_mail_mace', 'shaman_plate_mace',
+  'shaman_cloth_staff', 'shaman_leather_staff', 'shaman_mail_staff', 'shaman_plate_staff',
+  'shaman_cloth_sword', 'shaman_leather_sword', 'shaman_mail_sword', 'shaman_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
@@ -925,7 +955,7 @@ function wrapLegendaryWeaponGlow(svgMarkup) {
 // the combo from equipped gear and falls back to CLASS_ART_DEFAULTS for any
 // empty slot). Classes not in this set still render through the fully
 // procedural renderCharacterSprite below.
-const CLASS_ART_READY = new Set(['warrior', 'rogue', 'mage', 'paladin', 'hunter', 'warlock', 'barbarian', 'cleric', 'bard', 'deathKnight']);
+const CLASS_ART_READY = new Set(['warrior', 'rogue', 'mage', 'paladin', 'hunter', 'warlock', 'barbarian', 'cleric', 'bard', 'deathKnight', 'monk', 'druid', 'priest', 'shaman']);
 
 // The armor style / weapon visual shown for a class's still-unequipped
 // slots - an ungeared character reads as a light adventurer rather than
