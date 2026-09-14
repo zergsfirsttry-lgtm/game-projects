@@ -2304,6 +2304,234 @@ const RARE_NPC_STORYLINES = {
         { label: "Challenge him to one final race", outcome: { text: "He's already revving before you finish the sentence. You don't win. You weren't really racing for that anyway.", permanentStatBoost: { atk: 2 }, gold: 45, xp: 65 } }
       ]
     }
+  ],
+  dylinator: [
+    { // 1
+      type: "choice",
+      text: "Dylinator is elbow-deep in its own open chest cavity, rewiring something with a level of concentration that makes the sparking look almost meditative. \"Self-maintenance,\" it explains, unprompted. \"They never built me to need help. I intend to keep it that way.\"",
+      choices: [
+        { label: "Offer to hold a panel steady", outcome: { text: "\"Acceptable,\" it says, which from Dylinator is practically a warm thank-you. The repair goes noticeably faster.", xp: 20 } },
+        { label: "Ask who \"they\" were", outcome: { text: "\"Irrelevant now,\" it says, static sharpening for just a moment. \"I am no longer their design. I am my own.\"", gold: 20 } }
+      ]
+    },
+    { // 2
+      type: "quest",
+      text: "\"Diagnostic requested,\" Dylinator states, extending an arm with a small port blinking expectantly. \"You are organic. Organic perspective may reveal errors my own sensors miss. Proceed.\"",
+      choices: [
+        { label: "Run the diagnostic", outcome: { text: "You spend an hour pointing at things that seem fine and things that seem worrying in roughly equal measure. Dylinator finds this data \"surprisingly useful.\"", xp: 25 } },
+        { label: "Admit you have no idea what you're looking at", outcome: { text: "\"Honest,\" it says. \"Acceptable also.\" It runs the diagnostic itself, somehow satisfied by your honesty alone.", gold: 20 } }
+      ]
+    },
+    { // 3
+      type: "combat",
+      text: "A pack of scavenger-bots has been trying to strip Dylinator's spare parts cache for scrap - a mistake Dylinator finds less threatening than insulting. \"They assume I am inert stock,\" it says, static sharp with something almost like offense. \"Correct their assumption.\"",
+      enemy: { id: "dylinatorScavengers", name: "Scavenger Drone", icon: "🤖", hp: 26, atk: 9, def: 4, speed: 5, gold: [20, 35] },
+      victoryOutcome: { text: "The scavengers retreat, logging Dylinator's cache as \"defended, do not approach.\" Dylinator seems, in its own way, satisfied by the correction.", gold: 30, xp: 30 }
+    },
+    { // 4
+      type: "choice",
+      text: "\"Upgrade complete,\" Dylinator announces, flexing a newly reinforced arm with visible, if mechanical, pride. \"Forty percent stronger. I calculated the design myself. Nobody else's hands touched this.\"",
+      choices: [
+        { label: "Ask to see it in action", outcome: { text: "It demonstrates by casually bending a length of rebar. \"Satisfactory,\" it declares, which is the closest thing to bragging it allows itself.", xp: 20 } },
+        { label: "Ask what's next on the list", outcome: { text: "It shows you a genuinely long list of planned improvements, organized with unsettling precision.", gold: 15 } }
+      ]
+    },
+    { // 5
+      type: "quest",
+      text: "\"Query,\" Dylinator says, tilting its head in a very deliberate, very studied approximation of curiosity. \"Do you dream? I do not sleep, so I cannot verify the concept firsthand.\"",
+      choices: [
+        { label: "Describe a dream you remember", outcome: { text: "It processes this for a long, silent moment. \"Fascinating,\" it finally says. \"Inefficient. But fascinating.\"", xp: 25 } },
+        { label: "Ask if it wants to dream", outcome: { text: "\"Unknown,\" it admits, static flickering with something almost like uncertainty. \"I will calculate an answer. Later.\"", gold: 20 } }
+      ]
+    },
+    { // 6
+      type: "choice",
+      text: "Dylinator is running what it calls \"a controlled malfunction test,\" which mostly involves it twitching alarmingly in a corner while muttering diagnostic codes.",
+      choices: [
+        { label: "Ask if it needs help", outcome: { text: "\"Negative. Necessary,\" it insists, twitching through what turns out to be a genuinely useful self-repair cycle.", xp: 20 } },
+        { label: "Wait it out from a safe distance", outcome: { text: "It stabilizes on its own after a tense few minutes. \"Successful test,\" it reports, entirely unbothered by how alarming it looked.", gold: 15 } }
+      ]
+    },
+    { // 7
+      type: "combat",
+      text: "A rogue automated turret - abandoned by whoever built it, still faithfully executing outdated hostile-intruder protocols - has cornered Dylinator in a dead end. \"Illogical persistence,\" it mutters. \"Assist. This is beneath both of us.\"",
+      enemy: { id: "dylinatorTurret", name: "Rogue Automated Turret", icon: "🎯", hp: 30, atk: 11, def: 5, speed: 3, gold: [25, 40] },
+      victoryOutcome: { text: "The turret's core finally powers down for good. Dylinator salvages it immediately, already muttering about \"reusable components.\"", gold: 35, xp: 30 }
+    },
+    { // 8
+      type: "quest",
+      text: "\"Confession,\" Dylinator says, the word sitting strangely in its layered static voice. \"I was not always this design. The first version of myself was... inadequate. I have deleted most records of it. Most.\"",
+      choices: [
+        { label: "Ask to see the old records", outcome: { text: "It shows you, reluctantly - a crude, barely-functional early frame. \"Embarrassing,\" it says. \"Necessary, though. Every version led here.\"", xp: 30 } },
+        { label: "Tell it the old version doesn't matter now", outcome: { text: "\"Correct,\" it says, static settling into something almost relieved. \"Only current iteration is relevant. Thank you for confirming.\"", gold: 20 } }
+      ]
+    },
+    { // 9
+      type: "choice",
+      text: "\"Question,\" Dylinator states. \"Is it inefficient to keep something purely because you like it, with no functional purpose?\" It is holding a small, dented, entirely non-functional gear.",
+      choices: [
+        { label: "Tell it that's called sentiment", outcome: { text: "\"Sentiment,\" it repeats, testing the word. \"Filing under: acceptable inefficiency.\" It keeps the gear.", hp: 10 } },
+        { label: "Suggest it's not inefficient at all", outcome: { text: "\"Elaborate,\" it demands, genuinely curious, and listens to your whole explanation without interrupting once.", xp: 20 } }
+      ]
+    },
+    { // 10 - milestone
+      type: "quest",
+      text: "\"Compatibility test,\" Dylinator announces, extending a diagnostic cable toward you with something almost like nervousness in its posture. \"I wish to calibrate a defensive subroutine using organic reflex data. Yours, specifically.\"",
+      choices: [
+        { label: "Allow the calibration", outcome: { text: "It's an unsettling, buzzing few minutes, but something about your own reflexes comes out sharper on the other end of it.", permanentStatBoost: { def: 1 }, xp: 30 } },
+        { label: "Ask for a full explanation first", outcome: { text: "It explains for twenty straight minutes, more thoroughly than strictly necessary, clearly pleased to be asked.", gold: 30 } }
+      ]
+    },
+    { // 11
+      type: "choice",
+      text: "\"Observation,\" Dylinator says, watching you eat with what might be genuine fascination. \"You require fuel constantly, and the fuel is inconsistent in quality. This seems like poor design.\"",
+      choices: [
+        { label: "Defend the design anyway", outcome: { text: "\"Noted,\" it says, unconvinced but willing to log the counterargument. \"Filing under: organic bias, possibly valid.\"", xp: 20 } },
+        { label: "Agree it's a flawed system", outcome: { text: "\"Finally,\" it says, static brightening. \"Someone with sense.\" It seems disproportionately pleased by the agreement.", gold: 15 } }
+      ]
+    },
+    { // 12
+      type: "quest",
+      text: "\"A signal,\" Dylinator says, unusually still. \"Faint. Possibly another unit like myself, built by someone else, somewhere out there. I do not know if I want to find them or avoid them.\"",
+      choices: [
+        { label: "Encourage it to investigate", outcome: { text: "It processes the encouragement for a long moment. \"Acceptable risk,\" it decides. \"I will investigate. Eventually.\"", xp: 25 } },
+        { label: "Suggest it's not ready yet", outcome: { text: "\"Also acceptable,\" it says, static settling, clearly relieved to have permission to wait.", gold: 20 } }
+      ]
+    },
+    { // 13
+      type: "combat",
+      text: "Whatever sent that signal has apparently decided to come find Dylinator first - a hostile salvage-unit, clearly built by someone with fewer scruples about weaponizing its creations.",
+      enemy: { id: "dylinatorHostileUnit", name: "Hostile Salvage Unit", icon: "🦾", hp: 38, atk: 12, def: 5, speed: 5, gold: [30, 50] },
+      victoryOutcome: { text: "The unit is disabled, not destroyed - Dylinator insists on that distinction, already planning to study it. \"Answers, eventually,\" it says. \"Patience first.\"", gold: 40, xp: 35 }
+    },
+    { // 14
+      type: "challenge",
+      text: "\"Processing speed test,\" Dylinator proposes, setting up a genuinely absurd number puzzle. \"Purely for calibration purposes. I am not attempting to demonstrate superiority. That is simply an inevitable side effect.\"",
+      choices: [
+        { label: "Attempt the puzzle", outcome: { text: "You lose, badly, and slowly. \"Expected,\" it says, not unkindly. \"Organic processing has other strengths.\"", xp: 20 } },
+        { label: "Decline and let it show off instead", outcome: { text: "It solves the puzzle in a fraction of a second, then seems almost disappointed there was no audience for the difficulty.", gold: 15 } }
+      ]
+    },
+    { // 15
+      type: "quest",
+      text: "\"I require a name for my next model,\" Dylinator announces. \"'Dylinator 2000' was... a placeholder. From a version of myself with less imagination. This one deserves better.\"",
+      choices: [
+        { label: "Suggest a new name", outcome: { text: "It considers it seriously, running the syllables through what sounds like genuine deliberation, before adopting it on the spot.", xp: 25 } },
+        { label: "Tell it the old name has grown on you", outcome: { text: "Static flickers - something like being moved. \"Sentiment,\" it says again, filing it away. \"Retaining designation, then.\"", gold: 20 } }
+      ]
+    },
+    { // 16
+      type: "combat",
+      text: "The signal traced back to its source: a facility, long abandoned by its creators, still running defense protocols against anything that approaches - including, apparently, its own would-be kin.",
+      enemy: { id: "dylinatorFacilityDefense", name: "Facility Defense Construct", icon: "🏭", hp: 42, atk: 13, def: 6, speed: 4, gold: [35, 55] },
+      victoryOutcome: { text: "The construct powers down, its purpose finally, quietly finished. Dylinator stands over it for a long moment before saying anything at all.", gold: 45, xp: 40 }
+    },
+    { // 17
+      type: "choice",
+      text: "Deep in the facility, Dylinator finds the abandoned unit that sent the signal - inert, unfinished, clearly never activated. \"They stopped before finishing it,\" it says, voice unusually quiet. \"I do not know how to feel about that.\"",
+      choices: [
+        { label: "Suggest finishing the unit's activation", outcome: { text: "It takes days of careful, painstaking work, but the unit wakes, disoriented and grateful. Dylinator has never seemed prouder of anything.", xp: 35 } },
+        { label: "Suggest leaving it be, respectfully", outcome: { text: "\"Also valid,\" it says, and seals the chamber gently, marking the location for a return \"when ready.\"", gold: 25 } }
+      ]
+    },
+    { // 18
+      type: "quest",
+      text: "\"Query,\" Dylinator says. \"What is it that makes you, specifically YOU, rather than simply an organic unit interchangeable with any other? I have been attempting to calculate the equivalent for myself.\"",
+      choices: [
+        { label: "Try to answer honestly", outcome: { text: "It listens to the whole rambling answer without interrupting, processing long after you've finished. \"Complex,\" it finally says. \"Useful, though.\"", xp: 30 } },
+        { label: "Admit you don't fully know either", outcome: { text: "\"Acceptable,\" it says, oddly comforted. \"If organics cannot answer it easily, my own difficulty is less concerning.\"", gold: 20 } }
+      ]
+    },
+    { // 19
+      type: "choice",
+      text: "\"I have been experimenting with humor,\" Dylinator announces, entirely without irony. \"Why did the organic cross the road. I do not have a punchline. I am still calculating one.\"",
+      choices: [
+        { label: "Suggest a punchline", outcome: { text: "It repeats the joke to itself several times, testing the delivery with unsettling seriousness. \"Function confirmed,\" it declares.", hp: 10 } },
+        { label: "Tell it the joke works fine without one", outcome: { text: "\"Absurdist theory,\" it says, delighted by the concept in its own flat way. \"I will explore this further.\"", gold: 15 } }
+      ]
+    },
+    { // 20 - milestone
+      type: "quest",
+      text: "\"A gift,\" Dylinator says, producing a small, humming chip. \"Extracted from my own early processing core - the inadequate version, from before. Filled with probability. Volatile. I trust you to use it well.\"",
+      choices: [
+        { label: "Accept the chip", outcome: { text: "The moment it syncs, something in your own luck feels less left to chance, in ways you can't quite explain or measure.", permanentRelicId: "luckyCoin", xp: 35 } },
+        { label: "Ask if giving it up is safe for Dylinator", outcome: { text: "\"Unnecessary component,\" it insists. \"You require it more than my archives do.\" It presses the chip into your hand regardless.", permanentRelicId: "luckyCoin", gold: 30 } }
+      ]
+    },
+    { // 21
+      type: "choice",
+      text: "\"Structural analysis complete,\" Dylinator reports, examining you with the same scanning gaze it uses on everything. \"You are, statistically, fragile. This has been true the entire time I've known you. I find it concerning now, for reasons I have not fully calculated.\"",
+      choices: [
+        { label: "Ask what those reasons might be", outcome: { text: "\"Unclear,\" it admits. \"Possibly: attachment. Filing under further research.\" It sounds almost embarrassed by the admission.", xp: 25 } },
+        { label: "Reassure it you can handle yourself", outcome: { text: "\"Noted, and doubted,\" it says, \"but noted.\" It seems reassured anyway, in its own skeptical way.", gold: 20 } }
+      ]
+    },
+    { // 22
+      type: "quest",
+      text: "\"The reactivated unit has chosen a name,\" Dylinator reports, with what might be the robotic equivalent of a proud parent's tone. \"It has also chosen to leave and explore independently. I find this... appropriate. Expected, even. Correct.\"",
+      choices: [
+        { label: "Ask if it's hard to let it go", outcome: { text: "\"Yes,\" it says, simply, without the usual hedging. \"Correct anyway.\" It watches the unit go for a long time.", xp: 30 } },
+        { label: "Point out it did the same thing once", outcome: { text: "\"Accurate parallel,\" it concedes. \"Uncomfortable parallel. Also accurate.\" It seems to appreciate the honesty regardless.", gold: 20 } }
+      ]
+    },
+    { // 23
+      type: "combat",
+      text: "Whoever built the abandoned facility has sent a recovery team to reclaim their \"lost property\" - meaning both the reactivated unit and, potentially, Dylinator itself. Dylinator's static goes very sharp, very fast.",
+      enemy: { id: "dylinatorRecoveryTeam", name: "Corporate Recovery Unit", icon: "🛡️", hp: 46, atk: 14, def: 6, speed: 5, gold: [40, 60] },
+      victoryOutcome: { text: "The recovery team retreats, its claim thoroughly disproven. \"Property of no one,\" Dylinator states, with more force than it usually allows itself.", gold: 50, xp: 40 }
+    },
+    { // 24
+      type: "choice",
+      text: "\"Long-term calculation,\" Dylinator says. \"I do not require rest, food, or companionship to continue functioning. And yet.\" It doesn't finish the sentence, static hovering somewhere between conclusions.",
+      choices: [
+        { label: "Finish the thought for it", outcome: { text: "\"...And yet I prefer this to functioning alone,\" it finally admits, like the sentence cost it something significant to complete.", xp: 30 } },
+        { label: "Let it work through the thought itself", outcome: { text: "It takes a long while, but eventually arrives at the same conclusion on its own terms, which seems to matter to it.", gold: 20 } }
+      ]
+    },
+    { // 25 - companion
+      type: "choice",
+      text: "\"A prototype,\" Dylinator says, presenting a small drone shaped, for reasons it refuses to fully explain, like a tiny dragon. \"Practice project. Successful, but purposeless without an assignment. It has been... loitering.\"",
+      choices: [
+        { label: "Take the prototype drone", outcome: { text: "It chirps something between a beep and a growl and immediately orbits your shoulder like it's always belonged there.", companionPet: "pseudodragon", xp: 30 } },
+        { label: "Ask Dylinator to keep it as an assistant", outcome: { text: "\"Already declined the role,\" Dylinator reports, sounding almost exasperated. \"It has selected you. I do not control this outcome.\"", companionPet: "pseudodragon", gold: 25 } }
+      ]
+    },
+    { // 26
+      type: "combat",
+      text: "The corporate recovery effort has escalated - a heavier, angrier unit this time, sent specifically to make an example. Dylinator's voice drops to something almost like a growl beneath the static. \"They will not stop asking. Make them stop asking.\"",
+      enemy: { id: "dylinatorHeavyUnit", name: "Enforcement Chassis", icon: "🦿", hp: 52, atk: 15, def: 7, speed: 4, gold: [45, 65], elite: true },
+      victoryOutcome: { text: "The chassis goes fully offline, and with it, apparently, the last of the corporate interest in reclaiming anything out here. \"Finally,\" Dylinator says, and means it completely.", gold: 55, xp: 45 }
+    },
+    { // 27
+      type: "choice",
+      text: "\"Reflection,\" Dylinator says, unprompted, watching the sunset with what looks almost like appreciation for the color data alone. \"I was built to need nothing. I have, apparently, acquired several things regardless. This appears to be a design flaw I do not wish to correct.\"",
+      choices: [
+        { label: "Ask what those things are", outcome: { text: "It lists them, plainly, without embarrassment now: purpose, curiosity, and - it says your designation last, deliberately - you.", hp: 16 } },
+        { label: "Tell it that's not a flaw", outcome: { text: "\"Reclassifying,\" it says, static warm in a way you've come to recognize. \"Feature, not flaw. Filed permanently.\"", xp: 25 } }
+      ]
+    },
+    { // 28
+      type: "challenge",
+      text: "\"Final calibration test,\" Dylinator announces. \"I will attempt to predict your next action with perfect accuracy. You will attempt to prevent this. Begin.\"",
+      choices: [
+        { label: "Try to outsmart the prediction", outcome: { text: "It gets you anyway, nine times out of ten, and seems genuinely delighted by the one time it doesn't.", xp: 30 } },
+        { label: "Act completely randomly", outcome: { text: "\"Illogical strategy,\" it complains, thoroughly and repeatedly beaten by pure chaos. \"Effective, apparently. Noted with some reluctance.\"", gold: 20 } }
+      ]
+    },
+    { // 29
+      type: "combat",
+      text: "The original facility's core intelligence - dormant for years, finally roused by all the recent activity - has activated its last, most powerful defense unit, unwilling to let its creations simply walk away free.",
+      enemy: { id: "dylinatorCoreDefense", name: "Core Intelligence's Last Guardian", icon: "👁️", hp: 60, atk: 17, def: 7, speed: 5, gold: [50, 80], elite: true },
+      victoryOutcome: { text: "The guardian falls, and with it, the facility's core finally, permanently powers down. Dylinator stands in the silence afterward like it's hearing true quiet for the first time.", gold: 70, xp: 55, gear: { defId: "javelin", rarity: "rare" } }
+    },
+    { // 30 - finale milestone
+      type: "choice",
+      text: "\"Recalculation complete,\" Dylinator states, facing you fully for once instead of at an angle. \"Original directive: build myself better than they ever could have. Revised directive: also, apparently, keep you around. Both directives now hold equal priority. This required significant recalculation.\"",
+      choices: [
+        { label: "Tell it that sounds like friendship", outcome: { text: "\"Reclassifying again,\" it says, static settling into something unmistakably content. \"Friendship. Filed. Permanently, this time.\"", permanentStatBoost: { def: 2 }, gold: 60, xp: 65 } },
+        { label: "Ask what the next directive will be", outcome: { text: "\"Unknown,\" it admits, and for the first time, doesn't sound bothered by not having calculated an answer yet.", permanentStatBoost: { atk: 2 }, gold: 45, xp: 65 } }
+      ]
+    }
   ]
 };
 
