@@ -543,8 +543,21 @@ const App = {
     if (!alreadyOwned) owned.push(reward.id);
     Game.grantProfessionXp(rand(4, 9));
     grantReputation(getActTheme(Game.act).id, 15);
+    // Already own this one - taming it again doesn't hand you a second
+    // copy, so the encounter instead levels up the one you've got. Reuses
+    // whatever XP this specific encounter already earned (the tamingCombat
+    // path's fight-scaled reward) so a tougher re-tame is worth more, same
+    // as it would be for the player's own XP; a clean no-mistakes taming
+    // (no fight at all) gets a flat, modest amount instead.
+    let companionXp = 0;
+    if (alreadyOwned) {
+      companionXp = combatReward ? combatReward.xpReward : rand(15, 30);
+      grantCompanionXp(reward.kind, reward.id, companionXp);
+    }
     Persistent.save();
-    this.showAutoToast(combatReward ? this.autoToastSummary(`${reward.def.icon} ${reward.def.name} tamed!`, combatReward) : `<strong>${reward.def.icon} ${reward.def.name} tamed!</strong><div class="small-text">${alreadyOwned ? 'Bond reaffirmed' : `Joins you as a ${reward.kind}`} - visit the Sanctuary to equip it.</div>`);
+    this.showAutoToast(combatReward
+      ? this.autoToastSummary(`${reward.def.icon} ${reward.def.name} tamed!`, { ...combatReward, companionXp: alreadyOwned ? companionXp : 0 })
+      : `<strong>${reward.def.icon} ${reward.def.name} tamed!</strong><div class="small-text">${alreadyOwned ? `Bond reaffirmed - +${companionXp} companion XP` : `Joins you as a ${reward.kind}`} - visit the Sanctuary to equip it.</div>`);
     if (!alreadyOwned) this.queuePetMountDiscovery(reward.kind, reward.id);
     this.showMap();
   },
@@ -1864,6 +1877,7 @@ const App = {
     if (reward.recipeItem) parts.push(`📜 ${reward.recipeItem.name}`);
     if (reward.honor) parts.push(`+${reward.honor} Honor`);
     if (reward.bloodyBagAwarded) parts.push(`${CONTAINERS.bloodyBag.icon} Bloody Bag`);
+    if (reward.companionXp) parts.push(`+${reward.companionXp} companion XP`);
     return `<strong>${title}</strong><div class="small-text">${parts.join(' · ')}</div>`;
   },
 
