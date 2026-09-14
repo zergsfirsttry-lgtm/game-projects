@@ -3474,6 +3474,129 @@ const TALENT_TREES = {
       { id: 'cutpurse', name: 'Cutpurse', icon: '💰', desc: '+2% gold from all sources per rank', maxRank: 5, effect: { goldBonus: 0.02 } },
       { id: 'grandFinale', name: 'Grand Finale', icon: '🎆', desc: '+15% gold from all sources, +3 Speed', maxRank: 1, effect: { goldBonus: 0.15, speed: 3 } }
     ]}
+  },
+  // --- Legendary classes - same 3-trees-of-5 shape as every class above,
+  // added late (Phase 1 shipped these 5 classes without talent trees at
+  // all, which crashed the whole Sanctuary Character tab the moment one
+  // was selected - Object.entries(undefined) in renderSanctuaryTalents,
+  // main.js). Tree names/flavor lean on each class's own WoW archetype
+  // (Death Knight's Blood/Frost/Unholy, Monk's Brewmaster/Mistweaver/
+  // Windwalker, Druid's Balance/Feral/Restoration, Shaman's Elemental/
+  // Enhancement/Restoration, Priest's Discipline/Holy/Shadow).
+  deathKnight: {
+    blood: { name: 'Blood', icon: '🩸', talents: [
+      { id: 'bloodCraze', name: 'Blood Craze', icon: '🩸', desc: '+1 lifesteal per rank', maxRank: 5, effect: { lifesteal: 1 } },
+      { id: 'butchery', name: 'Butchery', icon: '🔪', desc: '+1 ATK per rank', maxRank: 5, effect: { atk: 1 } },
+      { id: 'bladedArmor', name: 'Bladed Armor', icon: '🛡️', desc: '+1 DEF per rank', maxRank: 5, effect: { def: 1 } },
+      { id: 'vampiricBlood', name: 'Vampiric Blood', icon: '❤️', desc: '+3 Max HP per rank', maxRank: 5, effect: { maxHp: 3 } },
+      { id: 'heartStrike', name: 'Heart Strike', icon: '💔', desc: '+6 ATK, +2 lifesteal', maxRank: 1, effect: { atk: 6, lifesteal: 2 } }
+    ]},
+    frost: { name: 'Frost', icon: '❄️', talents: [
+      { id: 'icyTalons', name: 'Icy Talons', icon: '🥶', desc: '+1 Speed per rank', maxRank: 5, effect: { speed: 1 } },
+      { id: 'frostArmor', name: 'Frost Armor', icon: '🧊', desc: '+1 DEF per rank', maxRank: 5, effect: { def: 1 } },
+      { id: 'chillOfTheGrave', name: 'Chill of the Grave', icon: '⚰️', desc: '+1 damage vs wounded enemies per rank', maxRank: 5, effect: { executeBonus: 1 } },
+      { id: 'endlessWinter', name: 'Endless Winter', icon: '🌨️', desc: '+3 Max HP per rank', maxRank: 5, effect: { maxHp: 3 } },
+      { id: 'iceboundFortitude', name: 'Icebound Fortitude', icon: '🛡️', desc: '+8 DEF', maxRank: 1, effect: { def: 8 } }
+    ]},
+    unholy: { name: 'Unholy', icon: '☠️', talents: [
+      { id: 'virulence', name: 'Virulence', icon: '🦠', desc: '+2% spell damage per rank', maxRank: 5, effect: { spellPower: 0.02 } },
+      { id: 'epidemic', name: 'Epidemic', icon: '💀', desc: '+1 damage vs elites/bosses per rank', maxRank: 5, effect: { eliteSlayerAtk: 1 } },
+      { id: 'unholyMight', name: 'Unholy Might', icon: '👊', desc: '+1 ATK per rank', maxRank: 5, effect: { atk: 1 } },
+      { id: 'morbidity', name: 'Morbidity', icon: '🕷️', desc: '+2% critical hit chance per rank', maxRank: 5, effect: { critBonus: 0.02 } },
+      { id: 'armyOfTheDead', name: 'Army of the Dead', icon: '🧟', desc: '+10% spell damage, +5 ATK', maxRank: 1, effect: { spellPower: 0.1, atk: 5 } }
+    ]}
+  },
+  monk: {
+    windwalker: { name: 'Windwalker', icon: '💨', talents: [
+      { id: 'combatConditioning', name: 'Combat Conditioning', icon: '👊', desc: '+1 ATK per rank', maxRank: 5, effect: { atk: 1 } },
+      { id: 'fistsOfFury', name: 'Fists of Fury', icon: '✊', desc: '+2% critical hit chance per rank', maxRank: 5, effect: { critBonus: 0.02 } },
+      { id: 'flyingSerpentKick', name: 'Flying Serpent Kick', icon: '🐍', desc: '+1 Speed per rank', maxRank: 5, effect: { speed: 1 } },
+      { id: 'touchOfKarma', name: 'Touch of Karma', icon: '☯️', desc: '+1 damage vs wounded enemies per rank', maxRank: 5, effect: { executeBonus: 1 } },
+      { id: 'stormEarthAndFire', name: 'Storm, Earth, and Fire', icon: '🌪️', desc: '+6 ATK, +5 Speed', maxRank: 1, effect: { atk: 6, speed: 5 } }
+    ]},
+    brewmaster: { name: 'Brewmaster', icon: '🍺', talents: [
+      { id: 'stagger', name: 'Stagger', icon: '🛡️', desc: '+1 DEF per rank', maxRank: 5, effect: { def: 1 } },
+      { id: 'ironskinBrew', name: 'Ironskin Brew', icon: '🍶', desc: '+3 Max HP per rank', maxRank: 5, effect: { maxHp: 3 } },
+      { id: 'purifyingBrew', name: 'Purifying Brew', icon: '🍵', desc: 'Heal 1 HP per round per rank', maxRank: 5, effect: { hpRegen: 1 } },
+      { id: 'elusiveBrawler', name: 'Elusive Brawler', icon: '🥋', desc: '+1 Speed per rank', maxRank: 5, effect: { speed: 1 } },
+      { id: 'fortifyingBrew', name: 'Fortifying Brew', icon: '🍺', desc: '+6 DEF, +10 Max HP', maxRank: 1, effect: { def: 6, maxHp: 10 } }
+    ]},
+    mistweaver: { name: 'Mistweaver', icon: '🌫️', talents: [
+      { id: 'soothingMist', name: 'Soothing Mist', icon: '💨', desc: 'Heal 1 HP per round per rank', maxRank: 5, effect: { hpRegen: 1 } },
+      { id: 'renewingMist', name: 'Renewing Mist', icon: '🌧️', desc: '+2% healing from items per rank', maxRank: 5, effect: { potionHealBonus: 0.02 } },
+      { id: 'thunderFocusTea', name: 'Thunder Focus Tea', icon: '⚡', desc: '+2% spell damage per rank', maxRank: 5, effect: { spellPower: 0.02 } },
+      { id: 'manaTea', name: 'Mana Tea', icon: '🍵', desc: '+1 DEF per rank', maxRank: 5, effect: { def: 1 } },
+      { id: 'revival', name: 'Revival', icon: '🙏', desc: 'Heal 3 HP per round, +15% healing from items', maxRank: 1, effect: { hpRegen: 3, potionHealBonus: 0.15 } }
+    ]}
+  },
+  druid: {
+    balance: { name: 'Balance', icon: '🌙', talents: [
+      { id: 'moonkinForm', name: 'Moonkin Form', icon: '🦉', desc: '+2% spell damage per rank', maxRank: 5, effect: { spellPower: 0.02 } },
+      { id: 'lunarGuidance', name: 'Lunar Guidance', icon: '🌙', desc: '+2% critical hit chance per rank', maxRank: 5, effect: { critBonus: 0.02 } },
+      { id: 'naturesGrace', name: "Nature's Grace", icon: '🍃', desc: '+1 Speed per rank', maxRank: 5, effect: { speed: 1 } },
+      { id: 'eclipse', name: 'Eclipse', icon: '🌑', desc: '+1 damage vs wounded enemies per rank', maxRank: 5, effect: { executeBonus: 1 } },
+      { id: 'starfall', name: 'Starfall', icon: '⭐', desc: '+15% spell damage, +5% critical hit chance', maxRank: 1, effect: { spellPower: 0.15, critBonus: 0.05 } }
+    ]},
+    feral: { name: 'Feral', icon: '🐾', talents: [
+      { id: 'predatoryStrikes', name: 'Predatory Strikes', icon: '🐺', desc: '+1 ATK per rank', maxRank: 5, effect: { atk: 1 } },
+      { id: 'primalFury', name: 'Primal Fury', icon: '😾', desc: '+2% critical hit chance per rank', maxRank: 5, effect: { critBonus: 0.02 } },
+      { id: 'feralAggression', name: 'Feral Aggression', icon: '🐆', desc: '+1 damage vs elites/bosses per rank', maxRank: 5, effect: { eliteSlayerAtk: 1 } },
+      { id: 'nineLives', name: 'Nine Lives', icon: '❤️', desc: '+3 Max HP per rank', maxRank: 5, effect: { maxHp: 3 } },
+      { id: 'berserk', name: 'Berserk', icon: '🔥', desc: '+6 ATK, +3 Speed', maxRank: 1, effect: { atk: 6, speed: 3 } }
+    ]},
+    restoration: { name: 'Restoration', icon: '🌿', talents: [
+      { id: 'livingSeed', name: 'Living Seed', icon: '🌱', desc: 'Heal 1 HP per round per rank', maxRank: 5, effect: { hpRegen: 1 } },
+      { id: 'naturesBounty', name: "Nature's Bounty", icon: '🍀', desc: '+2% healing from items per rank', maxRank: 5, effect: { potionHealBonus: 0.02 } },
+      { id: 'giftOfTheEarthmother', name: 'Gift of the Earthmother', icon: '🌍', desc: '+2% healing from items per rank', maxRank: 5, effect: { potionHealBonus: 0.02 } },
+      { id: 'improvedRejuvenation', name: 'Improved Rejuvenation', icon: '💚', desc: 'Heal 1 HP per round per rank', maxRank: 5, effect: { hpRegen: 1 } },
+      { id: 'tranquility', name: 'Tranquility', icon: '🕊️', desc: 'Heal 3 HP per round, +10% healing from items', maxRank: 1, effect: { hpRegen: 3, potionHealBonus: 0.1 } }
+    ]}
+  },
+  shaman: {
+    elemental: { name: 'Elemental', icon: '🌋', talents: [
+      { id: 'callOfFlame', name: 'Call of Flame', icon: '🔥', desc: '+2% spell damage per rank', maxRank: 5, effect: { spellPower: 0.02 } },
+      { id: 'elementalFury', name: 'Elemental Fury', icon: '💥', desc: '+2% critical hit chance per rank', maxRank: 5, effect: { critBonus: 0.02 } },
+      { id: 'stormReach', name: 'Storm Reach', icon: '🌩️', desc: '+1 damage vs wounded enemies per rank', maxRank: 5, effect: { executeBonus: 1 } },
+      { id: 'lightningMastery', name: 'Lightning Mastery', icon: '⚡', desc: '+1 Speed per rank', maxRank: 5, effect: { speed: 1 } },
+      { id: 'elementalMastery', name: 'Elemental Mastery', icon: '🌪️', desc: '+15% spell damage', maxRank: 1, effect: { spellPower: 0.15 } }
+    ]},
+    enhancement: { name: 'Enhancement', icon: '🪓', talents: [
+      { id: 'flurry', name: 'Flurry', icon: '💨', desc: '+1 Speed per rank', maxRank: 5, effect: { speed: 1 } },
+      { id: 'weaponMastery', name: 'Weapon Mastery', icon: '🪓', desc: '+1 ATK per rank', maxRank: 5, effect: { atk: 1 } },
+      { id: 'toughness', name: 'Toughness', icon: '🛡️', desc: '+1 DEF per rank', maxRank: 5, effect: { def: 1 } },
+      { id: 'spiritWeapons', name: 'Spirit Weapons', icon: '👻', desc: '+1 damage vs elites/bosses per rank', maxRank: 5, effect: { eliteSlayerAtk: 1 } },
+      { id: 'stormstrike', name: 'Stormstrike', icon: '⚡', desc: '+6 ATK, +5% critical hit chance', maxRank: 1, effect: { atk: 6, critBonus: 0.05 } }
+    ]},
+    restoration: { name: 'Restoration', icon: '💧', talents: [
+      { id: 'totemicFocus', name: 'Totemic Focus', icon: '🗿', desc: 'Heal 1 HP per round per rank', maxRank: 5, effect: { hpRegen: 1 } },
+      { id: 'purification', name: 'Purification', icon: '💧', desc: '+2% healing from items per rank', maxRank: 5, effect: { potionHealBonus: 0.02 } },
+      { id: 'tidalMastery', name: 'Tidal Mastery', icon: '🌊', desc: '+2% spell damage per rank', maxRank: 5, effect: { spellPower: 0.02 } },
+      { id: 'ancestralHealing', name: 'Ancestral Healing', icon: '❤️', desc: '+3 Max HP per rank', maxRank: 5, effect: { maxHp: 3 } },
+      { id: 'riptide', name: 'Riptide', icon: '🌀', desc: 'Heal 3 HP per round, +10% healing from items', maxRank: 1, effect: { hpRegen: 3, potionHealBonus: 0.1 } }
+    ]}
+  },
+  priest: {
+    discipline: { name: 'Discipline', icon: '⚖️', talents: [
+      { id: 'twinDisciplines', name: 'Twin Disciplines', icon: '📿', desc: '+2% spell damage per rank', maxRank: 5, effect: { spellPower: 0.02 } },
+      { id: 'innerFocus', name: 'Inner Focus', icon: '🧘', desc: '+2% healing from items per rank', maxRank: 5, effect: { potionHealBonus: 0.02 } },
+      { id: 'reflectiveShield', name: 'Reflective Shield', icon: '🛡️', desc: '+1 DEF per rank', maxRank: 5, effect: { def: 1 } },
+      { id: 'soulWarding', name: 'Soul Warding', icon: '👻', desc: '+3 Max HP per rank', maxRank: 5, effect: { maxHp: 3 } },
+      { id: 'powerWordBarrier', name: 'Power Word: Barrier', icon: '🔰', desc: '+8 DEF, +10 Max HP', maxRank: 1, effect: { def: 8, maxHp: 10 } }
+    ]},
+    holy: { name: 'Holy', icon: '✨', talents: [
+      { id: 'holySpecialization', name: 'Holy Specialization', icon: '⭐', desc: '+2% critical hit chance per rank', maxRank: 5, effect: { critBonus: 0.02 } },
+      { id: 'spiritOfRedemption', name: 'Spirit of Redemption', icon: '👼', desc: 'Heal 1 HP per round per rank', maxRank: 5, effect: { hpRegen: 1 } },
+      { id: 'searingLight', name: 'Searing Light', icon: '☀️', desc: '+1 damage vs wounded enemies per rank', maxRank: 5, effect: { executeBonus: 1 } },
+      { id: 'spiritualGuidance', name: 'Spiritual Guidance', icon: '🕊️', desc: '+2% spell damage per rank', maxRank: 5, effect: { spellPower: 0.02 } },
+      { id: 'guardianSpirit', name: 'Guardian Spirit', icon: '🔆', desc: 'Heal 3 HP per round, +15% healing from items', maxRank: 1, effect: { hpRegen: 3, potionHealBonus: 0.15 } }
+    ]},
+    shadow: { name: 'Shadow', icon: '🌑', talents: [
+      { id: 'shadowyApparition', name: 'Shadowy Apparition', icon: '👻', desc: '+2% spell damage per rank', maxRank: 5, effect: { spellPower: 0.02 } },
+      { id: 'mindFlay', name: 'Mind Flay', icon: '🌀', desc: '+2% critical hit chance per rank', maxRank: 5, effect: { critBonus: 0.02 } },
+      { id: 'devouringPlague', name: 'Devouring Plague', icon: '🦟', desc: '+1 lifesteal per rank', maxRank: 5, effect: { lifesteal: 1 } },
+      { id: 'shadowyInsight', name: 'Shadowy Insight', icon: '🔮', desc: '+1 damage vs wounded enemies per rank', maxRank: 5, effect: { executeBonus: 1 } },
+      { id: 'voidform', name: 'Voidform', icon: '🕳️', desc: '+15% spell damage, +2 lifesteal', maxRank: 1, effect: { spellPower: 0.15, lifesteal: 2 } }
+    ]}
   }
 };
 
