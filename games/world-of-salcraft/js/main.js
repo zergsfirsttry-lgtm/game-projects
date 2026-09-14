@@ -327,7 +327,7 @@ const App = {
           <label class="auto-toggle" title="Auto-resolves combat and, on the map, always sets out down whichever path looks hardest.">
             <input type="checkbox" id="hud-auto-toggle" ${this.autoCombat ? 'checked' : ''}> Auto Combat
           </label>
-          <label class="auto-toggle" title="Auto-picks a random option on campfires, events, world events, taming, and Jakesteel's duel-or-sacrifice choice.">
+          <label class="auto-toggle" title="Auto-picks a random option on campfires, events, world events, and taming. Never touches Jakesteel's duel-or-sacrifice choice - that one always waits for you.">
             <input type="checkbox" id="hud-auto-dialogue-toggle" ${this.autoDialogue ? 'checked' : ''}> Auto Dialogue
           </label>
           <label class="auto-toggle" title="Auto-buys a relic and potions at the shop, weighed against your current HP and gold.">
@@ -729,7 +729,11 @@ const App = {
         <div class="npc-portrait-wrap">${bossSpriteSvg('jakesteel', 140) || ''}</div>
         <h2>Jakesteel</h2>
         <p class="flavor">A massive Tauren warrior plants his greataxe in the dirt, chainmail straining across a frame built for war. Twin bull horns curve from his skull, and a red bloodfury aura pulses off him in slow, heavy waves - nearby wildlife has already fled. "Two ways through," he rumbles. "Duel me, one on one. Or pay the toll." He nods at your relics. "All of them. Every last one."</p>
-        <div class="choice-list" id="choice-list">
+        <!-- no-auto-dialogue: a real duel or every relic the run has found
+             is too high-stakes to ever resolve on its own - see
+             autoDialogueIfEnabled, which filters this out regardless of
+             which selector a caller passes it. -->
+        <div class="choice-list no-auto-dialogue" id="choice-list">
           <button class="choice-btn" id="btn-jakesteel-duel">⚔️ Duel Jakesteel, 1v1</button>
           <button class="choice-btn" id="btn-jakesteel-sacrifice" ${relicCount ? '' : 'disabled'}>🩸 Sacrifice all ${relicCount} Relic${relicCount === 1 ? '' : 's'} to pass</button>
         </div>
@@ -737,7 +741,6 @@ const App = {
     document.getElementById('btn-jakesteel-duel').addEventListener('click', () => this.startJakesteelDuel(node));
     document.getElementById('btn-jakesteel-sacrifice').addEventListener('click', () => this.sacrificeToJakesteel(node));
     this.maybeShowTutorial('jakesteel');
-    this.autoDialogueIfEnabled('.choice-list .choice-btn');
   },
 
   // Jakesteel's stats mirror the PLAYER'S OWN current effectiveStats (same
@@ -1495,15 +1498,20 @@ const App = {
   // Auto Dialogue: picks a random enabled button matching `selector` on
   // whatever screen is currently up and clicks it after a short beat, same
   // "let the game play itself" idea as Auto Combat/Auto Shop just for
-  // narrative choices - campfires, events, world events, taming, and
-  // Jakesteel's duel-or-sacrifice pick all share the .choice-list/.choice-btn
-  // markup (see showEvent/renderWorldEventScreen/showTamingStep/
-  // renderJakesteelScreen) except the campfire, which uses .rest-option
-  // button instead (see showRest) - callers pass whichever selector(s)
-  // apply. A no-op if the current screen has no matching buttons at all.
+  // narrative choices - campfires, events, world events, and taming all
+  // share the .choice-list/.choice-btn markup (see showEvent/
+  // renderWorldEventScreen/showTamingStep) except the campfire, which uses
+  // .rest-option button instead (see showRest) - callers pass whichever
+  // selector(s) apply. A no-op if the current screen has no matching
+  // buttons at all. Any button inside a .no-auto-dialogue container (right
+  // now just Jakesteel's duel-or-sacrifice pick - see renderJakesteelScreen)
+  // is filtered out regardless of selector - that choice is high-stakes
+  // and irreversible (a real duel, or every relic the run has found), so
+  // it always waits for the player, the same way a rare-NPC/legendary
+  // encounter already pauses auto entirely rather than resolving itself.
   autoDialogueIfEnabled(selector) {
     if (!this.autoDialogue) return;
-    const buttons = Array.from(this.root.querySelectorAll(selector)).filter(b => !b.disabled);
+    const buttons = Array.from(this.root.querySelectorAll(selector)).filter(b => !b.disabled && !b.closest('.no-auto-dialogue'));
     if (!buttons.length) return;
     const pick = buttons[rand(0, buttons.length - 1)];
     // Re-check autoDialogue (not just at the top of this function) at fire
@@ -4681,7 +4689,18 @@ function playerPowerMult() {
 // past a handful of fixed points of enemy defense with nothing to check it.
 function applyPlayerPowerScaling(template) {
   const mult = playerPowerMult();
-  return { ...template, hp: Math.round(template.hp * mult), atk: Math.round(template.atk * mult), def: Math.round((template.def || 0) * mult) };
+  // Enemy def is capped at the same mitigation ceiling combat.js enforces on
+  // damage (DEF_MITIGATION_CAP) - past that point, more def doesn't make a
+  // fight meaningfully tougher (mitigation is already floored), it just
+  // inflates hits-to-kill for free as hp keeps climbing on top of it.
+  const stats = Game.effectiveStats();
+  const defCap = Math.max(1, Math.round(stats.atk * DEF_MITIGATION_CAP));
+  return {
+    ...template,
+    hp: Math.round(template.hp * mult),
+    atk: Math.round(template.atk * mult),
+    def: Math.min(Math.round((template.def || 0) * mult), defCap)
+  };
 }
 
 function scaleEnemy(template, act) {

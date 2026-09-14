@@ -1097,18 +1097,18 @@ const LEGENDARY_TAMINGS = {
 };
 
 const ENEMIES = [
-  { id: 'slime', name: 'Slime', icon: '🟢', hp: 14, atk: 3, def: 0, speed: 2, gold: [5, 10] },
-  { id: 'rat', name: 'Giant Rat', icon: '🐀', hp: 10, atk: 4, def: 0, speed: 6, gold: [3, 8] },
-  { id: 'goblin', name: 'Goblin', icon: '👺', hp: 18, atk: 5, def: 1, speed: 5, gold: [8, 14] },
-  { id: 'wolf', name: 'Wild Wolf', icon: '🐺', hp: 20, atk: 6, def: 1, speed: 7, gold: [8, 14] },
-  { id: 'bandit', name: 'Bandit', icon: '🥷', hp: 22, atk: 6, def: 2, speed: 5, gold: [12, 20] },
-  { id: 'skeleton', name: 'Skeleton', icon: '💀', hp: 24, atk: 7, def: 2, speed: 3, gold: [10, 18] },
-  { id: 'cultist', name: 'Cultist', icon: '🕯️', hp: 20, atk: 8, def: 0, speed: 4, gold: [12, 22] },
-  { id: 'spider', name: 'Cave Spider', icon: '🕷️', hp: 16, atk: 6, def: 1, speed: 6, gold: [8, 15] },
-  { id: 'zombie', name: 'Zombie', icon: '🧟', hp: 26, atk: 5, def: 2, speed: 2, gold: [10, 16] },
-  { id: 'imp', name: 'Imp', icon: '👿', hp: 12, atk: 6, def: 0, speed: 7, gold: [8, 14] },
-  { id: 'harpy', name: 'Harpy', icon: '🦅', hp: 16, atk: 5, def: 0, speed: 8, gold: [8, 15] },
-  { id: 'boar', name: 'Wild Boar', icon: '🐗', hp: 20, atk: 6, def: 2, speed: 5, gold: [9, 16] }
+  { id: 'slime', name: 'Slime', icon: '🟢', hp: 24, atk: 3, def: 0, speed: 2, gold: [5, 10] },
+  { id: 'rat', name: 'Giant Rat', icon: '🐀', hp: 18, atk: 4, def: 0, speed: 6, gold: [3, 8] },
+  { id: 'goblin', name: 'Goblin', icon: '👺', hp: 30, atk: 5, def: 1, speed: 5, gold: [8, 14] },
+  { id: 'wolf', name: 'Wild Wolf', icon: '🐺', hp: 34, atk: 6, def: 1, speed: 7, gold: [8, 14] },
+  { id: 'bandit', name: 'Bandit', icon: '🥷', hp: 36, atk: 6, def: 2, speed: 5, gold: [12, 20] },
+  { id: 'skeleton', name: 'Skeleton', icon: '💀', hp: 40, atk: 7, def: 2, speed: 3, gold: [10, 18] },
+  { id: 'cultist', name: 'Cultist', icon: '🕯️', hp: 34, atk: 8, def: 0, speed: 4, gold: [12, 22] },
+  { id: 'spider', name: 'Cave Spider', icon: '🕷️', hp: 28, atk: 6, def: 1, speed: 6, gold: [8, 15] },
+  { id: 'zombie', name: 'Zombie', icon: '🧟', hp: 42, atk: 5, def: 2, speed: 2, gold: [10, 16] },
+  { id: 'imp', name: 'Imp', icon: '👿', hp: 20, atk: 6, def: 0, speed: 7, gold: [8, 14] },
+  { id: 'harpy', name: 'Harpy', icon: '🦅', hp: 28, atk: 5, def: 0, speed: 8, gold: [8, 15] },
+  { id: 'boar', name: 'Wild Boar', icon: '🐗', hp: 34, atk: 6, def: 2, speed: 5, gold: [9, 16] }
 ];
 
 const ELITES = [
