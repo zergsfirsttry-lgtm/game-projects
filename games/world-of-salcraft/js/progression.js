@@ -943,6 +943,44 @@ function grantXpToCharacter(charRecord, amount) {
   return { levelsGained };
 }
 
+// --- Soulbound Echo relic ---
+// Auto-granted (not purchasable) the instant any character first reaches
+// MAX_LEVEL - called from Game.grantXp (state.js) right after
+// grantXpToCharacter, so the very same XP haul that crosses the threshold
+// already starts sharing (see shareXpViaSoulboundEcho below), rather than
+// only kicking in from the next grant onward.
+const SOULBOUND_ECHO_RELIC_ID = 'soulboundEcho';
+const SOULBOUND_ECHO_SHARE_PCT = 0.5;
+
+function maybeGrantSoulboundEcho(charRecord) {
+  if (charRecord.level < MAX_LEVEL) return;
+  const pdata = Persistent.load();
+  if (!pdata.permanentRelics.includes(SOULBOUND_ECHO_RELIC_ID)) pdata.permanentRelics.push(SOULBOUND_ECHO_RELIC_ID);
+}
+
+// Redirects 50% of `amount` to every OTHER existing character record and
+// every owned pet/mount, once Soulbound Echo is unlocked. `excludePet`/
+// `excludeMount` skip whichever companion Game.grantXp already granted this
+// same amount to directly (its own equipped-companion grant), so it isn't
+// double-counted. Grants via the raw grantXpToCharacter/grantCompanionXp
+// functions directly, never through Game.grantXp itself, so this can't
+// recurse back into another round of sharing.
+function shareXpViaSoulboundEcho(amount, sourceClassId, excludePet, excludeMount) {
+  const pdata = Persistent.load();
+  if (!pdata.permanentRelics.includes(SOULBOUND_ECHO_RELIC_ID)) return;
+  const shared = Math.round(amount * SOULBOUND_ECHO_SHARE_PCT);
+  if (shared <= 0) return;
+  Object.keys(pdata.characters).forEach(classId => {
+    if (classId !== sourceClassId) grantXpToCharacter(pdata.characters[classId], shared);
+  });
+  Object.keys(pdata.companionLevels.pet).forEach(id => {
+    if (id !== excludePet) grantCompanionXp('pet', id, shared);
+  });
+  Object.keys(pdata.companionLevels.mount).forEach(id => {
+    if (id !== excludeMount) grantCompanionXp('mount', id, shared);
+  });
+}
+
 // --- Multi-spell equip ---
 // Every class starts with 1 equipped slot (its defaultSpell) and unlocks one
 // more at level 10, 30, 60, and MAX_LEVEL (99 - the practical stand-in for

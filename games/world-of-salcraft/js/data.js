@@ -333,7 +333,14 @@ const RELICS = {
   crowdPleaserBand: { id: 'crowdPleaserBand', name: "Crowd-Pleaser's Band", icon: 'assets/icons/relics/crowdPleaserBand.png', desc: '+1 ATK, +5% critical hit chance', forClass: 'bard', effect: { atk: 1, critBonus: 0.05 } },
   wanderersPack: { id: 'wanderersPack', name: "Wanderer's Pack", icon: 'assets/icons/relics/wanderersPack.png', desc: '+5 Max HP, +5% gold from all sources', forClass: 'bard', effect: { maxHp: 5, goldBonus: 0.05 } },
   echoingHarpstring: { id: 'echoingHarpstring', name: 'Echoing Harpstring', icon: 'assets/icons/relics/echoingHarpstring.png', desc: '+6% spell damage', forClass: 'bard', effect: { spellPower: 0.06 } },
-  showstoppersFlourish: { id: 'showstoppersFlourish', name: "Showstopper's Flourish", icon: 'assets/icons/relics/showstoppersFlourish.png', desc: '+2 ATK', forClass: 'bard', effect: { atk: 2 } }
+  showstoppersFlourish: { id: 'showstoppersFlourish', name: "Showstopper's Flourish", icon: 'assets/icons/relics/showstoppersFlourish.png', desc: '+2 ATK', forClass: 'bard', effect: { atk: 2 } },
+
+  // Not purchasable (no BANK_SHOP.relics entry) and no numeric `effect` -
+  // auto-granted the moment any character first reaches max level (see
+  // maybeGrantSoulboundEcho, progression.js), and read explicitly inside
+  // Game.grantXp (state.js) rather than folded into applyRelicEffects,
+  // since sharing XP isn't a stat bonus RELIC_EFFECT_KEYS can express.
+  soulboundEcho: { id: 'soulboundEcho', name: 'Soulbound Echo', icon: 'assets/icons/relics/soulboundEcho.png', desc: 'Unlocked by reaching max level on any character. Every character, pet, and mount now also earns 50% of any experience granted elsewhere.' }
 };
 
 const RELIC_EFFECT_KEYS = ['atk', 'def', 'maxHp', 'speed', 'critBonus', 'goldBonus', 'lifesteal', 'hpRegen', 'executeBonus', 'eliteSlayerAtk', 'potionHealBonus', 'spellPower'];

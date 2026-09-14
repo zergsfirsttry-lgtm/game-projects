@@ -266,6 +266,11 @@ const Game = {
     // fed to it at the House (see grantCompanionXp/instantiateFoodItem).
     if (charRecord.equipped.pet) grantCompanionXp('pet', charRecord.equipped.pet, scaled);
     if (charRecord.equipped.mount) grantCompanionXp('mount', charRecord.equipped.mount, scaled);
+    // Soulbound Echo (see progression.js): auto-unlocks the instant this
+    // character first hits MAX_LEVEL, then shares half of every future XP
+    // grant - including this one - with every other character/pet/mount.
+    maybeGrantSoulboundEcho(charRecord);
+    shareXpViaSoulboundEcho(scaled, this.player.classId, charRecord.equipped.pet, charRecord.equipped.mount);
     Persistent.save();
     return result;
   },
