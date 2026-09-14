@@ -1139,6 +1139,264 @@ const RARE_NPCS = {
   }
 };
 
+// --- Rare NPC follow-up storylines (see renderRareNpcStoryScreen/
+// resolveRareNpcStageChoice/enterRareNpcStageCombat in main.js) ---
+// Once a rare NPC's one-time signature reward (RARE_NPCS above) has been
+// claimed (tracked in pdata.metRareNpcs), every LATER visit advances
+// through this NPC's own array of stages instead of re-showing the same
+// flavor text - one stage per visit (still gated by the same 5-run
+// cooldown, see isRareEncounterReady), cycling back to stage 0 after the
+// last one so the well never runs dry. An NPC absent from this table (or
+// with an empty array) keeps the old repeat-the-signature-flavor behavior
+// unchanged - see the hasStoryline check in enterRareNpc.
+//
+// Stage shape: { type: 'choice'|'quest'|'challenge'|'combat', text, ... }.
+// 'choice'/'quest'/'challenge' differ only in framing (a snap decision vs.
+// a favor asked of you vs. a harder ask) - all three render identically and
+// resolve via `choices: [{ label, outcome }]`, where `outcome` is the same
+// object shape applyOutcome (events.js) already understands (text/hp/gold/
+// item/relic/statBoost), extended by applyRareNpcStageOutcome with
+// permanentStatBoost/permanentRelicId/companionPet/companionMount/gear for
+// the reward categories a one-off narrative moment needs that a run-scoped
+// event never did. 'combat' stages instead carry `enemy` (a scaleEnemy-
+// ready template) and `victoryOutcome` (same outcome shape, granted only on
+// a win - a loss already ends the run via the normal permadeath path
+// before this ever resolves, so there's no separate defeat branch to write).
+const RARE_NPC_STORYLINES = {
+  george: [
+    { // 1
+      type: 'choice',
+      text: "George is crouched by the trail, turning a lump of quartz over in his huge hands like it might do something. \"Rock,\" he says, holding it up proudly. \"Shiny rock.\" Ryker sniffs it once and loses interest immediately.",
+      choices: [
+        { label: 'Tell him it\'s a nice rock', outcome: { text: 'George beams and presses it into your hand.', gold: 15, item: 'potion' } },
+        { label: 'Ask if you can trade for it', outcome: { text: 'George trades without a second thought - he was never attached to it, just the shine.', gold: 25 } }
+      ]
+    },
+    { // 2
+      type: 'quest',
+      text: "\"Help George?\" he asks, pointing at a fallen log blocking the trail. It's the size of a small house. \"Heavy.\" He does not appear to be joking about needing help.",
+      choices: [
+        { label: 'Help him lift it', outcome: { text: 'Between the two of you (mostly him) the log rolls clear. George pats your shoulder hard enough to stagger you.', xp: 25, gold: 10 } },
+        { label: 'Let him handle it alone', outcome: { text: 'George shrugs and heaves it aside himself, grunting with effort. "Was fine," he insists, clearly not fine.', gold: 15 } }
+      ]
+    },
+    { // 3
+      type: 'choice',
+      text: "Ryker has treed something and won't stop barking about it. George squints up into the branches. \"Something up there,\" he reports, unhelpfully.",
+      choices: [
+        { label: 'Climb up and look', outcome: { text: 'Just a very startled owl. It leaves a single dropped feather behind - and, wedged in the same branch, a coin pouch someone lost long ago.', gold: 20 } },
+        { label: 'Call Ryker off', outcome: { text: 'Ryker abandons the tree with visible reluctance. George scratches his ears in apology.', xp: 15 } }
+      ]
+    },
+    { // 4
+      type: 'challenge',
+      text: "George plants his fist on a flat boulder. \"Arm thing,\" he says. \"Rogue did it once. Lost bad.\" He looks hopeful anyway.",
+      choices: [
+        { label: 'Take the challenge', outcome: { text: 'You do not win. You did not expect to win. George insists on a rematch someday and gives you a consolation potion for your trouble.', item: 'potion', xp: 20 } },
+        { label: 'Decline politely', outcome: { text: '"Smart," George says, nodding slowly, like he\'s impressed you saw that one coming.', gold: 15 } }
+      ]
+    },
+    { // 5
+      type: 'choice',
+      text: "You find George mid-meal, gnawing on something that used to be an entire roasted boar. He notices you watching and, without hesitation, tears off a leg the size of your torso and holds it out.",
+      choices: [
+        { label: 'Accept the meal', outcome: { text: 'It is enormous and somehow perfectly cooked. You eat well.', hp: 14 } },
+        { label: 'Say you already ate', outcome: { text: 'George shrugs and eats your portion too, without missing a beat.', gold: 10 } }
+      ]
+    },
+    { // 6
+      type: 'quest',
+      text: "\"Word,\" George says, very seriously, holding up one finger. \"Big word. Heard it. Forgot it.\" He looks at you like you might personally be storing his vocabulary for him.",
+      choices: [
+        { label: 'Teach him a new word', outcome: { text: 'You settle on "magnificent." George repeats it eleven times, delighted, and gets it right by the ninth.', xp: 20 } },
+        { label: 'Tell him small words work fine', outcome: { text: 'George considers this genuinely profound. "Small words," he agrees. "Good words."', gold: 15 } }
+      ]
+    },
+    { // 7
+      type: 'combat',
+      text: "A trio of bandits has George's camp surrounded, laughing about \"the big dumb one\" - right up until Ryker snarls and George's expression goes flat and cold. He nods you toward the nearest one without a word.",
+      enemy: { id: 'georgeBandit', name: 'Overconfident Bandit', icon: '🥷', hp: 26, atk: 9, def: 2, speed: 5, gold: [25, 40] },
+      victoryOutcome: { text: 'The bandits reconsider their life choices and scatter. George helps himself to what they dropped and hands you half.', gold: 30, xp: 30 }
+    },
+    { // 8
+      type: 'choice',
+      text: "George has built something out of sticks and vine. It might be a birdhouse. It might be a very small, very crooked hut. \"For Ryker,\" he explains, unhelpfully clarifying nothing.",
+      choices: [
+        { label: 'Admire the craftsmanship', outcome: { text: 'George glows with pride and gives you a little whittled figure from his pocket - lopsided, clearly meant to be you.', gold: 15, item: 'potion' } },
+        { label: 'Offer to help fix the lean', outcome: { text: 'You straighten a support beam. George looks at the now-slightly-less-crooked hut like you\'ve performed real magic.', xp: 20 } }
+      ]
+    },
+    { // 9
+      type: 'challenge',
+      text: "Thunder rolls somewhere distant and Ryker, giant fearsome war-dog, immediately wedges himself behind George's leg, shaking. George pats him with enormous gentleness. \"Loud,\" he explains, as if that settles it.",
+      choices: [
+        { label: 'Sit with them until it passes', outcome: { text: 'You wait out the storm together. George hums something almost like a tune, badly, the whole time.', hp: 10 } },
+        { label: 'Offer Ryker a treat to distract him', outcome: { text: 'It works instantly. George looks at you like you\'ve solved an ancient mystery.', xp: 15, item: 'potion' } }
+      ]
+    },
+    { // 10 - milestone
+      type: 'quest',
+      text: "George rolls up a sleeve to show you a long, old scar across his forearm. \"Bad fight,\" he says. \"Long time.\" He doesn't elaborate, but he holds his arm out toward you like he wants you to understand something about how he holds it up when he blocks. \"Like this,\" he says. \"You try.\"",
+      choices: [
+        { label: 'Learn his guard', outcome: { text: 'George walks you through it, over and over, patient in a way his size never suggests. Something about how you brace lands - permanently.', permanentStatBoost: { def: 1 }, xp: 25 } },
+        { label: 'Just listen', outcome: { text: 'George seems glad just to have told someone. "Don\'t remember who won," he admits. "Just remember it hurt."', gold: 25 } }
+      ]
+    },
+    { // 11
+      type: 'choice',
+      text: "Ryker comes trotting back from the treeline dragging something - a very old, very large bone, clearly not from any animal George recognizes, based on the way he's frowning at it.",
+      choices: [
+        { label: 'Take a closer look', outcome: { text: 'Whatever it was, it was big, and whoever it belonged to left something valuable buried nearby.', gold: 35 } },
+        { label: 'Let Ryker keep his prize', outcome: { text: 'Ryker looks extremely pleased with himself. George looks extremely fond.', xp: 20 } }
+      ]
+    },
+    { // 12
+      type: 'choice',
+      text: "\"Mushroom,\" George says, holding out a handful of them, clearly proud of the find. Some of them are, you're fairly sure, not the kind you eat.",
+      choices: [
+        { label: 'Eat one to be polite', outcome: { text: 'That was a mistake. A small, forgivable, extremely uncomfortable mistake.', hp: -8, xp: 15 } },
+        { label: 'Suggest he checks with Jess first', outcome: { text: '"Jess," George repeats, nodding slowly, filing this away as excellent advice.', gold: 15 } }
+      ]
+    },
+    { // 13
+      type: 'combat',
+      text: "Something huge has been stalking the treeline near George's camp for two nights running. He's been waiting up with his club just in case. Tonight, it shows itself.",
+      enemy: { id: 'georgeStalker', name: 'Stalking Wildcat', icon: '🐆', hp: 40, atk: 11, def: 3, speed: 7, gold: [35, 50] },
+      victoryOutcome: { text: 'Between you, Ryker, and George\'s club, it doesn\'t stand a chance. George sleeps easy for the first time in days.', gold: 40, xp: 35 }
+    },
+    { // 14
+      type: 'quest',
+      text: "George is trying to say something complicated and failing spectacularly. \"The... the thing where... you say sorry but you don't...\" He gives up. \"Word for that?\"",
+      choices: [
+        { label: 'Suggest "insincere"', outcome: { text: 'George tries the word out three times, gets close enough, and looks enormously satisfied with himself.', xp: 25 } },
+        { label: 'Ask who he\'s talking about', outcome: { text: 'Turns out it was a merchant who shortchanged him last season. George is still, quietly, a little annoyed about it.', gold: 20 } }
+      ]
+    },
+    { // 15
+      type: 'choice',
+      text: "You find George very carefully, very slowly, trying to pet a butterfly that's landed on Ryker's nose without startling either of them. He is failing, adorably.",
+      choices: [
+        { label: 'Watch quietly', outcome: { text: 'The moment holds for almost a full minute before Ryker sneezes and ruins everything. Worth it.', hp: 8 } },
+        { label: 'Try to help', outcome: { text: 'Your combined effort scares it off immediately. George is unbothered. "Tried," he says, satisfied with the attempt alone.', gold: 15 } }
+      ]
+    },
+    { // 16
+      type: 'challenge',
+      text: "\"Race,\" George announces, pointing at a distant dead tree. \"Me and Ryker. You watch.\" This does not appear to be a challenge extended to you, exactly, more a performance he'd like witnessed.",
+      choices: [
+        { label: 'Watch and cheer', outcome: { text: 'Ryker wins by a landslide. George insists he "let him," visibly lying, deliriously happy about it anyway.', xp: 20 } },
+        { label: 'Bet on George', outcome: { text: 'You lose the bet badly, but George is so touched someone believed in him that he pays you back double anyway.', gold: 25 } }
+      ]
+    },
+    { // 17
+      type: 'combat',
+      text: "A trapper's snare has half-caught Ryker's paw, and the trapper himself is stupid enough to come check it while George is standing right there, murder in his eyes.",
+      enemy: { id: 'georgeTrapper', name: 'Careless Trapper', icon: '🪤', hp: 30, atk: 8, def: 4, speed: 4, gold: [30, 45] },
+      victoryOutcome: { text: 'The trapper flees without his gear. Ryker\'s paw is fine - George checks it four separate times to be sure.', gold: 35, xp: 30 }
+    },
+    { // 18
+      type: 'choice',
+      text: "George has found a very small, very lost baby bird and is holding it in his enormous cupped hands like it's made of glass. \"Little one,\" he whispers, terrified of his own strength.",
+      choices: [
+        { label: 'Help find the nest', outcome: { text: 'You spot it two branches up. George lifts the chick back home with a gentleness that doesn\'t match anything else about him.', xp: 30 } },
+        { label: 'Suggest he keep it safe overnight', outcome: { text: 'He does, cupping it all night by the fire. It flies off fine in the morning. George looks like he might cry a little.', hp: 10 } }
+      ]
+    },
+    { // 19
+      type: 'quest',
+      text: "\"Tina,\" George says, frowning. \"Loud lady. Music lady. She say George dance funny.\" He does not seem offended, exactly, more confused about the correct response.",
+      choices: [
+        { label: 'Teach him a simple dance move', outcome: { text: 'It is, in fact, still very funny. George does not care and does it anyway, proudly, forever now.', xp: 20 } },
+        { label: 'Tell him his dancing is great as-is', outcome: { text: '"Great as-is," George repeats, delighted, and demonstrates immediately, several times.', gold: 15 } }
+      ]
+    },
+    { // 20 - milestone
+      type: 'choice',
+      text: "George pulls a small carved charm off his own belt - Ryker's old puppy collar-tag, kept all these years - and holds it out to you, suddenly nervous in a way you haven't seen from him before. \"For you,\" he says. \"Keep you safe. Like Ryker.\"",
+      choices: [
+        { label: 'Accept it', outcome: { text: 'Whatever ward George believes lives in that little charm, something about it genuinely settles into your bones.', permanentRelicId: 'vampiricFang', xp: 30 } },
+        { label: 'Tell him to keep it', outcome: { text: 'George insists, gently but immovably. There is no version of this where you leave without it. You take it.', permanentRelicId: 'vampiricFang', gold: 20 } }
+      ]
+    },
+    { // 21
+      type: 'choice',
+      text: "George is stacking rocks into a small, wobbly tower, one on top of another, tongue between his teeth in fierce concentration. It is, currently, four rocks tall and about to fall.",
+      choices: [
+        { label: 'Steady it for him', outcome: { text: 'Five rocks. A new record. George treats this like a genuine architectural triumph.', xp: 15 } },
+        { label: 'Let it fall and laugh', outcome: { text: 'It topples spectacularly. George laughs so hard Ryker starts barking in solidarity.', gold: 20 } }
+      ]
+    },
+    { // 22
+      type: 'quest',
+      text: "\"Help George write?\" he asks, holding out a stick and a patch of dirt. \"Want to write name. Just... George.\" He has clearly been trying and getting frustrated.",
+      choices: [
+        { label: 'Teach him to write his name', outcome: { text: 'It takes a while and looks more like a small battle occurred in the dirt, but by the end, it says GEORGE. He stares at it for a long time.', xp: 35 } },
+        { label: 'Write it for him as an example', outcome: { text: 'George copies it letter by letter, painstakingly, and is prouder of the copy than you\'ve ever seen him be of anything.', gold: 20 } }
+      ]
+    },
+    { // 23
+      type: 'challenge',
+      text: "\"Bet you can't carry Ryker,\" George says, grinning, absolutely certain of this. Ryker, for the record, is the size of a small pony.",
+      choices: [
+        { label: 'Try anyway', outcome: { text: 'You cannot, in fact, carry Ryker. You both end up on the ground. George laughs until he wheezes.', hp: -6, gold: 25 } },
+        { label: 'Concede immediately', outcome: { text: '"Smart," George says again, using his favorite compliment, patting your shoulder hard enough to nearly knock you down anyway.', gold: 15 } }
+      ]
+    },
+    { // 24
+      type: 'combat',
+      text: "A rival pack of wild dogs has been circling, testing whether Ryker's the toughest thing in these woods. George steps back with his club ready but lets Ryker's own fight play out first - until it clearly needs backup.",
+      enemy: { id: 'georgePack', name: 'Pack Alpha', icon: '🐕', hp: 44, atk: 12, def: 3, speed: 8, gold: [30, 50] },
+      victoryOutcome: { text: 'The pack yields and slinks off. Ryker struts for the rest of the day like he won it single-handed. George doesn\'t correct him.', gold: 45, xp: 40 }
+    },
+    { // 25
+      type: 'choice',
+      text: "George has found a shivering, half-starved wolf pup, clearly abandoned by whatever pack it came from. He looks at you, then at the pup, then at you again - the question obvious even unspoken.",
+      choices: [
+        { label: 'Take the pup in', outcome: { text: 'It takes to you almost instantly, like it already knew. George looks profoundly relieved someone else said yes first.', companionPet: 'direwolfPup', xp: 25 } },
+        { label: 'Suggest George keep it too', outcome: { text: 'George scoops it up without a second thought. "Ryker\'s friend now," he decides, and that\'s apparently that.', gold: 25 } }
+      ]
+    },
+    { // 26
+      type: 'choice',
+      text: "\"Made you thing,\" George announces, holding out a crudely carved wooden charm shaped - approximately - like a sword. \"From tree. Good tree. Strong.\"",
+      choices: [
+        { label: 'Wear it proudly', outcome: { text: 'It\'s lopsided and a little splintery, and somehow one of the nicer things anyone\'s given you.', gold: 15, item: 'bomb' } },
+        { label: 'Ask him to teach you the carving', outcome: { text: 'His huge hands make it look easy. Yours do not. He\'s endlessly patient about the difference.', xp: 25 } }
+      ]
+    },
+    { // 27
+      type: 'quest',
+      text: "\"Landry,\" George says, working through a complicated thought. \"Duck-man. He say his duck bigger than Ryker.\" He looks at you, genuinely troubled by this claim. \"Not true. Right?\"",
+      choices: [
+        { label: 'Reassure him Ryker is bigger', outcome: { text: 'George relaxes completely, crisis averted. "Knew it," he says, patting Ryker with enormous relief.', gold: 20 } },
+        { label: 'Suggest a friendly measuring contest', outcome: { text: 'Nothing is resolved, but George has a wonderful time arguing about it with you all afternoon.', xp: 20 } }
+      ]
+    },
+    { // 28
+      type: 'challenge',
+      text: "George is quiet for once, watching the sunset with Ryker's head in his lap. \"Simple is good,\" he says, out of nowhere. \"Don't need much. Ryker. Food. Sun.\" He looks at you like he's offering something real.",
+      choices: [
+        { label: 'Sit with him a while', outcome: { text: 'You don\'t say much. You don\'t need to. It\'s a good evening.', hp: 16 } },
+        { label: 'Ask if he\'s ever wanted more', outcome: { text: 'George thinks about it for a long time. "Wanted friend," he finally says. "Got one now. Enough."', xp: 30 } }
+      ]
+    },
+    { // 29
+      type: 'combat',
+      text: "Something ancient and enormous has been displacing whole trees at the edge of George's territory - a beast even he won't face without backup, and he says as much, plainly, no shame in it at all.",
+      enemy: { id: 'georgeBeast', name: 'Ridgeback Behemoth', icon: '🦣', hp: 60, atk: 15, def: 6, speed: 3, gold: [50, 70], elite: true },
+      victoryOutcome: { text: 'It takes everything you\'ve both got, but the beast finally retreats deeper into the wild. George looks at you like you\'ve personally moved a mountain.', gold: 60, xp: 55, gear: { defId: 'ironShield', rarity: 'rare' } }
+    },
+    { // 30 - finale milestone
+      type: 'choice',
+      text: "George stops you before you leave, uncharacteristically serious, Ryker sitting alert at his side like he knows something's coming. \"You,\" George says, searching for the word, and finding it clean and whole for once. \"Friend. Real friend. Not many. You, one of them.\" He holds out a huge, scarred hand.",
+      choices: [
+        { label: 'Shake his hand', outcome: { text: 'His grip could crush stone and he holds it like glass. Whatever George just decided about you, it\'s permanent.', permanentStatBoost: { atk: 2 }, gold: 60, xp: 60 } },
+        { label: 'Hug him instead', outcome: { text: 'You\'re fairly sure George has never been hugged by anything that survived it. He goes very still, then, carefully, hugs back.', permanentStatBoost: { maxHp: 6 }, gold: 40, xp: 60 } }
+      ]
+    }
+  ]
+};
+
 // --- Legendary taming encounters (see enterLegendaryTaming in main.js) ---
 // The exact same 3-decision approach-and-earn-trust flow as a normal
 // 'taming' node (TAMING_DECISIONS), but guarantees ONE SPECIFIC named

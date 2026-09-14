@@ -41,6 +41,62 @@ function applyOutcome(outcome) {
   return lines;
 }
 
+// Same idea as applyOutcome above, for RARE_NPC_STORYLINES (data.js)
+// choices specifically - starts from applyOutcome's shared fields
+// (text/hp/gold/item/relic/statBoost), then adds the reward categories a
+// one-off narrative moment needs that a run-scoped event never did:
+// permanentStatBoost (account-wide, see grantPermanentStatBoost), a
+// companion pet/mount (account-wide, granted only if not already owned -
+// falls back to a small gold consolation so a choice never reads as a
+// dead end), an existing permanent relic by id (same not-already-owned
+// fallback), or a freshly instantiated gear item straight into the bank
+// inventory (always additive - gear has no "already owned" concept).
+function applyRareNpcStageOutcome(outcome) {
+  const lines = applyOutcome(outcome);
+  const pdata = Persistent.load();
+  if (outcome.permanentStatBoost) {
+    Object.keys(outcome.permanentStatBoost).forEach(stat => {
+      const amount = outcome.permanentStatBoost[stat];
+      grantPermanentStatBoost(stat, amount);
+      lines.push(`+${amount} ${stat.toUpperCase()} permanently`);
+    });
+  }
+  if (outcome.companionPet) {
+    if (!pdata.ownedPets.includes(outcome.companionPet)) {
+      pdata.ownedPets.push(outcome.companionPet);
+      lines.push(`New companion: ${PETS[outcome.companionPet].name}`);
+    } else {
+      Game.addGold(20);
+      lines.push('+20 Gold (already had that companion)');
+    }
+  }
+  if (outcome.companionMount) {
+    if (!pdata.ownedMounts.includes(outcome.companionMount)) {
+      pdata.ownedMounts.push(outcome.companionMount);
+      lines.push(`New mount: ${MOUNTS[outcome.companionMount].name}`);
+    } else {
+      Game.addGold(20);
+      lines.push('+20 Gold (already had that mount)');
+    }
+  }
+  if (outcome.permanentRelicId) {
+    if (!pdata.permanentRelics.includes(outcome.permanentRelicId)) {
+      pdata.permanentRelics.push(outcome.permanentRelicId);
+      lines.push(`New permanent relic: ${RELICS[outcome.permanentRelicId].name}`);
+    } else {
+      Game.addGold(25);
+      lines.push('+25 Gold (already had that relic)');
+    }
+  }
+  if (outcome.gear) {
+    const item = instantiateGear(outcome.gear.defId, outcome.gear.rarity || 'common');
+    pdata.inventory.push(item);
+    lines.push(`Received ${RARITIES[item.rarity].label} ${item.name}`);
+  }
+  Persistent.save();
+  return lines;
+}
+
 function pickRandomEvent() {
   return EVENTS[rand(0, EVENTS.length - 1)];
 }

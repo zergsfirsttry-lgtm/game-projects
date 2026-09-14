@@ -1448,6 +1448,34 @@ function isTitleUnlocked(titleId) {
   return !!(title && title.check());
 }
 
+// Account-wide, permanent stat gains from narrative rewards (currently just
+// RARE_NPC_STORYLINES, data.js) - flat, not boosted by the Gear Set Bonus,
+// same reasoning as titleStatBonus/talentStatBonus below: a one-time story
+// moment should add a fixed, predictable amount regardless of how geared up
+// the character later becomes.
+function permanentStatBoostBonus() {
+  const boosts = Persistent.load().permanentStatBoosts;
+  return { atk: boosts.atk || 0, def: boosts.def || 0, maxHp: boosts.maxHp || 0, speed: boosts.speed || 0 };
+}
+
+function grantPermanentStatBoost(stat, amount) {
+  const pdata = Persistent.load();
+  pdata.permanentStatBoosts[stat] = (pdata.permanentStatBoosts[stat] || 0) + amount;
+}
+
+// Advances a rare NPC's follow-up-storyline progress by one stage, cycling
+// back to the start once every stage has been seen - see
+// RARE_NPC_STORYLINES (data.js) and renderRareNpcStoryScreen/
+// resolveRareNpcStageChoice/enterRareNpcStageCombat (main.js). A no-op for
+// any npcId with no storyline authored yet.
+function advanceRareNpcStage(npcId) {
+  const storyline = RARE_NPC_STORYLINES[npcId];
+  if (!storyline || !storyline.length) return;
+  const pdata = Persistent.load();
+  pdata.rareNpcProgress[npcId] = ((pdata.rareNpcProgress[npcId] || 0) + 1) % storyline.length;
+  Persistent.save();
+}
+
 // A title's passive bonus, folded into effectiveStats/previewClassStats the
 // same way a talent's is - flat, not boosted by the Gear Set Bonus, since
 // it's a narrative reward rather than gear.
@@ -1653,6 +1681,12 @@ const Persistent = {
   blank() {
     return {
       bankGold: 0, materials: { ore: 0, leather: 0, essence: 0, herbs: 0, wood: 0, fish: 0, dust: 0, shard: 0, crystal: 0 }, inventory: [], permanentRelics: [], unlockedSpells: [], unlockedClasses: [], ownedLegendaries: [], characters: {},
+      // Rare-NPC follow-up storyline progress (see RARE_NPC_STORYLINES,
+      // data.js) - {npcId: stageIndex}, advanced one stage per resolved
+      // visit. Account-wide, permanent stat gains from those storylines
+      // (and any other future source) - {atk, def, maxHp, speed}, applied
+      // in Game.effectiveStats() alongside every other flat stat source.
+      rareNpcProgress: {}, permanentStatBoosts: {},
       ownedPets: [], ownedMounts: [], activeQuestIds: [], questProgress: {}, questTiers: {}, completedQuestIds: [],
       honor: 0, honorInventory: [], honorPotionCount: 0, pvpInventory: [], randomPvpEnabled: false, recipeRarityBoost: {},
       companionLevels: { pet: {}, mount: {} }, activeBuffs: [], lastSeenAt: Date.now(), reputation: {},

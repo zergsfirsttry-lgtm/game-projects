@@ -630,6 +630,17 @@ const App = {
       this.enterCombat(node, scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Game.act));
       return;
     }
+    // Once this NPC's one-time signature reward is already claimed
+    // (pdata.metRareNpcs) AND they actually have a storyline authored
+    // (RARE_NPC_STORYLINES, data.js), every later visit is a follow-up
+    // stage instead - an NPC with no storyline yet keeps the old
+    // repeat-the-signature-flavor screen unchanged.
+    const pdata = Persistent.load();
+    const storyline = RARE_NPC_STORYLINES[node.rareNpcId];
+    if (pdata.metRareNpcs.includes(node.rareNpcId) && storyline && storyline.length) {
+      this.renderRareNpcStoryScreen(node);
+      return;
+    }
     this.renderRareNpcScreen(node);
   },
 
@@ -677,6 +688,49 @@ const App = {
     if (discoverPetMount) this.queuePetMountDiscovery(discoverPetMount[0], discoverPetMount[1]);
     this.showAutoToast(`<strong>${npc.name} rewards you!</strong><div class="small-text">${rewardDef.icon} ${rewardDef.name}</div>`);
     this.showMap();
+  },
+
+  // Follow-up storyline (see RARE_NPC_STORYLINES, data.js) - one stage per
+  // visit, cycling back to the start once every stage has been seen
+  // (advanceRareNpcStage, progression.js). 'choice'/'quest'/'challenge'
+  // stages render as a picker here; 'combat' stages hand off to
+  // enterRareNpcStageCombat instead.
+  renderRareNpcStoryScreen(node) {
+    const npc = RARE_NPCS[node.rareNpcId];
+    const storyline = RARE_NPC_STORYLINES[node.rareNpcId];
+    const pdata = Persistent.load();
+    const stageIndex = (pdata.rareNpcProgress[node.rareNpcId] || 0) % storyline.length;
+    const stage = storyline[stageIndex];
+    if (stage.type === 'combat') { this.enterRareNpcStageCombat(node, stage); return; }
+    this.root.innerHTML = `
+      ${this.renderHud()}
+      <div class="panel rare-npc-encounter">
+        <div class="npc-portrait-wrap"><img src="assets/sprites/${npc.portrait}.png" class="npc-portrait" alt="${npc.name}"></div>
+        <h2>${npc.name}</h2>
+        <p class="flavor">${stage.text}</p>
+        <div class="choice-list" id="rare-npc-stage-choices">
+          ${stage.choices.map((c, i) => `<button class="choice-btn" data-idx="${i}">${escapeHtml(c.label)}</button>`).join('')}
+        </div>
+      </div>`;
+    const anim = ENCOUNTER_AMBIENT_ANIM[npc.portrait];
+    if (anim) this.playLoopingAnimation(this.root.querySelector('.npc-portrait'), anim.frames, 260);
+    this.root.querySelectorAll('#rare-npc-stage-choices .choice-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.resolveRareNpcStageChoice(node, npc, stage, parseInt(btn.dataset.idx, 10)));
+    });
+    this.autoDialogueIfEnabled('#rare-npc-stage-choices .choice-btn');
+  },
+
+  resolveRareNpcStageChoice(node, npc, stage, choiceIdx) {
+    const choice = stage.choices[choiceIdx];
+    const lines = applyRareNpcStageOutcome(choice.outcome);
+    advanceRareNpcStage(node.rareNpcId);
+    this.showAutoToast(`<strong>${npc.name}</strong><div class="small-text">${lines.join(' · ')}</div>`);
+    this.showMap();
+  },
+
+  enterRareNpcStageCombat(node, stage) {
+    node.rareNpcStage = stage;
+    this.enterCombat(node, scaleEnemy(stage.enemy, Game.act));
   },
 
   // ---------------- Legendary taming (Robin / Monkey / Chopper) ----------------
@@ -1883,6 +1937,14 @@ const App = {
         });
         Persistent.save();
         this.showCombatReward({ goldReward, xpReward, levelResult, honor: honorReward, bloodyBagAwarded: true }, s.enemy);
+        return;
+      }
+      if (node.rareNpcStage) {
+        const npc = RARE_NPCS[node.rareNpcId];
+        const lines = applyRareNpcStageOutcome(node.rareNpcStage.victoryOutcome);
+        advanceRareNpcStage(node.rareNpcId);
+        this.showAutoToast(`<strong>${npc.name}</strong><div class="small-text">${lines.join(' · ')}</div>`);
+        this.showMap();
         return;
       }
 

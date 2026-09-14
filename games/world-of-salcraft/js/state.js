@@ -192,6 +192,10 @@ const Game = {
     // flat, run-scoped source like curses/talents, untouched by the Gear
     // Set Bonus below.
     const moral = this.moralEffectStatBonus();
+    // Permanent, account-wide, flat - see permanentStatBoostBonus
+    // (progression.js) and grantPermanentStatBoost, currently only granted
+    // by RARE_NPC_STORYLINES milestone stages.
+    const permBoost = permanentStatBoostBonus();
     const lvlMult = levelStatMultiplier(charRecord.level);
     // The Gear Set Bonus (see gearSetBonusPct in progression.js) multiplies
     // every stat contribution from items/relics/food/pets-mounts together -
@@ -206,10 +210,10 @@ const Game = {
     const diffStatMult = currentDifficulty().playerStatMult;
 
     const result = {
-      atk: Math.round(Math.max(0, Math.round((p.baseAtk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + curse.atk + ghost.atk + talent.atk + title.atk + pvpGear.atk + party.atk + moral.atk) * diffStatMult),
-      def: Math.round(Math.max(0, p.baseDef + boost(gear.def + bonus.def + companion.def + buff.def) + curse.def + ghost.def + talent.def + title.def + pvpGear.def + party.def + moral.def) * diffStatMult),
-      maxHp: Math.max(1, Math.round((Math.round((p.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + curse.maxHp + ghost.maxHp + talent.maxHp + title.maxHp + pvpGear.maxHp + party.maxHp + moral.maxHp) * diffStatMult)),
-      speed: Math.max(1, Math.round(Math.max(1, p.baseSpeed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + curse.speed + talent.speed + title.speed + moral.speed) * diffStatMult)),
+      atk: Math.round(Math.max(0, Math.round((p.baseAtk + boost(gear.atk)) * lvlMult) + boost(bonus.atk + companion.atk + buff.atk) + curse.atk + ghost.atk + talent.atk + title.atk + pvpGear.atk + party.atk + moral.atk + permBoost.atk) * diffStatMult),
+      def: Math.round(Math.max(0, p.baseDef + boost(gear.def + bonus.def + companion.def + buff.def) + curse.def + ghost.def + talent.def + title.def + pvpGear.def + party.def + moral.def + permBoost.def) * diffStatMult),
+      maxHp: Math.max(1, Math.round((Math.round((p.maxHp + boost(gear.maxHp)) * lvlMult) + boost(bonus.maxHp + companion.maxHp + buff.maxHp) + curse.maxHp + ghost.maxHp + talent.maxHp + title.maxHp + pvpGear.maxHp + party.maxHp + moral.maxHp + permBoost.maxHp) * diffStatMult)),
+      speed: Math.max(1, Math.round(Math.max(1, p.baseSpeed + boost(gear.speed + bonus.speed + companion.speed + buff.speed) + curse.speed + talent.speed + title.speed + moral.speed + permBoost.speed) * diffStatMult)),
       critBonus: boost(gear.critBonus + bonus.critBonus + companion.critBonus + buff.critBonus) + curse.critBonus + talent.critBonus + title.critBonus + pvpGear.critBonus + moral.critBonus,
       goldBonus: boost(gear.goldBonus + bonus.goldBonus + companion.goldBonus + buff.goldBonus) + curse.goldBonus + talent.goldBonus + title.goldBonus + reputation.goldBonus + moral.goldBonus,
       // These four are flat HP/damage amounts (like atk/def), not
