@@ -1620,6 +1620,234 @@ const RARE_NPC_STORYLINES = {
         { label: "Ask if the duckling gets a vote", outcome: { text: "\"She voted yes three towns ago,\" Landry says, dead serious, and the duckling honks in what you choose to take as agreement.", permanentStatBoost: { speed: 2 }, gold: 50, xp: 65 } }
       ]
     }
+  ],
+  william: [
+    { // 1
+      type: "choice",
+      text: "You find Combat Master Williams standing perfectly still in an empty courtyard, eyes closed, breathing slow. \"You're early,\" he says, without opening his eyes. \"Or I'm predictable. Sit if you like.\"",
+      choices: [
+        { label: "Sit and meditate with him", outcome: { text: "Ten silent minutes pass. You're not sure what changed, but something did.", hp: 12 } },
+        { label: "Ask what he's thinking about", outcome: { text: "\"Nothing,\" he says. \"That's rather the point.\" He seems pleased you asked anyway.", xp: 20 } }
+      ]
+    },
+    { // 2
+      type: "challenge",
+      text: "Williams balances on a narrow fence post, one leg tucked, utterly motionless. \"Balance isn't about the leg,\" he says. \"Try it.\" You suspect this will not go well for you.",
+      choices: [
+        { label: "Attempt the pose", outcome: { text: "You fall almost immediately. Twice. Williams doesn't laugh, which somehow feels worse than if he had.", hp: -5, xp: 20 } },
+        { label: "Ask him to explain the principle instead", outcome: { text: "\"Balance is attention,\" he says. \"The leg just tells you when you've lost it.\" You're not sure you understand, but it sounds true.", gold: 20 } }
+      ]
+    },
+    { // 3
+      type: "combat",
+      text: "A brash young student is loudly insisting Williams has gotten \"slow in his old age\" and demanding a match. Williams considers the young man for a long moment, then looks at you instead. \"You take this one. I've nothing to prove today.\"",
+      enemy: { id: "williamsStudent", name: "Overeager Student", icon: "🥋", hp: 30, atk: 10, def: 3, speed: 7, gold: [25, 40] },
+      victoryOutcome: { text: "The student leaves considerably humbler. Williams nods once - from him, that's practically applause.", gold: 35, xp: 30 }
+    },
+    { // 4
+      type: "choice",
+      text: "Williams splits a stack of roof tiles with one open palm, without any particular ceremony about it, like he's swatting a fly. \"Focus,\" he says, \"not force,\" and doesn't elaborate further.",
+      choices: [
+        { label: "Try it yourself", outcome: { text: "You mostly hurt your hand. Williams watches with something almost like sympathy.", hp: -6, xp: 20 } },
+        { label: "Ask him to explain the difference", outcome: { text: "He spends a genuinely patient hour on it. You still can't split a tile, but you understand why you can't, which he insists is progress.", xp: 30 } }
+      ]
+    },
+    { // 5
+      type: "quest",
+      text: "\"A saying, from my own teacher,\" Williams offers, unprompted. \"'The fist that never opens holds nothing.' Sit with that a while.\" He goes back to his tea, apparently done explaining for the day.",
+      choices: [
+        { label: "Ask him to explain it plainly", outcome: { text: "\"Grip too tight on anything - a technique, a grudge, a plan - and you can't hold what comes next,\" he says. Simple, once said aloud.", xp: 25 } },
+        { label: "Just nod and think on it yourself", outcome: { text: "You turn it over for days afterward. Williams seems to approve of the extended silence more than any answer would have earned.", gold: 20 } }
+      ]
+    },
+    { // 6
+      type: "quest",
+      text: "\"Training,\" Williams says, handing you two heavy buckets of water and pointing at a hill. \"Up. Down. Don't spill.\" There is no visible connection between this task and combat mastery, and he offers none.",
+      choices: [
+        { label: "Do it without complaint", outcome: { text: "Your arms are jelly by the end. Somehow, your stance feels steadier than it did this morning.", xp: 30 } },
+        { label: "Ask what this actually teaches", outcome: { text: "\"Patience. Also, my garden needed watering,\" he admits, entirely unbothered by the double duty.", gold: 20 } }
+      ]
+    },
+    { // 7
+      type: "combat",
+      text: "A rival dojo has sent their best to test Williams's reputation, the way they apparently do every few years. Williams sighs, the closest he comes to visible annoyance. \"Again. Go on, I'll watch.\"",
+      enemy: { id: "williamsRivalDojo", name: "Rival Dojo Champion", icon: "🥊", hp: 36, atk: 12, def: 4, speed: 6, gold: [30, 50] },
+      victoryOutcome: { text: "The champion bows, genuinely respectful in defeat. Williams looks satisfied, though whether at the win or at not having to fight himself is unclear.", gold: 40, xp: 35 }
+    },
+    { // 8
+      type: "quest",
+      text: "\"What are you afraid of?\" Williams asks, apropos of nothing, studying you like the answer matters more than you'd think.",
+      choices: [
+        { label: "Answer honestly", outcome: { text: "He listens without judgment, then nods slowly. \"Naming it is most of the work,\" he says. \"The rest is just practice.\"", xp: 30 } },
+        { label: "Deflect the question", outcome: { text: "\"Fair,\" he says, letting it go without pressing - though you suspect he's filed the deflection away as an answer of its own.", gold: 20 } }
+      ]
+    },
+    { // 9
+      type: "choice",
+      text: "Williams demonstrates a breathing technique, slow and deliberate, each inhale timed like a metronome. \"Breath before technique,\" he says. \"Always. No exceptions.\"",
+      choices: [
+        { label: "Practice along with him", outcome: { text: "It's harder than it looks. By the end you're at least breathing ON PURPOSE, which he calls a start.", hp: 14 } },
+        { label: "Ask why breath matters so much", outcome: { text: "\"Panic breathes shallow. Calm breathes deep. Your body decides which one it is before your mind catches up,\" he explains.", xp: 25 } }
+      ]
+    },
+    { // 10 - milestone
+      type: "quest",
+      text: "Williams sets your feet himself, adjusting your stance with small, precise touches. \"This is the stance under every stance,\" he says. \"Learn it once, properly, and your body remembers for you.\"",
+      choices: [
+        { label: "Drill the stance until it's second nature", outcome: { text: "It takes hours. Somewhere in there, something genuinely changes about how you hold yourself in a fight.", permanentStatBoost: { def: 1 }, xp: 30 } },
+        { label: "Ask him to show you once more, slower", outcome: { text: "He does, without a trace of impatience. \"Everyone learns at their own pace,\" he says. \"Mine was slower than yours, if it helps.\"", gold: 30 } }
+      ]
+    },
+    { // 11
+      type: "choice",
+      text: "\"Your guard drops on the left when you're tired,\" Williams observes, watching you shadow-spar. \"Everyone has a tell. That's yours.\"",
+      choices: [
+        { label: "Ask him to help correct it", outcome: { text: "A tedious, repetitive drill later, and the tell is - not gone, but smaller. \"Smaller is honest progress,\" he says.", xp: 25 } },
+        { label: "Ask what his own tell is", outcome: { text: "He actually laughs, briefly. \"I stopped having one. Eventually.\" He doesn't say how long it took.", gold: 20 } }
+      ]
+    },
+    { // 12
+      type: "combat",
+      text: "A pickpocket, apparently unaware whose pocket he's just tried to pick, finds himself facing Combat Master Williams's utterly serene, utterly unimpressed stare. Williams gestures for you to handle the actual apprehending.",
+      enemy: { id: "williamsPickpocket", name: "Unlucky Pickpocket", icon: "🥷", hp: 20, atk: 6, def: 1, speed: 8, gold: [15, 25] },
+      victoryOutcome: { text: "He returns everything he took, plus an apology he clearly means. Williams looks almost fond of the whole absurd episode.", gold: 25, xp: 20 }
+    },
+    { // 13
+      type: "quest",
+      text: "\"Strength or technique - which matters more?\" Williams asks, testing you the way he tests everyone, with a question that has no clean answer.",
+      choices: [
+        { label: "Argue for technique", outcome: { text: "\"A fair case,\" he allows. \"Though I've met very strong men who never needed to make it.\" He seems to enjoy the debate regardless of your answer.", xp: 25 } },
+        { label: "Argue for strength", outcome: { text: "\"Also fair,\" he says, \"though I've beaten stronger men than myself more times than I can count.\" He grins, just slightly.", gold: 20 } }
+      ]
+    },
+    { // 14
+      type: "choice",
+      text: "It's raining hard enough to flood the courtyard, and Williams is training in it anyway, entirely unbothered, form as crisp as ever. \"Weather doesn't ask permission,\" he says. \"Neither should your training.\"",
+      choices: [
+        { label: "Join him in the rain", outcome: { text: "You're both soaked and freezing within minutes. Neither of you stops. It's oddly satisfying.", hp: 10 } },
+        { label: "Watch from somewhere dry", outcome: { text: "\"Wise,\" he calls out, not remotely offended. \"I'm just stubborn, not smart.\"", gold: 15 } }
+      ]
+    },
+    { // 15
+      type: "challenge",
+      text: "\"Stand there,\" Williams says, pointing at a spot in the courtyard. \"Don't move. I'll tell you when you're done.\" He does not specify how long this will take, and you get the distinct sense that's deliberate.",
+      choices: [
+        { label: "Stand and wait it out", outcome: { text: "It's nearly an hour before he says anything. \"Patience,\" he finally says, \"is a technique too. Most people forget that.\"", xp: 30 } },
+        { label: "Ask how long this will take", outcome: { text: "\"As long as it takes you to stop asking,\" he says, and you have the distinct feeling you just failed a test you didn't know you were taking.", gold: 15 } }
+      ]
+    },
+    { // 16
+      type: "combat",
+      text: "Williams tosses a padded practice weapon your way without warning, testing your reflexes the moment your hand closes on the grip. \"Catch,\" he says, a full second too late to be useful advice.",
+      enemy: { id: "williamsSparringDummy", name: "Sparring Partner", icon: "🥋", hp: 26, atk: 9, def: 5, speed: 6, gold: [20, 35] },
+      victoryOutcome: { text: "You hold your own better than expected. Williams looks like he's recalibrating his estimate of you, slightly upward.", gold: 30, xp: 30 }
+    },
+    { // 17
+      type: "quest",
+      text: "\"My own teacher used to say mastery isn't a destination,\" Williams tells you, unusually reflective. \"Just a direction you keep walking. I didn't understand it until I was much older than you.\"",
+      choices: [
+        { label: "Ask if he understands it now", outcome: { text: "\"Some days,\" he admits, which from a man this composed feels like real vulnerability.", xp: 30 } },
+        { label: "Ask about his teacher", outcome: { text: "He talks for a long while, warmly, about someone who's clearly been gone a long time but never really left.", gold: 20 } }
+      ]
+    },
+    { // 18
+      type: "choice",
+      text: "A student's grown insufferably arrogant after one too many easy wins, and Williams asks you, diplomatically, to \"help recalibrate his confidence\" through a friendly demonstration.",
+      choices: [
+        { label: "Spar with the arrogant student", outcome: { text: "It's a short, humbling lesson. The student thanks you afterward, more graciously than expected.", xp: 25 } },
+        { label: "Suggest Williams handle it himself", outcome: { text: "\"Wouldn't be humbling, coming from me,\" Williams says. \"He already expects to lose to me. Losing to you means something different.\"", gold: 20 } }
+      ]
+    },
+    { // 19
+      type: "quest",
+      text: "\"Discipline is easy when you feel like it,\" Williams says, watching you struggle through a drill you clearly don't want to be doing. \"The version that counts is the one you keep when you don't.\"",
+      choices: [
+        { label: "Push through the drill anyway", outcome: { text: "You finish it, badly, but you finish it. Williams seems entirely uninterested in the quality and very interested in the completion.", xp: 30 } },
+        { label: "Admit you want to quit", outcome: { text: "\"Good,\" he says, unexpectedly. \"Admitting it honestly is its own discipline. Now finish anyway.\" You do.", gold: 20 } }
+      ]
+    },
+    { // 20 - milestone
+      type: "quest",
+      text: "Williams presses a small, worn stone into your palm - smooth from decades of being turned over in someone's hand while thinking. \"Carried this since my own first real lesson,\" he says. \"Time it moved on.\"",
+      choices: [
+        { label: "Accept the stone", outcome: { text: "It doesn't do anything you can point to. It just feels like carrying a very old, very patient kind of focus.", permanentRelicId: "eagleEye", xp: 35 } },
+        { label: "Ask if he's sure he wants to give it up", outcome: { text: "\"Certain,\" he says, and presses it into your hand anyway, the matter apparently already settled in his mind days ago.", permanentRelicId: "eagleEye", gold: 30 } }
+      ]
+    },
+    { // 21
+      type: "quest",
+      text: "\"People ask which style I fight in,\" Williams says. \"There isn't one. There's just what works, borrowed from wherever it lives.\" He seems to enjoy how much this annoys the traditionalists.",
+      choices: [
+        { label: "Ask him to teach a borrowed technique", outcome: { text: "He shows you something he picked up decades ago from a fighter whose name he's long since forgotten. It works beautifully anyway.", xp: 30 } },
+        { label: "Ask if any style annoyed him to learn", outcome: { text: "He lists three, with visible, lingering irritation at each, which is somehow the funniest thing you've seen him do.", gold: 20 } }
+      ]
+    },
+    { // 22
+      type: "combat",
+      text: "A gang, mistaking the quiet dojo for an easy target, has decided to make trouble. Williams looks less angry than mildly disappointed at their reading comprehension.",
+      enemy: { id: "williamsGang", name: "Overconfident Thug", icon: "👊", hp: 32, atk: 11, def: 3, speed: 6, gold: [25, 40] },
+      victoryOutcome: { text: "The rest of the gang reconsiders and leaves quietly. Williams doesn't even stand up from his tea for this one.", gold: 35, xp: 30 }
+    },
+    { // 23
+      type: "quest",
+      text: "\"I'm not young anymore,\" Williams says, matter-of-fact rather than mournful, stretching a shoulder that clearly aches. \"Figuring out what that means for how I train is its own discipline.\"",
+      choices: [
+        { label: "Ask what's changed", outcome: { text: "\"Less force, more precision. Same as it should've always been, honestly. Age just removes the option to cheat with strength.\"", xp: 25 } },
+        { label: "Offer to train alongside him at his pace", outcome: { text: "It's a slower, quieter session than usual, and you both leave it feeling like you learned more than the fast ones.", hp: 16 } }
+      ]
+    },
+    { // 24
+      type: "challenge",
+      text: "\"One meal today. Sunup to sundown, nothing else,\" Williams says. \"Not a punishment. Just a chance to notice how much of your focus goes to appetite instead of anything else.\"",
+      choices: [
+        { label: "Take on the fast", outcome: { text: "It's genuinely hard, and by evening you notice exactly what he meant. Small, uncomfortable, useful lesson.", xp: 30 } },
+        { label: "Politely decline", outcome: { text: "\"No shame in it,\" Williams says. \"I still hate this exercise, every single time I do it myself.\"", gold: 15 } }
+      ]
+    },
+    { // 25 - companion
+      type: "choice",
+      text: "A small, patient tortle Williams has been training as a demonstration partner for balance drills has taken a real liking to you. \"She's better at stillness than most of my human students,\" he admits. \"Might do you good to keep training with her.\"",
+      choices: [
+        { label: "Take her on as a training partner", outcome: { text: "She settles in beside you like she'd already decided this before you did. Williams looks quietly pleased.", companionPet: "ironshellTortle", xp: 30 } },
+        { label: "Ask Williams to keep training her instead", outcome: { text: "\"She's made her choice already,\" he says, nodding at her firmly planted beside you. \"Wasn't really up to either of us.\"", companionPet: "ironshellTortle", gold: 25 } }
+      ]
+    },
+    { // 26
+      type: "combat",
+      text: "\"Spar with me,\" Williams says, and for once it isn't a lesson dressed up as a favor - it's a genuine, serious match, the first he's offered you outright. \"Show me what's stuck.\"",
+      enemy: { id: "williamsHimself", name: "Combat Master Williams", icon: "🥋", hp: 48, atk: 14, def: 6, speed: 7, gold: [35, 55], elite: true },
+      victoryOutcome: { text: "You don't beat him, not really - but you land enough that he stops mid-match and actually smiles, which apparently almost never happens.", gold: 50, xp: 45 }
+    },
+    { // 27
+      type: "choice",
+      text: "Williams pours tea with the same unhurried precision he brings to everything else, setting a second cup across from him without asking if you want one. \"Sit,\" he says. \"No lesson today. Just tea.\"",
+      choices: [
+        { label: "Enjoy the quiet with him", outcome: { text: "It's the most relaxed you've ever seen him - which, for Williams, is barely different from usual, but you notice it anyway.", hp: 18 } },
+        { label: "Ask if he ever gets tired of teaching", outcome: { text: "\"Never,\" he says, without hesitation. \"Teaching is just training I get to watch happen to someone else.\"", xp: 25 } }
+      ]
+    },
+    { // 28
+      type: "challenge",
+      text: "\"What is mastery, actually?\" Williams asks, the same question he's apparently asked every serious student he's ever had, watching for how you answer as much as what you say.",
+      choices: [
+        { label: "Answer: never being satisfied", outcome: { text: "\"Close,\" he says. \"I'd say never PRETENDING to be satisfied. Some difference in there, if you look for it.\"", xp: 30 } },
+        { label: "Answer: making the hard thing look easy", outcome: { text: "\"Also close,\" he allows. \"Though the making-it-look part is the least important part of that sentence.\"", gold: 20 } }
+      ]
+    },
+    { // 29
+      type: "combat",
+      text: "The rival dojo, humbled once already, has sent their actual master this time - no student, no test, a real challenge aimed squarely at Williams's reputation. Williams, for once, looks genuinely alert. \"This one's earned. Let's not disappoint them.\"",
+      enemy: { id: "williamsRivalMaster", name: "Rival Grandmaster", icon: "🐉", hp: 58, atk: 16, def: 6, speed: 7, gold: [50, 75], elite: true },
+      victoryOutcome: { text: "A genuinely hard-fought match, decided by inches. The rival master bows deeply on the way out - to both of you, equally.", gold: 65, xp: 55, gear: { defId: "bucklerShield", rarity: "rare" } }
+    },
+    { // 30 - finale milestone
+      type: "choice",
+      text: "Williams sets down whatever he's holding and looks at you properly, the way he looks at almost nothing else. \"I don't say this often,\" he says. \"There's nothing left I need to teach you that you can't now find yourself. That's rather the whole point of a teacher, in the end.\"",
+      choices: [
+        { label: "Thank him for everything", outcome: { text: "He inclines his head, the closest thing to a bow he's ever given you. Whatever just changed between you, it's permanent.", permanentStatBoost: { atk: 1, def: 1 }, gold: 60, xp: 65 } },
+        { label: "Ask what comes after mastery", outcome: { text: "\"You find out,\" he says, \"and then, if you're any good at all, you teach it to someone else.\" He means you, obviously.", permanentStatBoost: { maxHp: 5 }, gold: 45, xp: 65 } }
+      ]
+    }
   ]
 };
 
