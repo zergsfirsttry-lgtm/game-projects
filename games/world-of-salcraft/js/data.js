@@ -1394,6 +1394,232 @@ const RARE_NPC_STORYLINES = {
         { label: 'Hug him instead', outcome: { text: 'You\'re fairly sure George has never been hugged by anything that survived it. He goes very still, then, carefully, hugs back.', permanentStatBoost: { maxHp: 6 }, gold: 40, xp: 60 } }
       ]
     }
+  ],
+  landry: [
+    { // 1
+      type: 'choice',
+      text: "Sheriff Landry's got a wanted poster nailed to a post, squinting between it and you like he's doing math. \"Reckon you favor this fella some,\" he says, tapping a crude sketch that looks like absolutely no one. \"Ain't you, though. Wrong color hat.\"",
+      choices: [
+        { label: "Point out the sketch is terrible", outcome: { text: "\"Artist owed me a favor,\" Landry admits. \"Didn't say he could draw.\" He tears it down anyway.", gold: 20 } },
+        { label: "Ask who the real culprit is", outcome: { text: "Landry gives you the actual description - and a small reward for the tip-off when it pans out.", gold: 30, xp: 15 } }
+      ]
+    },
+    { // 2
+      type: 'choice',
+      text: "The duckling has gotten into the general store and is currently wearing a barrel like a hat, utterly delighted with itself, while the shopkeep glares at Landry from the doorway.",
+      choices: [
+        { label: "Help corral the duckling", outcome: { text: "It takes both of you and a dropped biscuit. Landry pays the shopkeep double, muttering about \"deputy expenses.\"", xp: 20 } },
+        { label: "Let it enjoy the barrel a while longer", outcome: { text: "Landry sighs, tips the shopkeep for the trouble out of his own pocket, and watches the duckling parade around like royalty.", gold: 15 } }
+      ]
+    },
+    { // 3
+      type: 'quest',
+      text: "Raised voices from the saloon - a card game gone sideways. Landry doesn't rush in, just leans on the doorframe. \"Give it a minute,\" he drawls. \"Or don't, if you're the impatient type.\"",
+      choices: [
+        { label: "Step in and calm things down", outcome: { text: "You talk the table down before fists fly. Landry looks mildly impressed. \"Didn't even need my shotgun. Nice change.\"", xp: 25 } },
+        { label: "Wait it out with him", outcome: { text: "It fizzles on its own in about a minute, exactly like he said. \"Told you,\" Landry says, insufferably smug.", gold: 20 } }
+      ]
+    },
+    { // 4
+      type: 'combat',
+      text: "Cattle rustlers, working the herd at the edge of town under cover of dusk. Landry checks his shotgun's load without any particular hurry. \"Same folks every season,\" he sighs. \"You'd think they'd learn.\"",
+      enemy: { id: 'landryRustler', name: 'Cattle Rustler', icon: '🤠', hp: 28, atk: 9, def: 3, speed: 5, gold: [25, 40] },
+      victoryOutcome: { text: "One less rustler working these parts. Landry tips his hat. \"Buy you a drink for that, if the saloon wasn't already a mess.\"", gold: 35, xp: 30 }
+    },
+    { // 5
+      type: 'challenge',
+      text: "\"Quick-draw contest,\" Landry proposes, setting up two bottles on a fence rail. \"Loser buys the coffee. Winner still buys the coffee, on account of I already know how this goes.\"",
+      choices: [
+        { label: "Take the contest", outcome: { text: "You lose, predictably, and badly. Landry buys the coffee anyway, true to his word.", hp: 8, gold: 10 } },
+        { label: "Ask him to teach you the stance instead", outcome: { text: "He walks you through it slow, patient as a man who's taught this a hundred times. Something about your footing sticks.", xp: 25 } }
+      ]
+    },
+    { // 6
+      type: 'quest',
+      text: "\"Fella's cheating at cards,\" Landry murmurs, not looking up from his own hand. \"Third table this week. Bottom-dealing, if you know what to look for.\" He doesn't seem eager to make a scene over it.",
+      choices: [
+        { label: "Call the cheater out yourself", outcome: { text: "The table erupts, the cheater bolts, and Landry collects the pot \"for evidence.\" He splits it with you.", gold: 30 } },
+        { label: "Let Landry handle it his way", outcome: { text: "He waits for the man to overplay his hand, then cleans him out fair and square with a smile. \"Patience,\" Landry says. \"Works better than shouting.\"", xp: 20 } }
+      ]
+    },
+    { // 7
+      type: 'choice',
+      text: "The duckling has taken an enormous, immediate liking to whatever companion you've got with you, following it around at a respectful, adoring distance. \"Made a friend,\" Landry observes, mustache twitching.",
+      choices: [
+        { label: "Let them play a while", outcome: { text: "It's a genuinely good afternoon. Even Landry cracks a real smile watching them.", hp: 12 } },
+        { label: "Ask Landry about raising a deputy bird", outcome: { text: "He tells you the whole ridiculous story with real fondness. Found it half-drowned in a creek, three years back, and never looked back.", xp: 20 } }
+      ]
+    },
+    { // 8
+      type: 'combat',
+      text: "The afternoon train's been flagged down by masked riders three miles out. Landry's already saddled up by the time you catch wind of it. \"Company'd be appreciated,\" he says, which for him counts as an emergency.",
+      enemy: { id: 'landryTrainRobber', name: 'Train Robber', icon: '🎭', hp: 32, atk: 10, def: 3, speed: 6, gold: [30, 45] },
+      victoryOutcome: { text: "The robbers scatter without their haul. The rail company sends Landry a thank-you fee, and he splits it down the middle without being asked.", gold: 40, xp: 35 }
+    },
+    { // 9
+      type: 'quest',
+      text: "Landry's quiet for a stretch, watching the sunset from the jailhouse porch. \"Had a partner, once,\" he says eventually. \"Before the duckling. Good man. Bad day.\" He doesn't finish the thought, and you don't push.",
+      choices: [
+        { label: "Sit with him quietly", outcome: { text: "Neither of you says much else. Sometimes that's the whole point of sitting with someone.", hp: 14 } },
+        { label: "Ask what happened", outcome: { text: "He tells you, plainly, without drama. It's not a happy story, but he seems lighter for having said it out loud.", xp: 30 } }
+      ]
+    },
+    { // 10 - milestone
+      type: 'quest',
+      text: "Landry unpins a spare deputy's star from his desk drawer, turning it over once before holding it out. \"Ain't official-official,\" he admits, \"but town's better with more eyes on it. You in?\"",
+      choices: [
+        { label: "Accept the deputy star", outcome: { text: "Something about wearing it changes how you carry yourself - a steadier hand, a calmer nerve.", permanentStatBoost: { speed: 1 }, xp: 30 } },
+        { label: "Ask what the job actually pays", outcome: { text: "\"Pays in coffee and goodwill,\" Landry says, dead serious, then laughs and presses real coin into your hand anyway.", gold: 35 } }
+      ]
+    },
+    { // 11
+      type: 'choice',
+      text: "Two ranchers are squared off over a well that's run dry on one side of the property line and not the other. Landry's mediating with the patience of a man who's done this exact argument a dozen times.",
+      choices: [
+        { label: "Suggest they share the water", outcome: { text: "It takes some convincing, but they shake on it. Landry looks relieved not to have to arrest anyone over a well.", xp: 25 } },
+        { label: "Let Landry work it out his way", outcome: { text: "He talks them both down to a sensible schedule inside ten minutes. \"Mostly folks just want to be heard,\" he tells you after.", gold: 20 } }
+      ]
+    },
+    { // 12
+      type: 'choice',
+      text: "\"Got a real crime for you,\" Landry says, entirely straight-faced. \"Someone stole a pie off Miss Ardell's windowsill. Second time this month. Town's in an uproar.\"",
+      choices: [
+        { label: "Take the case seriously", outcome: { text: "You stake out the windowsill and catch the culprit red-handed - a raccoon with excellent taste. Miss Ardell rewards your detective work.", gold: 25 } },
+        { label: "Suggest she just move the pie", outcome: { text: "\"Groundbreaking,\" Landry deadpans, and closes the case on the spot.", xp: 15 } }
+      ]
+    },
+    { // 13
+      type: 'combat',
+      text: "A whole gang's set up camp in the dry gulch outside town, bold enough to be spotted from the road. Landry counts heads from a distance and exhales slowly. \"More'n I'd like. Could use the extra gun.\"",
+      enemy: { id: 'landryGangLeader', name: 'Gulch Gang Leader', icon: '🏴‍☠️', hp: 40, atk: 12, def: 4, speed: 5, gold: [35, 55] },
+      victoryOutcome: { text: "The gang breaks and runs once their leader goes down. Landry cuffs what's left of them without breaking a sweat.", gold: 45, xp: 40 }
+    },
+    { // 14
+      type: 'challenge',
+      text: "\"Hand of poker,\" Landry offers, already shuffling. \"Nothing serious. Small stakes.\" His idea of small stakes and yours may not match up.",
+      choices: [
+        { label: "Play the hand", outcome: { text: "He wins, of course he wins, but he's gracious about it and buys the next round.", gold: -10, xp: 15 } },
+        { label: "Fold before it starts", outcome: { text: "\"Smartest move you'll make all week,\" Landry admits, putting the cards away without complaint.", gold: 10 } }
+      ]
+    },
+    { // 15
+      type: 'combat',
+      text: "A stagecoach comes barreling into town with no driver at the reins - spooked horses, and something chasing them that isn't natural. Landry's already running for his horse.",
+      enemy: { id: 'landryPredator', name: 'Nightprowler', icon: '🐺', hp: 36, atk: 12, def: 3, speed: 9, gold: [30, 50] },
+      victoryOutcome: { text: "You run it off before it catches the coach. The passengers are shaken but unharmed, and more than happy to show their gratitude.", gold: 40, xp: 35 }
+    },
+    { // 16
+      type: 'choice',
+      text: "The duckling has laid an egg roughly the size of a bowling ball, and is sitting on it with fierce, quiet pride, daring anyone to comment. Landry has, wisely, said nothing.",
+      choices: [
+        { label: "Congratulate the proud parent", outcome: { text: "The duckling puffs up even further. Landry looks faintly terrified of what might hatch.", hp: 10 } },
+        { label: "Ask Landry if he's ready for a second deputy", outcome: { text: "\"Absolutely not,\" he says, already resigned to the fact that he definitely will be.", gold: 20 } }
+      ]
+    },
+    { // 17
+      type: 'combat',
+      text: "A gunslinger's ridden in specifically looking for Landry's reputation, itching for a name-making duel. Landry looks more tired than worried. \"Every few years, one of these,\" he mutters, and nods you toward him instead.",
+      enemy: { id: 'landryGunslinger', name: 'Reputation-Seeking Gunslinger', icon: '🔫', hp: 38, atk: 13, def: 3, speed: 6, gold: [35, 55] },
+      victoryOutcome: { text: "He leaves town considerably humbler than he arrived. Landry buys you the good coffee for handling it so he didn't have to.", gold: 45, xp: 40 }
+    },
+    { // 18
+      type: 'choice',
+      text: "Landry pours two mugs of coffee thick as tar and slides one across the jailhouse desk without a word - about as close as he gets to a formal thank-you for anything.",
+      choices: [
+        { label: "Drink it", outcome: { text: "It's terrible. You drink it anyway. He nods once, satisfied, like you've passed some kind of test.", hp: 10 } },
+        { label: "Ask for something to cut the bitterness", outcome: { text: "\"Now you're just insulting the coffee,\" Landry says, but hands over the sugar tin anyway.", gold: 10 } }
+      ]
+    },
+    { // 19
+      type: 'quest',
+      text: "\"Folks been avoiding the old Hollis place,\" Landry says. \"Say it's haunted. I say it's just empty and creepy, but I ain't been inside in a while to be sure.\"",
+      choices: [
+        { label: "Check it out together", outcome: { text: "No ghosts - just an owl, a lot of dust, and a strongbox someone forgot about decades back. Landry splits the find with you.", gold: 35 } },
+        { label: "Let the rumor stand", outcome: { text: "\"Keeps folks from squatting there,\" Landry admits, unbothered. \"Rumor's doing honest work.\"", xp: 20 } }
+      ]
+    },
+    { // 20 - milestone
+      type: 'quest',
+      text: "Landry unpins his OWN badge this time - not a spare, the real one, worn smooth from years of wear - and sets it on the desk between you. \"Got a spare in the drawer for me,\" he says. \"This one's earned its rest. Figure it's earned a good home, too.\"",
+      choices: [
+        { label: "Accept the badge", outcome: { text: "It doesn't do anything magical. It doesn't need to. Wearing it just feels like standing a little straighter.", permanentRelicId: 'swiftBoots', xp: 35 } },
+        { label: "Tell him it belongs with him", outcome: { text: "Landry insists, immovable about it in a way that brooks no argument. You wear it out of the jailhouse whether you meant to or not.", permanentRelicId: 'swiftBoots', gold: 25 } }
+      ]
+    },
+    { // 21
+      type: 'quest',
+      text: "A farming family got raided overnight - stores gone, a fence torn down, nobody hurt but plenty scared. Landry's already out there by the time you hear about it, boots deep in the mud, taking it seriously.",
+      choices: [
+        { label: "Help rebuild the fence", outcome: { text: "A long, honest day's work. The family feeds you both supper after, refusing to let you leave hungry.", hp: 16, xp: 20 } },
+        { label: "Help track who did it", outcome: { text: "The trail's cold but not dead. Landry makes a note and promises the family he won't forget it - and he doesn't forget things.", gold: 25 } }
+      ]
+    },
+    { // 22
+      type: 'choice',
+      text: "The duckling has wandered off - not unusual, except it's been three hours and Landry's trying very hard not to look worried about it in front of you.",
+      choices: [
+        { label: "Help search for it", outcome: { text: "You find it happily terrorizing a family of raccoons by the creek, completely fine. Landry's relief is enormous and entirely unspoken.", xp: 25 } },
+        { label: "Reassure him it can handle itself", outcome: { text: "It wanders back an hour later, unbothered, having apparently just wanted some alone time. Landry pretends he wasn't pacing.", gold: 15 } }
+      ]
+    },
+    { // 23
+      type: 'combat',
+      text: "The rustler from a few seasons back - the one Landry sighed about, remember - has finally overplayed his hand and is holed up at the edge of town, cornered and desperate.",
+      enemy: { id: 'landryOutlaw', name: 'Cornered Outlaw', icon: '🤠', hp: 34, atk: 11, def: 4, speed: 5, gold: [35, 50] },
+      victoryOutcome: { text: "Justice, eventually, if slowly. Landry looks almost sentimental about closing out a case this old.", gold: 45, xp: 35 }
+    },
+    { // 24
+      type: 'quest',
+      text: "\"Newcomers keep tripping over the same three rules,\" Landry says, counting on his fingers. \"No guns drawn in the saloon, no racing horses down Main, and don't feed the deputy table scraps. Mind giving folks the tour?\"",
+      choices: [
+        { label: "Take on the job", outcome: { text: "You spend the day steering wagons and greenhorns straight. Landry's grateful for the quiet it buys him.", xp: 30 } },
+        { label: "Suggest he just post a sign", outcome: { text: "\"Radical idea,\" Landry says, and actually goes and does it, visibly pleased with himself the whole time.", gold: 20 } }
+      ]
+    },
+    { // 25 - companion
+      type: 'choice',
+      text: "Landry's old posse-bird - a big, weathered griffon he rode before his knees started complaining about it - has been standing saddled and restless for want of a rider. \"Getting too old for the long patrols,\" he admits. \"She ain't, though. Feels a waste, letting her go stir-crazy in the stable.\"",
+      choices: [
+        { label: "Offer to ride with her", outcome: { text: "She takes to you fast, like she'd been waiting for someone to ask. Landry watches you go with something between pride and relief.", companionMount: 'griffonMount', xp: 30 } },
+        { label: "Suggest he keeps riding her himself", outcome: { text: "\"Knees say no. Heart says yes,\" Landry admits, and hands over the reins anyway - some fights you don't win against a sheriff's stubbornness.", companionMount: 'griffonMount', gold: 25 } }
+      ]
+    },
+    { // 26
+      type: 'combat',
+      text: "A lamp's tipped in the saloon and the whole back room's caught - not an enemy exactly, but Landry's shouting for a bucket line and the fire's spreading like it means to fight you for the building.",
+      enemy: { id: 'landryFire', name: 'Spreading Blaze', icon: '🔥', hp: 30, atk: 8, def: 0, speed: 4, gold: [20, 30] },
+      victoryOutcome: { text: "Between the bucket line and some very undignified stomping, the fire's out before it takes the whole saloon. Landry buys everyone a round, on the house he doesn't own.", gold: 30, xp: 30 }
+    },
+    { // 27
+      type: 'choice',
+      text: "\"Found her half-drowned in a creek after a flash flood,\" Landry says, nodding at the duckling, telling the story properly for once. \"Wasn't bigger than my boot. Fed her scraps for a month before I realized she wasn't stopping growing.\"",
+      choices: [
+        { label: "Ask if he regrets it", outcome: { text: "\"Not for one single day,\" he says, and you believe every word of it.", hp: 10 } },
+        { label: "Ask what he named her before \"Deputy\"", outcome: { text: "\"Bathsheba,\" he admits, a little embarrassed. \"Don't tell the town council.\"", xp: 20 } }
+      ]
+    },
+    { // 28
+      type: 'challenge',
+      text: "\"Justice ain't about winning,\" Landry says, out of nowhere, watching the sun go down over the jailhouse roof. \"It's about the same rules applying Tuesday as they did Monday. Simple as that, mostly.\"",
+      choices: [
+        { label: "Ask if it's ever that simple", outcome: { text: "\"Almost never,\" he admits, \"but it's a real fine thing to aim at anyway.\"", xp: 30 } },
+        { label: "Just nod and watch the sunset with him", outcome: { text: "You don't need to say anything. He seems glad of the company either way.", hp: 14 } }
+      ]
+    },
+    { // 29
+      type: 'combat',
+      text: "The name on the wanted poster nobody in three counties wanted to touch has finally ridden into town, bold as anything, daring somebody to try. Landry loads his shotgun without a flicker of hesitation. \"Reckon that's us, then.\"",
+      enemy: { id: 'landryLegend', name: 'The Ridgeline Killer', icon: '💀', hp: 55, atk: 15, def: 5, speed: 6, gold: [50, 75], elite: true },
+      victoryOutcome: { text: "Three counties' worth of trouble, ended in one afternoon. Landry doesn't say much, but the handshake after says plenty.", gold: 65, xp: 55, gear: { defId: 'towerShield', rarity: 'rare' } }
+    },
+    { // 30 - finale milestone
+      type: 'choice',
+      text: "Landry calls a meeting of exactly one person - you - in the empty jailhouse, and slides a second, permanent star across the desk, the twin of his own. \"Ain't temporary this time,\" he says. \"Town trusts you. I trust you. Figure that's worth making official.\"",
+      choices: [
+        { label: "Pin on the permanent star", outcome: { text: "It sits different than the spare did. Heavier, somehow, in the good way. Landry shakes your hand like he means it, because he does.", permanentStatBoost: { def: 2 }, gold: 70, xp: 65 } },
+        { label: "Ask if the duckling gets a vote", outcome: { text: "\"She voted yes three towns ago,\" Landry says, dead serious, and the duckling honks in what you choose to take as agreement.", permanentStatBoost: { speed: 2 }, gold: 50, xp: 65 } }
+      ]
+    }
   ]
 };
 

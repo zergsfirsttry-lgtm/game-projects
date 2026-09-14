@@ -730,7 +730,12 @@ const App = {
 
   enterRareNpcStageCombat(node, stage) {
     node.rareNpcStage = stage;
-    this.enterCombat(node, scaleEnemy(stage.enemy, Game.act));
+    // No dedicated bestiary art for these one-off story enemies - skip the
+    // "New Enemy Discovered" popup's sprite lookup (checkEnemyDiscovery),
+    // same reasoning as pvpGhost/rivalGhost already use.
+    const scaled = scaleEnemy(stage.enemy, Game.act);
+    scaled.narrativeOneOff = true;
+    this.enterCombat(node, scaled);
   },
 
   // ---------------- Legendary taming (Robin / Monkey / Chopper) ----------------
@@ -1830,7 +1835,7 @@ const App = {
   // renders through characterSpriteFor (the same gear-aware class portrait
   // the Sanctuary uses) instead of the idle/frames path.
   checkEnemyDiscovery(enemy) {
-    if (!enemy || !enemy.id || enemy.pvpGhost || enemy.rivalGhost) return;
+    if (!enemy || !enemy.id || enemy.pvpGhost || enemy.rivalGhost || enemy.narrativeOneOff) return;
     const pdata = Persistent.load();
     if (pdata.seenEnemyIds.includes(enemy.id)) return;
     pdata.seenEnemyIds.push(enemy.id);
