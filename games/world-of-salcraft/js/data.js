@@ -2076,6 +2076,234 @@ const RARE_NPC_STORYLINES = {
         { label: "Ask what being family actually means to them", outcome: { text: "\"Means we'd go to the mat for you,\" the big brother says, simply. \"Same as for each other. That's the whole of it, really.\"", permanentStatBoost: { atk: 2 }, gold: 45, xp: 65 } }
       ]
     }
+  ],
+  izzo: [
+    { // 1
+      type: "choice",
+      text: "Izzo's got the hood popped on a car that's clearly been through several lives, muttering at the engine like it can hear the disappointment in his voice. \"She's been sluggish,\" he says. \"Off her game. We've all been there.\"",
+      choices: [
+        { label: "Help diagnose the problem", outcome: { text: "Turns out to be something small and stupid. Izzo looks personally offended it took two people to find it.", xp: 25 } },
+        { label: "Suggest he just race it anyway", outcome: { text: "\"Bold,\" he grins. \"Reckless. I respect it.\" He does not, in fact, race it anyway.", gold: 20 } }
+      ]
+    },
+    { // 2
+      type: "quest",
+      text: "\"Three years running, Race King,\" Izzo reminds you, entirely unprompted, polishing a trophy that's already blinding. \"Nobody's touched me. Nobody's CLOSE to touching me.\"",
+      choices: [
+        { label: "Ask if that ever gets lonely at the top", outcome: { text: "The grin falters, just slightly. \"Sometimes,\" he admits. \"Winning's better with somebody worth beating.\"", xp: 20 } },
+        { label: "Ask for racing tips", outcome: { text: "He talks technique for a solid hour, more generous with his secrets than his reputation suggests he'd be.", gold: 20 } }
+      ]
+    },
+    { // 3
+      type: "combat",
+      text: "A rival racer's crew has been sabotaging pit stops up and down the circuit, and Izzo's had enough of finding sugar in his gas tank. \"Handle the muscle,\" he says. \"I'll handle the racing.\"",
+      enemy: { id: "izzoSaboteur", name: "Pit Crew Saboteur", icon: "🔧", hp: 28, atk: 9, def: 3, speed: 6, gold: [25, 40] },
+      victoryOutcome: { text: "The sabotage stops overnight. Izzo wins his next race clean, and credits you loudly to anyone who'll listen.", gold: 35, xp: 30 }
+    },
+    { // 4
+      type: "choice",
+      text: "\"Name a car,\" Izzo says, gesturing at a fresh build with genuine ceremony. \"Every good ride needs a good name. This one's earned somethin' special.\"",
+      choices: [
+        { label: "Suggest a name", outcome: { text: "He loves it instantly, painting it on the side himself before the paint's even properly dry.", xp: 20 } },
+        { label: "Ask what he'd name it", outcome: { text: "He already has three names picked out, obviously, and argues himself into a fourth on the spot.", gold: 15 } }
+      ]
+    },
+    { // 5
+      type: "quest",
+      text: "\"Gonna let you in on somethin',\" Izzo says, lowering his voice like it's a state secret. \"Racing ain't about the car. It's about who wants it more. Car just makes sure the want don't go to waste.\"",
+      choices: [
+        { label: "Ask how he found that fire", outcome: { text: "He tells a real, unpolished story about losing badly, once, a long time ago, and never wanting to feel that again.", xp: 25 } },
+        { label: "Nod and let the wisdom sit", outcome: { text: "He seems to appreciate the quiet more than a response. Rare for him.", gold: 20 } }
+      ]
+    },
+    { // 6
+      type: "choice",
+      text: "Izzo's mid-argument with his own pit crew about tire pressure, gesturing wildly enough that you're mildly concerned for the nearby equipment.",
+      choices: [
+        { label: "Help settle the argument", outcome: { text: "You split the difference and, miraculously, everyone accepts it. Izzo looks at you like you've performed actual wizardry.", xp: 25 } },
+        { label: "Let them work it out", outcome: { text: "They settle it themselves in about ten minutes, loudly, the way they apparently always do.", gold: 15 } }
+      ]
+    },
+    { // 7
+      type: "combat",
+      text: "A street racer's been running illegal midnight races through town, endangering more than himself, and Izzo - who takes the SPORT of racing very seriously - is personally offended by the recklessness.",
+      enemy: { id: "izzoStreetRacer", name: "Reckless Street Racer", icon: "🏁", hp: 32, atk: 11, def: 3, speed: 8, gold: [30, 45] },
+      victoryOutcome: { text: "The street racer agrees, emphatically, to take it to the actual track from now on. Izzo considers this a genuine public service.", gold: 40, xp: 35 }
+    },
+    { // 8
+      type: "quest",
+      text: "\"Sponsor deal fell through,\" Izzo admits, uncharacteristically subdued. \"Second one this season. Startin' to wonder if the Race King brand's worth what it used to be.\"",
+      choices: [
+        { label: "Reassure him he's still the best", outcome: { text: "\"Damn right I am,\" he says, brightening instantly, ego fully restored on schedule.", gold: 25 } },
+        { label: "Help him find new sponsors", outcome: { text: "You spend a day making calls with him. It works better than either of you expected, and he's genuinely grateful.", xp: 30 } }
+      ]
+    },
+    { // 9
+      type: "choice",
+      text: "\"Ride along,\" Izzo offers, patting the passenger seat, grin already promising this will be a terrible idea. \"Full speed. You'll love it or you'll never speak to me again. Fifty-fifty, honestly.\"",
+      choices: [
+        { label: "Take the ride", outcome: { text: "It is, genuinely, terrifying and incredible in equal measure. You get out shaking and immediately want to do it again.", hp: -5, xp: 25 } },
+        { label: "Politely decline", outcome: { text: "\"Coward,\" he says, with real affection, and doesn't push it further.", gold: 15 } }
+      ]
+    },
+    { // 10 - milestone
+      type: "quest",
+      text: "Izzo hands you a helmet, dead serious for once. \"Gonna teach you to actually drive this thing right,\" he says. \"Not just point and go fast. Real control.\" It's the first genuinely patient thing you've seen him do.",
+      choices: [
+        { label: "Take the driving lesson seriously", outcome: { text: "Hours of drills later, something about your reflexes behind the wheel - and, weirdly, in a fight - feels sharper.", permanentStatBoost: { speed: 1 }, xp: 30 } },
+        { label: "Ask him to just show off instead", outcome: { text: "He absolutely does not need convincing. The show-off run alone teaches you more than you expected.", gold: 30 } }
+      ]
+    },
+    { // 11
+      type: "choice",
+      text: "\"New paint job,\" Izzo announces, gesturing at a car with flames so aggressive they're nearly load-bearing. \"Whaddya think? Too much?\"",
+      choices: [
+        { label: "Tell him it's perfect", outcome: { text: "\"Knew it,\" he says, though he was visibly nervous asking. \"Too much is the whole point, honestly.\"", gold: 20 } },
+        { label: "Suggest toning it down slightly", outcome: { text: "He considers it, genuinely, for about four seconds before rejecting the idea entirely.", xp: 20 } }
+      ]
+    },
+    { // 12
+      type: "quest",
+      text: "\"Kid at the track keeps askin' me for tips,\" Izzo says. \"Talented. Reminds me of me, if I'm honest, which worries me some.\" He seems torn between pride and genuine concern.",
+      choices: [
+        { label: "Encourage him to mentor the kid", outcome: { text: "He does, gruffly and generously, and it's clearly good for both of them.", xp: 30 } },
+        { label: "Ask what worries him about it", outcome: { text: "\"Same fire I had. Same mistakes waitin', probably,\" he admits. \"Hope I can help him skip a few.\"", gold: 20 } }
+      ]
+    },
+    { // 13
+      type: "combat",
+      text: "The sponsor who dropped Izzo has apparently hired muscle to \"discourage\" him from racing under a new deal with a rival team - a move so petty it's almost impressive.",
+      enemy: { id: "izzoSponsorMuscle", name: "Ex-Sponsor's Enforcer", icon: "🕴️", hp: 36, atk: 12, def: 4, speed: 5, gold: [30, 50] },
+      victoryOutcome: { text: "The enforcer reports back that Izzo is, quote, \"not worth the trouble,\" which Izzo takes as a genuine compliment somehow.", gold: 40, xp: 35 }
+    },
+    { // 14
+      type: "challenge",
+      text: "\"Drag race,\" Izzo grins, eyeing your own transportation with real interest. \"You versus me. Loser buys the winner a trophy. Small one. Symbolic.\"",
+      choices: [
+        { label: "Take the race", outcome: { text: "You lose, badly, but he's gracious about it and buys you a bigger trophy than the deal called for, out of respect.", gold: -10, xp: 25 } },
+        { label: "Decline gracefully", outcome: { text: "\"Smart,\" he says. \"I'd have crushed you. But it's the smart call, respect it.\"", gold: 15 } }
+      ]
+    },
+    { // 15
+      type: "choice",
+      text: "Izzo's staring at a trophy shelf that's, if anything, slightly too full, rearranging them for the third time this week with real concentration.",
+      choices: [
+        { label: "Ask which trophy means the most", outcome: { text: "He points, without hesitation, to a small, cheap, dented one from his very first amateur race. \"This one. Always this one.\"", xp: 20 } },
+        { label: "Suggest he needs a bigger shelf", outcome: { text: "\"Already ordered one,\" he admits, slightly embarrassed at how quickly he answers.", gold: 20 } }
+      ]
+    },
+    { // 16
+      type: "combat",
+      text: "A rival team's mascot car - genuinely, absurdly, weaponized somehow - has been terrorizing the pit lane, and nobody else on the crew is brave enough to deal with it.",
+      enemy: { id: "izzoRivalMascot", name: "Weaponized Mascot Car", icon: "🚗", hp: 34, atk: 10, def: 6, speed: 7, gold: [30, 45] },
+      victoryOutcome: { text: "It's disabled without anyone getting hurt, which is honestly more than anyone expected going in. Izzo laughs about this one for weeks.", gold: 40, xp: 35 }
+    },
+    { // 17
+      type: "quest",
+      text: "\"Championship's comin' up,\" Izzo says, unusually focused, none of the usual bravado in his voice. \"Real one. Not the local stuff. This is the one that matters.\"",
+      choices: [
+        { label: "Help him train seriously", outcome: { text: "You spend real, focused days on it together. No jokes, no showing off - just work. It shows.", xp: 35 } },
+        { label: "Remind him he's already the best", outcome: { text: "\"Best local,\" he corrects, uncharacteristically humble. \"This one's a different league.\" He appreciates the confidence anyway.", gold: 25 } }
+      ]
+    },
+    { // 18
+      type: "choice",
+      text: "\"Superstitions,\" Izzo admits, a little embarrassed, showing you a lucky charm dangling from the rearview mirror. \"Don't laugh. Never lost a race with it in the car.\"",
+      choices: [
+        { label: "Take the superstition seriously", outcome: { text: "\"Knew you'd get it,\" he says, relieved not to be mocked for once about this particular thing.", hp: 10 } },
+        { label: "Point out that's not how racing works", outcome: { text: "\"Statistically, sure,\" he shrugs. \"Emotionally, absolutely not touching that charm.\"", gold: 15 } }
+      ]
+    },
+    { // 19
+      type: "quest",
+      text: "\"Championship's tomorrow,\" Izzo says, pacing, more nervous than you've ever seen him. \"What if I choke? What if three years was the peak and it's all downhill from here?\"",
+      choices: [
+        { label: "Talk him down", outcome: { text: "By the end of the conversation, the swagger's fully back, restored and possibly overcorrected.", xp: 30 } },
+        { label: "Remind him he loves this regardless of outcome", outcome: { text: "That one actually lands, quieter than the usual pep talk. \"Yeah,\" he says. \"Yeah, that's true.\"", gold: 20 } }
+      ]
+    },
+    { // 20 - milestone
+      type: "quest",
+      text: "Izzo won the championship - by a hair, by everything he had. He finds you after, still buzzing, and presses his OWN first-ever lucky charm into your hand. \"Time to pass it on,\" he says. \"You were there for this one.\"",
+      choices: [
+        { label: "Accept the lucky charm", outcome: { text: "It doesn't do anything measurable. It just feels, undeniably, lucky - a permanent little edge you can't quite explain.", permanentRelicId: "berserkerHeart", xp: 35 } },
+        { label: "Tell him to keep it for the next title", outcome: { text: "\"Got a new one already,\" he grins, pressing the old one into your hand regardless. \"This one's yours now. Non-negotiable.\"", permanentRelicId: "berserkerHeart", gold: 30 } }
+      ]
+    },
+    { // 21
+      type: "choice",
+      text: "\"First championship win,\" Izzo says, still a little dazed by it days later. \"Don't really know what to do with myself now that I've actually got it.\"",
+      choices: [
+        { label: "Suggest setting a new goal", outcome: { text: "\"Back-to-back,\" he decides, instantly, fire returning to his eyes. \"That's the next one. Obviously.\"", xp: 25 } },
+        { label: "Tell him to just enjoy it a while", outcome: { text: "He actually takes the advice, for once, and spends a genuinely relaxed week not thinking about racing at all. Briefly.", hp: 12 } }
+      ]
+    },
+    { // 22
+      type: "quest",
+      text: "\"Kid from the track's racing his first real event,\" Izzo says, proud as a father, which is a strange look on him. \"Come watch. I might be more nervous than he is.\"",
+      choices: [
+        { label: "Go watch the race together", outcome: { text: "The kid places third. Izzo cheers louder for that than he ever did for his own championship.", xp: 25 } },
+        { label: "Ask if he's thought about coaching full-time", outcome: { text: "\"Huh,\" he says, genuinely considering it for the first time. \"Might not hate that, actually.\"", gold: 20 } }
+      ]
+    },
+    { // 23
+      type: "combat",
+      text: "The old rival team, humiliated at the championship, has decided to settle things the unsanctioned, illegal, off-track way. Izzo's furious in a way you haven't seen from him before.",
+      enemy: { id: "izzoRivalTeamBoss", name: "Rival Team Owner", icon: "🏆", hp: 44, atk: 13, def: 5, speed: 6, gold: [35, 55] },
+      victoryOutcome: { text: "The rival owner is banned from the circuit entirely after this stunt. Izzo's champion title has never felt more clean.", gold: 45, xp: 40 }
+    },
+    { // 24
+      type: "choice",
+      text: "\"Retirement,\" Izzo says the word like it tastes bad, turning it over. \"Some folks are askin' when. Ain't got an answer. Ain't sure I want one yet.\"",
+      choices: [
+        { label: "Ask what would make it feel like the right time", outcome: { text: "\"Dunno yet,\" he admits. \"Guess I'll know it when I feel it. Ain't there yet, though.\"", xp: 25 } },
+        { label: "Tell him there's no rush", outcome: { text: "\"Preciate that,\" he says, genuinely relieved not to be pushed on it.", gold: 20 } }
+      ]
+    },
+    { // 25 - companion
+      type: "choice",
+      text: "A little mechanical squirrel - one of the pit crew's diagnostic bots, gone rogue and startlingly personable - has taken to riding in the glovebox and chirping opinions about tire pressure. \"She's smarter than half my crew,\" Izzo admits. \"Might be time she found a new job.\"",
+      choices: [
+        { label: "Take the mechanical squirrel", outcome: { text: "She settles onto your shoulder immediately, already diagnosing something about your gear that probably needs oiling.", companionPet: "mechanicalSquirrel", xp: 30 } },
+        { label: "Suggest she stays with the pit crew", outcome: { text: "\"Crew'd riot,\" Izzo laughs, and hands her over anyway. \"She already picked you. Wasn't really my call.\"", companionPet: "mechanicalSquirrel", gold: 25 } }
+      ]
+    },
+    { // 26
+      type: "combat",
+      text: "An underground, entirely unsanctioned racing ring has been luring young drivers with promises of easy money and dangerous cars, and Izzo wants it shut down before someone gets seriously hurt.",
+      enemy: { id: "izzoUndergroundBoss", name: "Underground Ring Boss", icon: "🎲", hp: 48, atk: 14, def: 5, speed: 6, gold: [40, 60], elite: true },
+      victoryOutcome: { text: "The ring folds overnight without its boss. Izzo personally makes sure every driver involved gets a legitimate track invitation instead.", gold: 55, xp: 45 }
+    },
+    { // 27
+      type: "choice",
+      text: "\"Somethin' I never told anyone,\" Izzo says, quieter than usual, looking at his very first car - long retired, lovingly preserved. \"Almost quit before I ever really started. Bad crash. Scared me bad.\"",
+      choices: [
+        { label: "Ask what brought him back", outcome: { text: "\"Missed it too much to stay scared,\" he says simply. \"Some things are worth the fear.\"", xp: 30 } },
+        { label: "Tell him that took real courage", outcome: { text: "He doesn't have a joke ready for once. Just nods, quietly moved, and lets the moment sit.", hp: 16 } }
+      ]
+    },
+    { // 28
+      type: "challenge",
+      text: "\"Blindfolded lap,\" Izzo announces, entirely too pleased with this plan. \"Not you driving - me. Trust exercise. You call out the turns.\" This is, obviously, a terrible idea.",
+      choices: [
+        { label: "Call out the turns for him", outcome: { text: "Against all reason, he doesn't crash. You're both shaking with adrenaline and inadvisable laughter after.", xp: 30 } },
+        { label: "Talk him out of it entirely", outcome: { text: "\"Boring but fair,\" he sighs, taking the blindfold off, visibly a little disappointed not to have done something reckless today.", gold: 20 } }
+      ]
+    },
+    { // 29
+      type: "combat",
+      text: "The legendary racer Izzo's spent his whole career chasing - retired for years, coaxed out for one last unofficial grudge match - has finally agreed to settle the old rivalry, on the track and, apparently, off it too.",
+      enemy: { id: "izzoLegend", name: "The Retired Legend", icon: "👑", hp: 56, atk: 16, def: 6, speed: 7, gold: [50, 75], elite: true },
+      victoryOutcome: { text: "It's close, brutal, and unforgettable. The legend shakes both your hands after, genuinely impressed. Izzo talks about nothing else for a month.", gold: 65, xp: 55, gear: { defId: "genTrinket10", rarity: "rare" } }
+    },
+    { // 30 - finale milestone
+      type: "choice",
+      text: "Izzo pulls up beside you one last time, engine idling low instead of roaring for once. \"Been thinkin',\" he says. \"Race King title don't mean much without somebody worth racing. You've been that, this whole time. Figured you oughta know it.\"",
+      choices: [
+        { label: "Thank him for the ride", outcome: { text: "He grins, the real one, not the showman's version. \"Anytime,\" he says, and for once you believe he means exactly that.", permanentStatBoost: { speed: 2 }, gold: 60, xp: 65 } },
+        { label: "Challenge him to one final race", outcome: { text: "He's already revving before you finish the sentence. You don't win. You weren't really racing for that anyway.", permanentStatBoost: { atk: 2 }, gold: 45, xp: 65 } }
+      ]
+    }
   ]
 };
 
