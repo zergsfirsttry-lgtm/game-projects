@@ -155,7 +155,12 @@ const EXTRA_WEAPON_TEMPLATES = {
   javelin: { slot: 'weapon', weaponType: 'thrown', name: 'Javelin', icon: '🔱', baseAtk: 4 },
   blessingOfMight: { slot: 'weapon', weaponType: 'blessing', name: 'Blessing of Might', icon: '🕊️', baseAtk: 2 },
   blessingOfKings: { slot: 'weapon', weaponType: 'blessing', name: 'Blessing of Kings', icon: '🕊️', baseAtk: 3, baseDef: 1 },
-  blessingOfLight: { slot: 'weapon', weaponType: 'blessing', name: 'Blessing of Light', icon: '✨', baseAtk: 2 }
+  blessingOfLight: { slot: 'weapon', weaponType: 'blessing', name: 'Blessing of Light', icon: '✨', baseAtk: 2 },
+  // Death Knights' equivalent of a Blessing - same shape/slot, own item pool
+  // (see WEAPON_TYPE_SLOTS.sigil below), Death-Knight-lore-flavored.
+  sigilOfTheDamned: { slot: 'weapon', weaponType: 'sigil', name: 'Sigil of the Damned', icon: '🔥', baseAtk: 3 },
+  sigilOfVengeance: { slot: 'weapon', weaponType: 'sigil', name: 'Sigil of Vengeance', icon: '🩸', baseAtk: 2, baseDef: 1 },
+  sigilOfFrost: { slot: 'weapon', weaponType: 'sigil', name: 'Sigil of Frost', icon: '❄️', baseAtk: 2 }
 };
 Object.assign(GEAR_TEMPLATES, EXTRA_WEAPON_TEMPLATES);
 
@@ -260,7 +265,8 @@ const WEAPON_TYPE_SLOTS = {
   thrown: ['ranged'],
   wand: ['ranged'],
   instrument: ['mainHand'],
-  blessing: ['ranged']
+  blessing: ['ranged'],
+  sigil: ['ranged']
 };
 const WEAPON_TYPE_TWO_HANDED = { twoHanded: true, staff: true };
 
@@ -273,7 +279,13 @@ const CLASS_WEAPON_TYPES = {
   warlock: ['oneHanded', 'staff', 'mainHandOnly', 'wand'],
   barbarian: ['twoHanded', 'oneHanded', 'mainHandOnly', 'ranged', 'thrown', 'staff'],
   cleric: ['twoHanded', 'oneHanded', 'mainHandOnly', 'shield', 'blessing'],
-  bard: ['instrument', 'oneHanded', 'ranged']
+  bard: ['instrument', 'oneHanded', 'ranged'],
+  // --- Legendary classes ---
+  deathKnight: ['twoHanded', 'oneHanded', 'mainHandOnly', 'sigil'],                          // paladin, minus shield, plus sigil
+  monk: ['staff'],                                                                            // staff, or bare-handed (no mainHand item to equip otherwise)
+  druid: ['staff', 'blessing'],                                                                // rogue's gear pool, staff-only, shares Blessing with paladin/cleric/shaman
+  shaman: ['twoHanded', 'oneHanded', 'mainHandOnly', 'shield', 'thrown', 'staff', 'blessing'], // hunter, minus ranged (bows), shares Blessing with paladin/cleric/druid
+  priest: ['oneHanded', 'staff', 'mainHandOnly', 'wand']                                       // identical to mage
 };
 
 function canClassUseWeaponType(classId, weaponType) {
@@ -1078,14 +1090,34 @@ const CLASS_TRIALS = {
   bard: { name: "Bard's Trial", hp: 38, atk: 8, def: 1, speed: 7, gold: [40, 60] }
 };
 
+// Classes still locked behind a Class Trial specifically - used to pick a
+// trial node's target (see enterClassTrial, main.js), which needs a
+// CLASS_TRIALS entry to exist. Legendary classes (locked by level instead)
+// are deliberately excluded - they have no trial to be a target for.
 function getLockedClassIds() {
   const unlocked = Persistent.load().unlockedClasses;
   return Object.keys(CLASS_TRIALS).filter(id => !unlocked.includes(id));
 }
 
+// --- Legendary class unlocks ---
+// Unlike CLASS_TRIALS (a one-off combat win, flagged permanently in
+// Persistent), a Legendary class unlocks the moment ANY character's level
+// reaches its threshold - checked live against current character records
+// rather than cached as its own flag, since there's no delevel mechanic to
+// make a cached flag ever necessary.
+const LEGENDARY_CLASS_UNLOCK_LEVEL = { druid: 15, shaman: 25, priest: 45, deathKnight: 65, monk: 85 };
+
+function isLegendaryClassUnlocked(classId) {
+  const threshold = LEGENDARY_CLASS_UNLOCK_LEVEL[classId];
+  if (!threshold) return false;
+  return Object.values(Persistent.load().characters).some(c => c.level >= threshold);
+}
+
 function isClassUnlocked(classId) {
   const cls = CLASSES[classId];
-  return !!(cls.starter || Persistent.load().unlockedClasses.includes(classId));
+  if (cls.starter) return true;
+  if (LEGENDARY_CLASS_UNLOCK_LEVEL[classId]) return isLegendaryClassUnlocked(classId);
+  return Persistent.load().unlockedClasses.includes(classId);
 }
 
 // --- Quests (Sanctuary) ---

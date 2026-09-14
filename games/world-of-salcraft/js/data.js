@@ -79,7 +79,13 @@ const SPELLS = {
   starfall: { id: 'starfall', name: 'Starfall', desc: 'Deal 15 arcane damage', cooldown: 3, type: 'flat', power: 15, icon: 'assets/icons/spells/starfall.png' },
   wildStrike: { id: 'wildStrike', name: 'Wild Strike', desc: '+10 damage, 50% more if below half HP', cooldown: 2, type: 'rage', power: 10, icon: 'assets/icons/spells/wildStrike.png' },
   rejuvenation: { id: 'rejuvenation', name: 'Rejuvenation', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 6, icon: 'assets/icons/spells/rejuvenation.png' },
-  avengingWrath: { id: 'avengingWrath', name: 'Avenging Wrath', desc: '+16 damage, 50% more if below half HP', cooldown: 4, type: 'rage', power: 16, icon: 'assets/icons/spells/avengingWrath.png' }
+  avengingWrath: { id: 'avengingWrath', name: 'Avenging Wrath', desc: '+16 damage, 50% more if below half HP', cooldown: 4, type: 'rage', power: 16, icon: 'assets/icons/spells/avengingWrath.png' },
+  // --- Legendary classes' signature spells (see CLASSES below) ---
+  deathCoil: { id: 'deathCoil', name: 'Death Coil', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 9, icon: 'assets/icons/spells/deathCoil.png' },
+  flyingKick: { id: 'flyingKick', name: 'Flying Kick', desc: '+7 damage, ignores 2 DEF', cooldown: 2, type: 'cleave', power: 7, ignoreDef: 2, icon: 'assets/icons/spells/flyingKick.png' },
+  wrath: { id: 'wrath', name: 'Wrath', desc: 'Deal 14 nature damage', cooldown: 2, type: 'flat', power: 14, icon: 'assets/icons/spells/wrath.png' },
+  lightningBolt: { id: 'lightningBolt', name: 'Lightning Bolt', desc: 'Deal 15 nature damage', cooldown: 2, type: 'flat', power: 15, icon: 'assets/icons/spells/lightningBolt.png' },
+  shadowWordPain: { id: 'shadowWordPain', name: 'Shadow Word: Pain', desc: 'Deal damage and heal for half', cooldown: 2, type: 'drain', power: 8, icon: 'assets/icons/spells/shadowWordPain.png' }
 };
 
 const CLASSES = {
@@ -155,6 +161,46 @@ const CLASSES = {
     defaultSpell: 'viciousMockery',
     startItems: ['potion'],
     blurb: 'Quick and cutting, more gold-savvy than most. Unlocked via Class Trial.'
+  },
+
+  // --- Legendary classes - unlocked by leveling ANY character to a
+  // threshold (see LEGENDARY_CLASS_UNLOCK_LEVEL, progression.js), not via
+  // Class Trial. Each borrows an existing class's weapon/armor competency
+  // (see CLASS_WEAPON_TYPES, progression.js) with class-specific carve-outs.
+  deathKnight: {
+    id: 'deathKnight', name: 'Death Knight', icon: '💀',
+    maxHp: 36, atk: 5, def: 5, speed: 3,
+    defaultSpell: 'deathCoil',
+    startItems: ['potion'],
+    blurb: "A human risen back to unlife, wielding a paladin's arsenal without a shield to hide behind. Fuels its strikes with Sigils instead of Blessings. Legendary class - unlocks at level 65 on any character."
+  },
+  monk: {
+    id: 'monk', name: 'Monk', icon: '🐼',
+    maxHp: 24, atk: 7, def: 2, speed: 8,
+    defaultSpell: 'flyingKick',
+    startItems: ['potion', 'bomb'],
+    blurb: 'A panda martial artist who fights bare-handed or with a staff - nothing else. Legendary class - unlocks at level 85 on any character.'
+  },
+  druid: {
+    id: 'druid', name: 'Druid', icon: '🌿',
+    maxHp: 22, atk: 6, def: 2, speed: 6,
+    defaultSpell: 'wrath',
+    startItems: ['potion', 'potion'],
+    blurb: 'An elf shaped by nature magic, restricted to the staff alone. Shares its Blessings with Paladins and Shamans. Legendary class - unlocks at level 15 on any character.'
+  },
+  shaman: {
+    id: 'shaman', name: 'Shaman', icon: '⚡',
+    maxHp: 26, atk: 6, def: 3, speed: 6,
+    defaultSpell: 'lightningBolt',
+    startItems: ['potion', 'bomb'],
+    blurb: "An orc elementalist with a hunter's gear pool, minus the bow. Shares its Blessings with Paladins and Druids. Legendary class - unlocks at level 25 on any character."
+  },
+  priest: {
+    id: 'priest', name: 'Priest', icon: '👻',
+    maxHp: 20, atk: 3, def: 0, speed: 5,
+    defaultSpell: 'shadowWordPain',
+    startItems: ['potion', 'potion'],
+    blurb: 'An undead shadow caster with a mage\'s exact gear pool. Legendary class - unlocks at level 45 on any character.'
   }
 };
 

@@ -872,7 +872,15 @@ const CLASS_LOOKS = {
   warlock: { head: { r:'#1a1a1f', h:'#a888a0', e:'#7d2ae8', n:'#9c7c94' }, armorShape:'robe', armorPalette:{ A:'#3a1a4a', L:'#3a1a4a', B:'#22102c', T:'#3a1a4a', W:'#7d2ae8' }, weaponStyle:'staff', weaponPalette:{ handle:'#3a1a4a', orb:'#c23df5' } },
   barbarian: { head: { r:'#c9502e', h:'#c9906b', e:'#20160e', n:'#bd8560' }, armorShape:'armor', armorPalette:{ A:'#8a4a2a', L:'#8a4a2a', B:'#5c3218', T:'#8a4a2a', W:'#e8dcc4' }, weaponStyle:'axe', weaponPalette:{ blade:'#c7ccd1', handle:'#6b4a2f' } },
   cleric: { head: { r:'#e8e4d8', h:'#e8b98a', e:'#20160e', n:'#e0ab7d' }, armorShape:'robe', armorPalette:{ A:'#d9d4c3', L:'#d9d4c3', B:'#a8a290', T:'#d9d4c3', W:'#e8c94a' }, weaponStyle:'mace', weaponPalette:{ handle:'#6b4a2f', head:'#e8e4d8' } },
-  bard: { head: { r:'#a83d8a', h:'#e0ab7d', e:'#20160e', n:'#d19d6e' }, armorShape:'armor', armorPalette:{ A:'#8a2a5c', L:'#8a2a5c', B:'#5c1c3d', T:'#8a2a5c', W:'#e8c94a' }, weaponStyle:'lute', weaponPalette:{ body:'#6b4a2f', neck:'#4a3320' } }
+  bard: { head: { r:'#a83d8a', h:'#e0ab7d', e:'#20160e', n:'#d19d6e' }, armorShape:'armor', armorPalette:{ A:'#8a2a5c', L:'#8a2a5c', B:'#5c1c3d', T:'#8a2a5c', W:'#e8c94a' }, weaponStyle:'lute', weaponPalette:{ body:'#6b4a2f', neck:'#4a3320' } },
+  // --- Legendary classes - procedural placeholder look until each gets its
+  // own PixelLab art pipeline (see CLASS_ART_READY below, which none of
+  // these are in yet).
+  deathKnight: { head: { r:'#c9c4d9', h:'#c9c0b8', e:'#4fd8ff', n:'#b0aba0' }, armorShape:'armor', armorPalette:{ A:'#2a3040', L:'#2a3040', B:'#1a1f2c', T:'#2a3040', W:'#5cc9e8' }, weaponStyle:'sword', weaponPalette:{ blade:'#8ad9e8', guard:'#3a4550', hilt:'#1a1f2c' } },
+  monk: { head: { r:'#2a2a2a', h:'#f5f2ea', e:'#1a1a1a', n:'#e8e4d8' }, armorShape:'robe', armorPalette:{ A:'#c9782e', L:'#c9782e', B:'#8a4f1c', T:'#c9782e', W:'#e8c94a' }, weaponStyle:'staff', weaponPalette:{ handle:'#6b4a2f', orb:'#e8c94a' } },
+  druid: { head: { r:'#4a7c3a', h:'#e0c9a0', e:'#3a8c3a', n:'#d4b48c' }, armorShape:'robe', armorPalette:{ A:'#2e6b3a', L:'#2e6b3a', B:'#1c4326', T:'#2e6b3a', W:'#8a5a2e' }, weaponStyle:'staff', weaponPalette:{ handle:'#4a3320', orb:'#5cd65c' } },
+  shaman: { head: { r:'#1a1a1a', h:'#5c7a3a', e:'#e8d030', n:'#4a6b2e' }, armorShape:'armor', armorPalette:{ A:'#6b4a2a', L:'#6b4a2a', B:'#3d2a18', T:'#6b4a2a', W:'#3a8ce8' }, weaponStyle:'axe', weaponPalette:{ blade:'#8a9aa0', handle:'#4a3320' } },
+  priest: { head: { r:'#d4d0c0', h:'#a0a888', e:'#e8e04a', n:'#8a9070' }, armorShape:'robe', armorPalette:{ A:'#3a2a4a', L:'#3a2a4a', B:'#221830', T:'#3a2a4a', W:'#8a8070' }, weaponStyle:'staff', weaponPalette:{ handle:'#4a3320', orb:'#9c6fd0' } }
 };
 
 // accentKeys: a single palette key or an array of them - all get swapped to
@@ -923,7 +931,13 @@ const CLASS_ART_DEFAULTS = {
   warlock: { armorStyle: 'cloth', weaponVisual: 'staff' },
   barbarian: { armorStyle: 'leather', weaponVisual: 'axe' },
   cleric: { armorStyle: 'cloth', weaponVisual: 'mace' },
-  bard: { armorStyle: 'leather', weaponVisual: 'lute' }
+  bard: { armorStyle: 'leather', weaponVisual: 'lute' },
+  // --- Legendary classes ---
+  deathKnight: { armorStyle: 'plate', weaponVisual: 'sword' },
+  monk: { armorStyle: 'leather', weaponVisual: 'staff' },
+  druid: { armorStyle: 'leather', weaponVisual: 'staff' },
+  shaman: { armorStyle: 'leather', weaponVisual: 'axe' },
+  priest: { armorStyle: 'cloth', weaponVisual: 'staff' }
 };
 
 function classBodyArtPath(classId, armorStyle, weaponVisual) {

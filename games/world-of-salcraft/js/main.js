@@ -188,10 +188,18 @@ const App = {
             <span>DEF ${stats.def}</span><span>SPD ${stats.speed}</span>
           </div>
           ${companionParts.length ? `<div class="small-text class-companions">${companionParts.join(' · ')}</div>` : ''}
-        ` : `
+        ` : (() => {
+          const legendaryThreshold = LEGENDARY_CLASS_UNLOCK_LEVEL[c.id];
+          if (legendaryThreshold) {
+            const bestLevel = Math.max(0, ...Object.values(Persistent.load().characters).map(ch => ch.level || 0));
+            return `
+          <p class="small-text">🔒 Legendary Class</p>
+          <p class="small-text">Reach level ${legendaryThreshold} on any character to unlock it (best right now: Lv.${bestLevel}).</p>`;
+          }
+          return `
           <p class="small-text">🔒 Locked</p>
-          <p class="small-text">Win this class's Class Trial (a rare map encounter) to unlock it.</p>
-        `}
+          <p class="small-text">Win this class's Class Trial (a rare map encounter) to unlock it.</p>`;
+        })()}
       </button>`;
     }).join('');
 
