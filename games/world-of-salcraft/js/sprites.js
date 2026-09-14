@@ -501,7 +501,15 @@ const WEAPON_ATTACK_ANIM = Object.fromEntries([
   'bard_cloth_bow', 'bard_leather_bow', 'bard_mail_bow', 'bard_plate_bow',
   'bard_cloth_lute', 'bard_leather_lute', 'bard_mail_lute', 'bard_plate_lute',
   'bard_cloth_mace', 'bard_leather_mace', 'bard_mail_mace', 'bard_plate_mace',
-  'bard_cloth_sword', 'bard_leather_sword', 'bard_mail_sword', 'bard_plate_sword'
+  'bard_cloth_sword', 'bard_leather_sword', 'bard_mail_sword', 'bard_plate_sword',
+  // --- Legendary classes (Phase 1b art pipeline) ---
+  // Death Knight complete: all 4 armor styles across all 4 weapons it can
+  // wield (paladin's own pool minus shield). No _cast entry, same as its
+  // paladin donor - Death Coil isn't 'flat'-type, so it never needs one.
+  'deathKnight_cloth_axe', 'deathKnight_leather_axe', 'deathKnight_mail_axe', 'deathKnight_plate_axe',
+  'deathKnight_cloth_dagger', 'deathKnight_leather_dagger', 'deathKnight_mail_dagger', 'deathKnight_plate_dagger',
+  'deathKnight_cloth_mace', 'deathKnight_leather_mace', 'deathKnight_mail_mace', 'deathKnight_plate_mace',
+  'deathKnight_cloth_sword', 'deathKnight_leather_sword', 'deathKnight_mail_sword', 'deathKnight_plate_sword'
 ].map(_weaponAttackAnim));
 
 // The single lookup every trigger site should use (see renderCombatScreen in
@@ -917,7 +925,7 @@ function wrapLegendaryWeaponGlow(svgMarkup) {
 // the combo from equipped gear and falls back to CLASS_ART_DEFAULTS for any
 // empty slot). Classes not in this set still render through the fully
 // procedural renderCharacterSprite below.
-const CLASS_ART_READY = new Set(['warrior', 'rogue', 'mage', 'paladin', 'hunter', 'warlock', 'barbarian', 'cleric', 'bard']);
+const CLASS_ART_READY = new Set(['warrior', 'rogue', 'mage', 'paladin', 'hunter', 'warlock', 'barbarian', 'cleric', 'bard', 'deathKnight']);
 
 // The armor style / weapon visual shown for a class's still-unequipped
 // slots - an ungeared character reads as a light adventurer rather than
