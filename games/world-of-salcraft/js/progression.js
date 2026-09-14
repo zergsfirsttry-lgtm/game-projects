@@ -897,10 +897,10 @@ function computeAfkProgress() {
 }
 
 const BANK_SHOP = {
-  // soulboundEcho is deliberately excluded - it's auto-granted the moment any
-  // character first reaches MAX_LEVEL (see maybeGrantSoulboundEcho below),
-  // never purchasable.
-  relics: Object.keys(RELICS).filter(id => id !== 'soulboundEcho').map(id => ({ id, price: 180 })),
+  // obtainableRelicIds() (data.js) already excludes soulboundEcho (flagged
+  // notObtainable there) - it's auto-granted the moment any character first
+  // reaches MAX_LEVEL (see maybeGrantSoulboundEcho below), never purchasable.
+  relics: obtainableRelicIds().map(id => ({ id, price: 180 })),
   spells: [
     'frostbolt', 'execute', 'chainLightning', 'inspire',
     'iceLance', 'shadowBolt', 'arcaneBlast', 'earthShatter', 'moonfire', 'sinisterStrike',

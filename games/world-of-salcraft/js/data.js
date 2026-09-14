@@ -335,13 +335,29 @@ const RELICS = {
   echoingHarpstring: { id: 'echoingHarpstring', name: 'Echoing Harpstring', icon: 'assets/icons/relics/echoingHarpstring.png', desc: '+6% spell damage', forClass: 'bard', effect: { spellPower: 0.06 } },
   showstoppersFlourish: { id: 'showstoppersFlourish', name: "Showstopper's Flourish", icon: 'assets/icons/relics/showstoppersFlourish.png', desc: '+2 ATK', forClass: 'bard', effect: { atk: 2 } },
 
-  // Not purchasable (no BANK_SHOP.relics entry) and no numeric `effect` -
-  // auto-granted the moment any character first reaches max level (see
-  // maybeGrantSoulboundEcho, progression.js), and read explicitly inside
-  // Game.grantXp (state.js) rather than folded into applyRelicEffects,
-  // since sharing XP isn't a stat bonus RELIC_EFFECT_KEYS can express.
-  soulboundEcho: { id: 'soulboundEcho', name: 'Soulbound Echo', icon: 'assets/icons/relics/soulboundEcho.png', desc: 'Unlocked by reaching max level on any character. Every character, pet, and mount now also earns 50% of any experience granted elsewhere.' }
+  // notObtainable: true - excluded from every normal acquisition pool (see
+  // obtainableRelicIds below) rather than just BANK_SHOP.relics, since
+  // pickRelicChoices/randomRelic draw from RELICS just as directly and would
+  // otherwise offer it as a run-only reward that does nothing (it has no
+  // numeric `effect` for applyRelicEffects to sum). The only path that's
+  // ever supposed to grant it is maybeGrantSoulboundEcho (progression.js),
+  // the moment any character first reaches max level - already idempotent
+  // (checks pdata.permanentRelics.includes before pushing), so it can never
+  // end up duplicated there either. Read explicitly inside Game.grantXp
+  // (state.js) rather than folded into applyRelicEffects, since sharing XP
+  // isn't a stat bonus RELIC_EFFECT_KEYS can express.
+  soulboundEcho: { id: 'soulboundEcho', name: 'Soulbound Echo', icon: 'assets/icons/relics/soulboundEcho.png', desc: 'Unlocked by reaching max level on any character. Every character, pet, and mount now also earns 50% of any experience granted elsewhere.', notObtainable: true }
 };
+
+// The relic id pool every normal acquisition path (post-combat choices,
+// treasure/event rewards, the Bank Shop) should draw from - excludes any
+// relic flagged notObtainable (currently just soulboundEcho), which has its
+// own dedicated, already-idempotent grant path instead. Centralized here so
+// a future notObtainable relic only needs excluding once, not re-derived at
+// every call site.
+function obtainableRelicIds() {
+  return Object.keys(RELICS).filter(id => !RELICS[id].notObtainable);
+}
 
 const RELIC_EFFECT_KEYS = ['atk', 'def', 'maxHp', 'speed', 'critBonus', 'goldBonus', 'lifesteal', 'hpRegen', 'executeBonus', 'eliteSlayerAtk', 'potionHealBonus', 'spellPower'];
 
@@ -360,7 +376,7 @@ function applyRelicEffects(relicIds) {
 // that class's 10 optimized relics plus the 6 universal ones (16 candidates,
 // so 3 distinct picks are always possible without repeats).
 function pickRelicChoices(classId, count) {
-  const pool = Object.keys(RELICS).filter(id => !RELICS[id].forClass || RELICS[id].forClass === classId);
+  const pool = obtainableRelicIds().filter(id => !RELICS[id].forClass || RELICS[id].forClass === classId);
   const shuffled = pool.sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
@@ -3038,7 +3054,7 @@ const EVENTS = [
 ];
 
 function randomRelic() {
-  const keys = Object.keys(RELICS);
+  const keys = obtainableRelicIds();
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
