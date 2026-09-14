@@ -466,7 +466,7 @@ const App = {
       const enemy = ELITES.find(e => e.id === node.enemyId) || ELITES[rand(0, ELITES.length - 1)];
       this.enterCombat(node, scaleEnemy(enemy, Game.act));
     }
-    else if (node.type === 'boss') this.enterCombat(node, scaleEnemy(BOSSES[(Game.act - 1) % BOSSES.length], Game.act));
+    else if (node.type === 'boss') this.enterActFinale(node);
     else if (node.type === 'event') { grantReputation(getActTheme(Game.act).id, 8); this.showEvent(node); }
     else if (node.type === 'rest') { grantReputation(getActTheme(Game.act).id, 8); this.showRest(node); }
     else if (node.type === 'shop') { grantReputation(getActTheme(Game.act).id, 8); this.showShop(node); }
@@ -946,6 +946,43 @@ const App = {
     const nextWave = () => this.startGauntletWave();
     if (this.autoCombat) this.autoRelicChoice(nextWave);
     else this.showRelicChoice(nextWave);
+  },
+
+  // Every Act now ends in a short multi-encounter finale (2-4 fights) rather
+  // than a single boss HP bar - one or two lead-in elites, then the Act's
+  // actual BOSSES entry as the last step (unchanged reward/showActComplete
+  // flow, see resolveCombatEnd). Mirrors the gauntlet pattern above
+  // (Game.gauntlet/startGauntletWave/advanceGauntlet) but for a boss node
+  // instead of a legendary node, and with a fixed short length rather than
+  // 5-10 waves - this is meant to read as "the final stretch," not a slog.
+  enterActFinale(node) {
+    const totalSteps = rand(2, 4);
+    const steps = [];
+    for (let i = 1; i < totalSteps; i++) steps.push('leadIn');
+    steps.push('boss');
+    Game.actFinale = { stepIndex: 0, steps, node };
+    this.startActFinaleStep();
+  },
+
+  startActFinaleStep() {
+    const f = Game.actFinale;
+    const isBossStep = f.steps[f.stepIndex] === 'boss';
+    // Lead-in fights sit a notch below the boss itself (act-0.3) so the boss
+    // still clearly hits hardest - same ELITES pool a legendary gauntlet's
+    // final wave draws from, just tuned down slightly here.
+    const enemy = isBossStep
+      ? scaleEnemy(BOSSES[(Game.act - 1) % BOSSES.length], Game.act)
+      : scaleEnemy(ELITES[rand(0, ELITES.length - 1)], Math.max(1, Game.act - 0.3));
+    Combat.start(enemy);
+    this.renderCombatScreen(f.node);
+    if (this.autoCombat) this.performAutoAction(f.node);
+  },
+
+  showActFinaleStepCleared(reward, f) {
+    this.showAutoToast(this.autoToastSummary(`Encounter ${f.stepIndex} of ${f.steps.length} cleared`, reward));
+    const nextStep = () => this.startActFinaleStep();
+    if (this.autoCombat) this.autoRelicChoice(nextStep);
+    else this.showRelicChoice(nextStep);
   },
 
   showLegendaryReward(item, reward) {
@@ -1786,11 +1823,12 @@ const App = {
       if (Game.dungeon) { this.showDungeonOutcome(false); return; }
       if (Game.raid) { this.showRaidOutcome(false); return; }
       Game.gauntlet = null;
+      Game.actFinale = null;
       Game.recordRunEnd(false);
       this.showGameOver(false);
       return;
     }
-    if (s.fled) { Game.gauntlet = null; this.showMap(); return; }
+    if (s.fled) { Game.gauntlet = null; Game.actFinale = null; this.showMap(); return; }
     if (s.victory) {
       if (Game.pvp) { this.showPvpOutcome(true); return; }
       grantReputation(getActTheme(Game.act).id, s.enemy.boss ? 50 : s.enemy.elite ? 25 : 10);
@@ -1800,6 +1838,21 @@ const App = {
       if (Game.dungeon) { this.showDungeonOutcome(true); return; }
       if (Game.raid) { this.showRaidOutcome(true); return; }
       if (Game.gauntlet) { Game.grantProfessionXp(rand(4, 9)); this.advanceGauntlet(); return; }
+      if (Game.actFinale && Game.actFinale.steps[Game.actFinale.stepIndex] !== 'boss') {
+        const f = Game.actFinale;
+        Game.grantProfessionXp(rand(4, 9));
+        const goldReward = Game.addGold(rand(s.enemy.gold[0], s.enemy.gold[1]));
+        const xpReward = Math.max(4, Math.round(s.enemy.maxHp * 0.6));
+        const levelResult = Game.grantXp(xpReward);
+        Game.heal(Math.round(Game.effectiveStats().maxHp * 0.12));
+        f.stepIndex += 1;
+        this.showActFinaleStepCleared({ goldReward, xpReward, levelResult }, f);
+        return;
+      }
+      // The finale's last step is the Act's actual boss - clear the tracker
+      // and fall through to the exact same reward/showActComplete flow a
+      // single boss fight always used, unchanged.
+      if (Game.actFinale) Game.actFinale = null;
       if (node.trialClassId) { Game.grantProfessionXp(rand(4, 9)); this.resolveClassTrialVictory(node); return; }
       if (node.tamingCombat) {
         const goldReward = Game.addGold(rand(s.enemy.gold[0], s.enemy.gold[1]));

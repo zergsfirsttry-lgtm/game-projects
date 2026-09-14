@@ -22,6 +22,7 @@ const Game = {
   visitedNodes: [],
   goldEarnedThisRun: 0,
   gauntlet: null,
+  actFinale: null,
   raid: null,
   dungeon: null,
   pvp: null,
@@ -36,6 +37,7 @@ const Game = {
     const cls = CLASSES[classId];
     const charRecord = Persistent.getCharacter(classId);
     this.gauntlet = null;
+    this.actFinale = null;
     this.player = {
       classId,
       className: cls.name,
@@ -124,6 +126,7 @@ const Game = {
     this.player = null;
     this.map = null;
     this.gauntlet = null;
+    this.actFinale = null;
     this.runSnapshot = null;
   },
 
