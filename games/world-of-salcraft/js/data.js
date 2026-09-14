@@ -2532,6 +2532,234 @@ const RARE_NPC_STORYLINES = {
         { label: "Ask what the next directive will be", outcome: { text: "\"Unknown,\" it admits, and for the first time, doesn't sound bothered by not having calculated an answer yet.", permanentStatBoost: { atk: 2 }, gold: 45, xp: 65 } }
       ]
     }
+  ],
+  tina: [
+    { // 1
+      type: "choice",
+      text: "Tina's testing a new drop on her floating decks, bass shaking leaves off nearby trees, entirely unbothered by the audience of exactly one. \"Be honest,\" she says. \"Does this slap or does this SLAP.\"",
+      choices: [
+        { label: "Tell her it slaps", outcome: { text: "\"Knew it,\" she grins, pointing both finger guns at you. \"You've got ears. I respect that in a person.\"", gold: 20 } },
+        { label: "Suggest a small tweak", outcome: { text: "She actually tries it, live, on the spot - and it's better for the change. \"Okay, producer energy, I see you,\" she laughs.", xp: 25 } }
+      ]
+    },
+    { // 2
+      type: "quest",
+      text: "\"Big show tonight,\" Tina says, practically vibrating with excitement. \"Biggest crowd yet. Need someone on hype duty. You in? Just gotta get 'em loud before I even start.\"",
+      choices: [
+        { label: "Take on hype duty", outcome: { text: "You get the crowd roaring before the first beat even drops. Tina points at you from the decks mid-set, mouthing \"MVP.\"", xp: 25 } },
+        { label: "Watch from the side instead", outcome: { text: "She handles the hype herself, effortlessly, like she always does. You still get put on the guest list for life.", gold: 20 } }
+      ]
+    },
+    { // 3
+      type: "combat",
+      text: "A heckler's been throwing bottles at the stage, ruining the vibe for everyone, and security's nowhere in sight. Tina doesn't even stop the music. \"Handle that for me? I am NOT stopping this set.\"",
+      enemy: { id: "tinaHeckler", name: "Stage Heckler", icon: "🍾", hp: 24, atk: 8, def: 2, speed: 6, gold: [15, 30] },
+      victoryOutcome: { text: "The heckler's escorted out and the crowd cheers louder than they did for the drop. Tina blows you a kiss from the decks without missing a beat.", gold: 30, xp: 25 }
+    },
+    { // 4
+      type: "choice",
+      text: "\"Rival DJ's been talking trash online,\" Tina says, scrolling her phone with visible, theatrical outrage. \"Says my sound's 'derivative.' DERIVATIVE. I invented three subgenres, personally.\"",
+      choices: [
+        { label: "Suggest ignoring it", outcome: { text: "\"You're right, you're right,\" she sighs, putting the phone away. \"Petty's not a good look on a headliner anyway.\"", xp: 20 } },
+        { label: "Help her draft a comeback", outcome: { text: "You write something genuinely devastating together. She posts it immediately and it performs incredibly.", gold: 25 } }
+      ]
+    },
+    { // 5
+      type: "quest",
+      text: "\"Behind the persona,\" Tina says, unusually quiet for once, decks powered down. \"Started doing this in my bedroom. Three people watching, tops. Feels like a different life.\"",
+      choices: [
+        { label: "Ask what kept her going", outcome: { text: "\"Loved it even with three people watching,\" she says simply. \"Still would, honestly, if it all disappeared tomorrow.\"", xp: 25 } },
+        { label: "Tell her the bedroom days clearly paid off", outcome: { text: "\"Right?\" she laughs, brightening instantly. \"Baby DJ Tina would LOSE it seeing this.\"", gold: 20 } }
+      ]
+    },
+    { // 6
+      type: "choice",
+      text: "\"Wardrobe malfunction,\" Tina announces backstage, holding up a costume piece that has clearly seen one too many shows. \"Big finale outfit's basically held together with hope at this point.\"",
+      choices: [
+        { label: "Help fix the outfit", outcome: { text: "Between the two of you and an alarming amount of safety pins, it holds through the whole finale. Tina owes you, loudly and repeatedly.", xp: 20 } },
+        { label: "Suggest she improvise something new", outcome: { text: "She throws something together in ten minutes that somehow becomes her signature look for the next six months.", gold: 20 } }
+      ]
+    },
+    { // 7
+      type: "quest",
+      text: "\"Fan letters,\" Tina says, holding up an enormous stack, genuinely moved by all of them. \"Read every single one. Some of these kids needed this music more than they're letting on.\"",
+      choices: [
+        { label: "Help her respond to a few", outcome: { text: "You spend a real afternoon on it together. A few of those replies clearly mean everything to the kids who get them.", xp: 30 } },
+        { label: "Suggest a fan shoutout at the next show", outcome: { text: "She does it, live, mid-set, and the kid in question nearly passes out from joy. Tina's grinning about it for days.", gold: 20 } }
+      ]
+    },
+    { // 8
+      type: "combat",
+      text: "A saboteur's been messing with the sound equipment before shows - loosened cables, swapped settings, small stuff that could've caused a real disaster onstage. Tina's genuinely furious for the first time you've seen. \"That's not petty rivalry. That's DANGEROUS.\"",
+      enemy: { id: "tinaSaboteur", name: "Equipment Saboteur", icon: "🎚️", hp: 30, atk: 9, def: 3, speed: 6, gold: [25, 40] },
+      victoryOutcome: { text: "The saboteur's caught red-handed and banned from every venue on the circuit. Tina dedicates the whole next show to you, by name, from the stage.", gold: 35, xp: 30 }
+    },
+    { // 9
+      type: "choice",
+      text: "\"New collab track,\" Tina says, hooking up a second set of decks with real excitement. \"Need a second opinion on the drop placement. You've got good instincts, weirdly.\"",
+      choices: [
+        { label: "Give honest feedback", outcome: { text: "She takes the note seriously and reworks the whole second half. The final version is noticeably better for it.", xp: 25 } },
+        { label: "Tell her to trust her gut", outcome: { text: "\"Real answer,\" she nods. \"Always should've, honestly.\" The original version drops as-is, and it's a hit.", gold: 20 } }
+      ]
+    },
+    { // 10 - milestone
+      type: "quest",
+      text: "\"Vocal lesson,\" Tina announces, handing you an actual microphone for once instead of just talking at you with one. \"Everyone's got a voice worth projecting. Let's find yours.\" She's disarmingly serious about this.",
+      choices: [
+        { label: "Take the lesson seriously", outcome: { text: "It's less about singing and more about presence, somehow. You leave standing a little taller than you walked in.", permanentStatBoost: { atk: 1 }, xp: 30 } },
+        { label: "Ask her to just perform instead", outcome: { text: "She launches into an impromptu, incredible performance instead, no complaints about the redirect whatsoever.", gold: 30 } }
+      ]
+    },
+    { // 11
+      type: "choice",
+      text: "\"Stage design meeting,\" Tina says, spreading out sketches that range from \"ambitious\" to \"physically impossible.\" \"Need a reality check. Which of these won't get me sued.\"",
+      choices: [
+        { label: "Point out the impossible ones", outcome: { text: "She's disappointed but grateful. \"Fine. FINE. No actual fire this time.\"", xp: 20 } },
+        { label: "Encourage the most ambitious one", outcome: { text: "\"You're a menace and I love it,\" she grins, already calling the venue to ask about weight limits on the ceiling rig.", gold: 20 } }
+      ]
+    },
+    { // 12
+      type: "quest",
+      text: "\"Opener act's terrified,\" Tina says, nodding at a visibly nervous performer backstage. \"First real show. Remember that feeling. Go say something nice, would you?\"",
+      choices: [
+        { label: "Go encourage the opener", outcome: { text: "They visibly relax, and go on to have the best set of their short career so far. Tina watches from the wings, beaming like a proud big sister.", xp: 25 } },
+        { label: "Suggest Tina do it herself", outcome: { text: "\"Fair, coming from the headliner probably hits harder,\" she agrees, and gives possibly the kindest pep talk you've ever witnessed.", gold: 20 } }
+      ]
+    },
+    { // 13
+      type: "combat",
+      text: "The rival DJ's crew has shown up at Tina's own venue, trying to intimidate the staff into canceling the show entirely - a move so far beneath actual competition that Tina's more insulted than scared.",
+      enemy: { id: "tinaRivalCrew", name: "Rival Crew Enforcer", icon: "🎧", hp: 34, atk: 11, def: 3, speed: 6, gold: [30, 45] },
+      victoryOutcome: { text: "The crew leaves empty-handed and the show goes on, louder and more triumphant than planned. Tina dedicates an entire remix to the incident afterward.", gold: 40, xp: 35 }
+    },
+    { // 14
+      type: "challenge",
+      text: "\"Dance-off,\" Tina announces, already moving, decks on autoplay. \"No judges. No rules. Just vibes.\" This is not remotely a fair contest and you both know it.",
+      choices: [
+        { label: "Accept the dance-off", outcome: { text: "You lose, spectacularly, and it's caught on someone's phone forever. Tina laughs so hard she nearly knocks over her own decks.", hp: -4, gold: 20 } },
+        { label: "Decline with dignity intact", outcome: { text: "\"Coward,\" she teases, already moving on to the next idea, no hard feelings whatsoever.", xp: 20 } }
+      ]
+    },
+    { // 15
+      type: "choice",
+      text: "\"Real talk,\" Tina says, decks quiet for once. \"Some nights the crowd's rough. Some nights I bomb. Doesn't show up online, but it happens. Wanted someone to know that.\"",
+      choices: [
+        { label: "Tell her that's normal and okay", outcome: { text: "\"Yeah,\" she says, relieved. \"Just needed to say it out loud to somebody who isn't gonna post about it.\"", hp: 12 } },
+        { label: "Ask how she bounces back from a bad night", outcome: { text: "\"Next set,\" she shrugs. \"Every set's a new one. Bad night doesn't get a vote on the next one.\"", xp: 25 } }
+      ]
+    },
+    { // 16
+      type: "combat",
+      text: "A pack of overzealous fans has stormed the barricade trying to get closer to the stage, and while flattering, it's genuinely gotten dangerous fast. \"Love them, but crowd control, please,\" Tina calls out, not stopping the set.",
+      enemy: { id: "tinaCrowdSurge", name: "Overzealous Fan Surge", icon: "🙌", hp: 28, atk: 7, def: 2, speed: 8, gold: [20, 30] },
+      victoryOutcome: { text: "The barricade holds and nobody's hurt. Tina shouts a genuine thank-you from the stage mid-song, and the crowd cheers for you specifically.", gold: 30, xp: 30 }
+    },
+    { // 17
+      type: "quest",
+      text: "\"Been thinking about the rival thing,\" Tina admits. \"Maybe it's dumb. Maybe we'd both sound better collabing than competing. Scary thought, honestly.\"",
+      choices: [
+        { label: "Encourage the collab idea", outcome: { text: "She actually reaches out. It goes better than either of them expected, and the resulting track is genuinely huge.", xp: 30 } },
+        { label: "Point out rivalry pushes her to improve too", outcome: { text: "\"Also true,\" she concedes. \"Maybe both things can be true. Rivalry AND respect. Wild concept.\"", gold: 20 } }
+      ]
+    },
+    { // 18
+      type: "choice",
+      text: "\"Merch design,\" Tina says, holding up two shirt mockups. \"One's got my face on it. Other one's just the logo. Ego check - which one's actually better.\"",
+      choices: [
+        { label: "Pick the logo one", outcome: { text: "\"Ugh, you're right, that's the better shirt,\" she admits, visibly wounded but grateful for the honesty.", xp: 20 } },
+        { label: "Pick the one with her face", outcome: { text: "\"See, THIS is why we're friends,\" she grins, already ordering the print run.", gold: 20 } }
+      ]
+    },
+    { // 19
+      type: "quest",
+      text: "\"Burnout's real,\" Tina admits, looking genuinely tired for once between shows. \"Been going nonstop for months. Don't wanna stop, but don't wanna break either.\"",
+      choices: [
+        { label: "Convince her to take a real break", outcome: { text: "She actually takes a week off, reluctantly, and comes back with more energy than she's had in months.", xp: 30 } },
+        { label: "Offer to help manage the schedule", outcome: { text: "You cut a few unnecessary bookings together. She's noticeably lighter for the smaller load.", gold: 25 } }
+      ]
+    },
+    { // 20 - milestone
+      type: "quest",
+      text: "\"Ring,\" Tina says, producing a genuinely fancy piece of jewelry from backstage. \"Got it after my first sold-out show. Superstition says it brings the right kind of energy to whoever wears it onstage. Your turn.\"",
+      choices: [
+        { label: "Accept the ring", outcome: { text: "Whatever energy it carries, it settles onto you like it was always meant to end up there.", permanentRelicId: "silverTongueRing", xp: 35 } },
+        { label: "Ask if she's sure about parting with it", outcome: { text: "\"Made new memories since,\" she says. \"This one's earned its retirement. On you, though - still working.\"", permanentRelicId: "silverTongueRing", gold: 30 } }
+      ]
+    },
+    { // 21
+      type: "choice",
+      text: "\"Documentary crew wants to follow me around,\" Tina says, equal parts thrilled and terrified. \"My whole life, on camera. Feels like a lot.\"",
+      choices: [
+        { label: "Encourage her to do it", outcome: { text: "She says yes. It turns out to be one of the more vulnerable, honest things she's ever put out, and fans love her more for it.", xp: 30 } },
+        { label: "Suggest keeping some things private", outcome: { text: "\"Yeah,\" she nods, relieved. \"Some stuff's just mine. Doesn't need an audience.\" She negotiates the terms accordingly.", gold: 20 } }
+      ]
+    },
+    { // 22
+      type: "quest",
+      text: "\"Opener's ready for their own headline slot,\" Tina reports, practically glowing with pride. \"Gonna give up my own Friday show for it. Feels right.\"",
+      choices: [
+        { label: "Support the decision", outcome: { text: "The opener's headline debut sells out, and Tina cheers louder from the crowd than she ever has from the stage.", xp: 25 } },
+        { label: "Ask if she'll miss the spotlight", outcome: { text: "\"A little,\" she admits. \"Mostly just excited for them, though. Good trade, honestly.\"", gold: 20 } }
+      ]
+    },
+    { // 23
+      type: "combat",
+      text: "The rival DJ's crew is back, this time trying to sabotage the collab track's release show entirely - petty, desperate, and now genuinely dangerous with the stakes this high.",
+      enemy: { id: "tinaCrewBoss", name: "Rival Crew Boss", icon: "🎙️", hp: 42, atk: 13, def: 4, speed: 6, gold: [35, 55] },
+      victoryOutcome: { text: "The sabotage attempt fails spectacularly and the collab release show goes off without a hitch. The rival DJ personally apologizes to Tina afterward, mortified.", gold: 45, xp: 40 }
+    },
+    { // 24
+      type: "choice",
+      text: "\"Award nomination,\" Tina says, staring at the notification like it might be a prank. \"Actual, real, industry award. Didn't think this was ever gonna be a me thing.\"",
+      choices: [
+        { label: "Tell her she's earned every bit of it", outcome: { text: "She actually tears up a little, just for a second, before the grin comes roaring back. \"Okay. Okay! Let's go WIN this thing.\"", hp: 10 } },
+        { label: "Help her prep an acceptance speech just in case", outcome: { text: "You write something genuinely great together. She ends up not needing it that night, but keeps it anyway, \"for luck.\"", xp: 25 } }
+      ]
+    },
+    { // 25 - companion
+      type: "choice",
+      text: "A tiny, iridescent stage-mascot dragon - built into her show's pyrotechnics rig originally, now with what can only be called a personality of its own - has taken to riding on her shoulder between sets, and lately, on yours instead.",
+      choices: [
+        { label: "Take the stage dragon", outcome: { text: "It does a little victory loop the moment you agree, clearly delighted. \"She's been eyeing you for weeks,\" Tina laughs. \"Finally made it official.\"", companionPet: "faerieDragonling", xp: 30 } },
+        { label: "Suggest it stays part of the show", outcome: { text: "\"She's retiring from pyrotechnics duty either way,\" Tina says. \"Better she goes with someone who'll actually appreciate her.\"", companionPet: "faerieDragonling", gold: 25 } }
+      ]
+    },
+    { // 26
+      type: "combat",
+      text: "The award show itself has been infiltrated by a group trying to cause a scene during Tina's category, apparently hired by someone bitter about the nomination. Security's overwhelmed. Tina's still in her dress and heels and absolutely ready to fight anyway.",
+      enemy: { id: "tinaAwardShowThugs", name: "Hired Disruptor", icon: "🚨", hp: 44, atk: 13, def: 5, speed: 6, gold: [40, 60], elite: true },
+      victoryOutcome: { text: "The disruption's handled before it ever reaches the stage. Tina wins the award twenty minutes later, and dedicates it to you by name in front of the whole industry.", gold: 55, xp: 45 }
+    },
+    { // 27
+      type: "choice",
+      text: "\"Been meaning to say this properly,\" Tina says, decks packed away for once, no performance in it at all. \"You've been around for the real stuff, not just the highlight reel. That matters more than you probably know.\"",
+      choices: [
+        { label: "Tell her the same is true for you", outcome: { text: "She doesn't have a quip ready for once. Just a real, quiet smile that says more than her usual hundred words would.", hp: 16 } },
+        { label: "Ask what \"the real stuff\" means to her now", outcome: { text: "\"The nights nobody's filming,\" she says. \"Turns out those are the ones that actually stuck.\"", xp: 30 } }
+      ]
+    },
+    { // 28
+      type: "challenge",
+      text: "\"Freestyle set, no prep, right now,\" Tina says, already cueing something up. \"You call out a mood. I build the whole thing live. No do-overs. Let's see what you've got.\"",
+      choices: [
+        { label: "Call out something impossible", outcome: { text: "She absolutely nails it anyway, somehow, turning your ridiculous prompt into something genuinely incredible on the spot.", xp: 30 } },
+        { label: "Call out something simple", outcome: { text: "\"Boring prompt, incredible execution,\" she declares of her own work, entirely without irony, and she's not wrong.", gold: 20 } }
+      ]
+    },
+    { // 29
+      type: "combat",
+      text: "The rival DJ, now a genuine friend and collaborator, has been targeted by the SAME saboteur network that's been dogging Tina all along - bigger, better funded, and clearly done playing small. The two of them face it together, you at their side.",
+      enemy: { id: "tinaNetworkBoss", name: "Saboteur Network Ringleader", icon: "🕶️", hp: 58, atk: 16, def: 6, speed: 6, gold: [50, 80], elite: true },
+      victoryOutcome: { text: "The whole network unravels once its ringleader's caught. Tina and her former rival throw an impromptu joint victory set right there in the street.", gold: 65, xp: 55, gear: { defId: "emberWand", rarity: "rare" } }
+    },
+    { // 30 - finale milestone
+      type: "choice",
+      text: "Tina pulls you up onstage mid-encore, mic already in your hand before you can object, the whole crowd roaring. \"Been saying it all along,\" she shouts over the bass. \"Main character energy. Tonight, you're not just in the story. You're headlining it with me.\"",
+      choices: [
+        { label: "Take the mic and own the moment", outcome: { text: "The crowd goes absolutely feral. Whatever this feeling is, it doesn't fully fade when the lights come back up.", permanentStatBoost: { speed: 1, atk: 1 }, gold: 60, xp: 65 } },
+        { label: "Pull her into the spotlight instead", outcome: { text: "\"Deflecting the spotlight ONTO the headliner, incredible strategy,\" she laughs, but takes the moment anyway, grinning at you the whole time.", permanentStatBoost: { maxHp: 5 }, gold: 45, xp: 65 } }
+      ]
+    }
   ]
 };
 
