@@ -2083,6 +2083,15 @@ const App = {
 
   // ---------------- Sanctuary (persistent hub: character, inventory, blacksmith, shop) ----------------
   showSanctuary(classId, tab) {
+    // No classId means this call came from OUTSIDE the Sanctuary (the title
+    // screen's own button, or an automatic return after abandoning/losing/
+    // winning a run) rather than navigating between tabs while already
+    // inside it - see the showSanctuary(classId, tab) call sites elsewhere,
+    // which always pass an explicit classId. That's the "visit" boundary the
+    // Bank Shop's 4 random Permanent Relic offers re-roll on (see
+    // rerollShopRelicOffer, progression.js) - every other call in this file
+    // just refreshes the currently-open tab and must NOT re-roll it.
+    if (!classId) rerollShopRelicOffer();
     const unlockedClasses = Object.values(CLASSES).filter(c => isClassUnlocked(c.id));
     // Falls back to whichever character was actually played most recently
     // (set at run-start in confirmSelection, and held steady for the whole
@@ -3555,9 +3564,9 @@ const App = {
 
   renderSanctuaryShop() {
     const pdata = Persistent.load();
-    const unpurchasedRelics = BANK_SHOP.relics.filter(entry => !pdata.permanentRelics.includes(entry.id));
+    const relicOffer = currentShopRelicOffer();
     return `
-      ${this.categoryButtonRow('shop-relics', '🏺', 'Permanent Relics', `${unpurchasedRelics.length} available - apply to every class, every run`)}
+      ${this.categoryButtonRow('shop-relics', '🏺', 'Permanent Relics', `${relicOffer.length} on offer this visit - apply to every class, every run`)}
       ${this.categoryButtonRow('shop-spells', '📖', 'Spells', 'equip from Inventory')}
       ${this.categoryButtonRow('shop-gear', '🛡️', 'Starter Gear', `${BANK_SHOP.gear.length} items`)}
       ${this.categoryButtonRow('shop-sell', '🪙', 'Sell Items', `${this.sellableItems(pdata).length} sellable - value scales with rarity`)}
@@ -3567,18 +3576,18 @@ const App = {
   showShopRelicsModal(classId, tab) {
     this.showListModal('🏺 Permanent Relics', () => {
       const pdata = Persistent.load();
-      const unpurchasedRelics = BANK_SHOP.relics.filter(entry => !pdata.permanentRelics.includes(entry.id));
-      return unpurchasedRelics.length ? unpurchasedRelics.map(entry => {
+      const relicOffer = currentShopRelicOffer();
+      return relicOffer.length ? relicOffer.map(entry => {
         const r = RELICS[entry.id];
         return `<div class="gear-row"><div class="desc"><span>${this.renderIcon(r.icon)}</span><div><strong>${r.name}</strong><div class="small-text">${r.desc}</div></div></div>
           <button class="btn-secondary" data-buy-relic="${entry.id}" ${pdata.bankGold < entry.price ? 'disabled' : ''}>${entry.price} 🪙</button></div>`;
-      }).join('') : '<p class="small-text">All permanent relics purchased.</p>';
+      }).join('') : '<p class="small-text">Nothing on offer this visit - check back next time you return to the Sanctuary.</p>';
     }, (container, refresh) => {
       container.querySelectorAll('[data-buy-relic]').forEach(btn => {
         btn.addEventListener('click', () => {
           const pdata = Persistent.load();
           const id = btn.dataset.buyRelic;
-          const entry = BANK_SHOP.relics.find(r => r.id === id);
+          const entry = currentShopRelicOffer().find(r => r.id === id);
           if (!entry || pdata.permanentRelics.includes(id) || pdata.bankGold < entry.price) return;
           pdata.bankGold -= entry.price;
           pdata.permanentRelics.push(id);

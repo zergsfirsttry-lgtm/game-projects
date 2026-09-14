@@ -897,7 +897,10 @@ function computeAfkProgress() {
 }
 
 const BANK_SHOP = {
-  relics: Object.keys(RELICS).map(id => ({ id, price: 180 })),
+  // soulboundEcho is deliberately excluded - it's auto-granted the moment any
+  // character first reaches MAX_LEVEL (see maybeGrantSoulboundEcho below),
+  // never purchasable.
+  relics: Object.keys(RELICS).filter(id => id !== 'soulboundEcho').map(id => ({ id, price: 180 })),
   spells: [
     'frostbolt', 'execute', 'chainLightning', 'inspire',
     'iceLance', 'shadowBolt', 'arcaneBlast', 'earthShatter', 'moonfire', 'sinisterStrike',
@@ -912,6 +915,42 @@ const BANK_SHOP = {
     { defId: 'clothRobe', rarity: 'common', price: 25 }
   ]
 };
+
+// --- Bank Shop's Permanent Relics offer ---
+// Rather than listing every not-yet-owned relic (86+ once a character's
+// unlocked a few classes) at one flat price, the shop shows just 4 random
+// ones at a time, each independently priced 1000-9000 gold (rounded to the
+// nearest 50) - re-rolled, ids AND prices both, each time the player visits
+// the Sanctuary fresh (see the enteringFresh check in showSanctuary,
+// main.js). Already-owned relics are never in the pool to begin with, and
+// one bought mid-visit simply drops out of the current 4 rather than being
+// replaced or re-priced until the next re-roll.
+const SHOP_RELIC_PRICE_MIN = 1000;
+const SHOP_RELIC_PRICE_MAX = 9000;
+function rollShopRelicPrice() {
+  return Math.round(rand(SHOP_RELIC_PRICE_MIN, SHOP_RELIC_PRICE_MAX) / 50) * 50;
+}
+function rerollShopRelicOffer() {
+  const pdata = Persistent.load();
+  const pool = BANK_SHOP.relics.map(entry => entry.id).filter(id => !pdata.permanentRelics.includes(id));
+  const shuffled = pool.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = rand(0, i);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  pdata.shopRelicOfferIds = shuffled.slice(0, 4).map(id => ({ id, price: rollShopRelicPrice() }));
+  Persistent.save();
+}
+
+// The {id, price} entries currently on offer - lazily rolls a first offer if
+// none exists yet (a brand-new save), and drops any that have since been
+// purchased or otherwise stopped being valid (e.g. bought via a cheat)
+// without rolling in a replacement - that only happens on the next re-roll.
+function currentShopRelicOffer() {
+  const pdata = Persistent.load();
+  if (!pdata.shopRelicOfferIds) rerollShopRelicOffer();
+  return pdata.shopRelicOfferIds.filter(entry => !pdata.permanentRelics.includes(entry.id));
+}
 
 // --- Leveling ---
 // A literal compounding "+10% per level" overflows to Infinity well before level
@@ -1687,6 +1726,10 @@ const Persistent = {
       // (and any other future source) - {atk, def, maxHp, speed}, applied
       // in Game.effectiveStats() alongside every other flat stat source.
       rareNpcProgress: {}, permanentStatBoosts: {},
+      // The Bank Shop's current 4 random Permanent Relic offers (see
+      // rerollShopRelicOffer/currentShopRelicOffer below) - null until the
+      // first Sanctuary visit generates one.
+      shopRelicOfferIds: null,
       ownedPets: [], ownedMounts: [], activeQuestIds: [], questProgress: {}, questTiers: {}, completedQuestIds: [],
       honor: 0, honorInventory: [], honorPotionCount: 0, pvpInventory: [], randomPvpEnabled: false, recipeRarityBoost: {},
       companionLevels: { pet: {}, mount: {} }, activeBuffs: [], lastSeenAt: Date.now(), reputation: {},
