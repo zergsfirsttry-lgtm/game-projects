@@ -1848,6 +1848,234 @@ const RARE_NPC_STORYLINES = {
         { label: "Ask what comes after mastery", outcome: { text: "\"You find out,\" he says, \"and then, if you're any good at all, you teach it to someone else.\" He means you, obviously.", permanentStatBoost: { maxHp: 5 }, gold: 45, xp: 65 } }
       ]
     }
+  ],
+  mcclures: [
+    { // 1
+      type: "choice",
+      text: "The wiry brother is squinting at a copper still that's hissing in a way he clearly doesn't like. \"Pressure's off,\" he mutters. \"Big fella, you touch the valve last?\" The big one looks extremely guilty.",
+      choices: [
+        { label: "Help them fix the valve", outcome: { text: "Between the three of you, disaster is narrowly avoided. \"Owe you a bottle,\" the wiry one says, meaning it as the highest compliment he owns.", xp: 25 } },
+        { label: "Step back and let them sort it out", outcome: { text: "They bicker it out themselves in about a minute flat, clearly a well-worn routine. The still hisses back to normal.", gold: 20 } }
+      ]
+    },
+    { // 2
+      type: "choice",
+      text: "\"Taste-test,\" the big brother announces, holding out a jar of something clear enough to see through and strong enough to see stars. \"Batch seventeen. Might be the one.\"",
+      choices: [
+        { label: "Take the taste test", outcome: { text: "It is, emphatically, not the one. Your eyes water for a full minute. Both brothers find this hilarious.", hp: -6, gold: 15 } },
+        { label: "Politely decline", outcome: { text: "\"Smart,\" the wiry one says. \"Batch sixteen near took my eyebrows off.\"", gold: 15 } }
+      ]
+    },
+    { // 3
+      type: "quest",
+      text: "\"Revenuers sniffing round the county again,\" the wiry brother says, not remotely panicked about it. \"Mostly want someone to watch the ridge road, holler if a wagon with badges shows up.\"",
+      choices: [
+        { label: "Keep watch for them", outcome: { text: "No wagon shows, but you spend a pleasant afternoon on the ridge anyway. They pay you in cash AND liquor, against your better judgment.", gold: 30 } },
+        { label: "Suggest they just relocate the still", outcome: { text: "\"Did that twice already this year,\" the big one sighs. \"Runs out of ridge eventually.\"", xp: 20 } }
+      ]
+    },
+    { // 4
+      type: "combat",
+      text: "A rival bootlegging outfit has been raiding the McClures' hidden caches, and the brothers have finally had enough. \"Time somebody taught 'em property lines,\" the wiry one says, cracking his knuckles.",
+      enemy: { id: "mcclureRival", name: "Rival Bootlegger", icon: "🥃", hp: 30, atk: 10, def: 3, speed: 5, gold: [25, 40] },
+      victoryOutcome: { text: "The rival outfit packs up and finds somewhere else to be. The brothers split a bottle in celebration, and generously don't make you drink any of it.", gold: 35, xp: 30 }
+    },
+    { // 5
+      type: "quest",
+      text: "\"Secret's in the corn,\" the big brother confides, like he's handing you a state secret. \"Also the water. Also - don't tell him I said this - probably mostly the water.\"",
+      choices: [
+        { label: "Ask for the actual recipe", outcome: { text: "They argue about the \"actual\" recipe for a genuinely long time before settling on a version that's probably 60% true.", xp: 25 } },
+        { label: "Pretend you already knew", outcome: { text: "\"Now THAT'S a real moonshiner's answer,\" the wiry one grins, delighted, and slips you a jar for your trouble.", gold: 20 } }
+      ]
+    },
+    { // 6
+      type: "choice",
+      text: "The brothers are mid-argument about whose turn it is to check the traps out back - a genuinely old, genuinely petty dispute that's clearly been running for years.",
+      choices: [
+        { label: "Offer to check the traps yourself", outcome: { text: "Full of good rabbit and one extremely offended raccoon. Both brothers seem relieved not to have to lose the argument.", xp: 20, hp: 8 } },
+        { label: "Referee the argument", outcome: { text: "You rule in the wiry one's favor. The big one sulks for exactly thirty seconds before offering you a drink anyway.", gold: 20 } }
+      ]
+    },
+    { // 7
+      type: "quest",
+      text: "\"Family recipe's older'n both of us,\" the wiry brother says, unusually sentimental. \"Granddad's granddad's, way back. Feels wrong, some days, sellin' it for coin instead of just... sharin' it.\"",
+      choices: [
+        { label: "Suggest it can be both", outcome: { text: "\"Huh,\" he says, chewing on that. \"Reckon it can be, at that.\" He seems genuinely moved by the reframe.", xp: 30 } },
+        { label: "Ask to hear the family history", outcome: { text: "A long, meandering, probably-25%-exaggerated story follows. It's a great afternoon regardless of accuracy.", gold: 20 } }
+      ]
+    },
+    { // 8
+      type: "combat",
+      text: "Something's been raiding the corn stores meant for the next batch - tracks too big for a raccoon, too small for a bear, and both brothers are equal parts nervous and thrilled about the mystery.",
+      enemy: { id: "mcclureCornRaider", name: "Corn Raider", icon: "🦝", hp: 26, atk: 8, def: 2, speed: 7, gold: [20, 30] },
+      victoryOutcome: { text: "Turns out to be an unusually large, unusually bold raccoon. The brothers are almost disappointed it wasn't a bear, and almost proud of the raccoon's ambition.", gold: 25, xp: 25 }
+    },
+    { // 9
+      type: "choice",
+      text: "\"Cigarette?\" the big brother offers, holding out a hand-rolled one that smells faintly of the still itself. Neither brother seems to notice or mind the overlap.",
+      choices: [
+        { label: "Accept and sit a while", outcome: { text: "You don't really smoke, but the sitting-a-while part is genuinely nice. The brothers tell stories that may or may not be true.", hp: 10 } },
+        { label: "Decline but stay for the stories", outcome: { text: "\"Suit yourself,\" he shrugs, and launches into a story about a bear, a canoe, and a batch of bad moonshine that you suspect gets taller every telling.", xp: 20 } }
+      ]
+    },
+    { // 10 - milestone
+      type: "quest",
+      text: "\"Reckon you've earned a taste of the REAL stuff,\" the wiry brother says, producing a jar that looks identical to every other jar but is apparently, categorically, not. \"Granddad's own batch. Don't waste it.\"",
+      choices: [
+        { label: "Drink it with proper respect", outcome: { text: "It's smooth in a way none of the other batches were, and something about it settles warm in your chest for good.", permanentStatBoost: { maxHp: 3 }, xp: 30 } },
+        { label: "Save it for later", outcome: { text: "\"Your call,\" he shrugs, \"but I'd have drunk it on the spot, personally.\" He seems to respect the restraint anyway.", gold: 30 } }
+      ]
+    },
+    { // 11
+      type: "choice",
+      text: "The brothers are trying to fix a wagon wheel with what appears to be spare still parts, duct tape not having been invented yet in this particular universe's backwoods.",
+      choices: [
+        { label: "Help with proper tools", outcome: { text: "It actually works this time. The big brother looks personally betrayed that \"proper tools\" were an option all along.", xp: 20 } },
+        { label: "Let them finish their way", outcome: { text: "It holds together for exactly one trip into town before falling apart spectacularly. Somehow, both brothers count this as a win.", gold: 15 } }
+      ]
+    },
+    { // 12
+      type: "quest",
+      text: "\"Got a cousin over the ridge makes a mean batch too,\" the wiry brother admits, \"but between you and me, ours is better. Don't tell him I said that. Or that I said anything at all, really.\"",
+      choices: [
+        { label: "Promise to keep the secret", outcome: { text: "\"Good man,\" he says, relieved, and slips you a little extra for your discretion.", gold: 25 } },
+        { label: "Offer to settle it with a taste test", outcome: { text: "They love this idea entirely too much and immediately start planning a rivalry that will clearly never actually happen.", xp: 25 } }
+      ]
+    },
+    { // 13
+      type: "combat",
+      text: "The cousin's rival still (the one they definitely don't talk about) has apparently sent someone to \"negotiate\" over territory, and the negotiation has already turned physical by the time you arrive.",
+      enemy: { id: "mcclureCousinsThug", name: "Cousin's Enforcer", icon: "🪓", hp: 34, atk: 11, def: 4, speed: 5, gold: [30, 45] },
+      victoryOutcome: { text: "The enforcer leaves with a firm message for the cousin. The brothers are thrilled, and mildly worried about the family reunion next spring.", gold: 40, xp: 35 }
+    },
+    { // 14
+      type: "choice",
+      text: "\"Naming rights,\" the big brother says, gesturing grandly at a fresh, unnamed batch. \"You get to name this one. Big honor. We've named 'em after every relative we like already.\"",
+      choices: [
+        { label: "Suggest a name", outcome: { text: "Whatever you suggest, they love it immediately and unreservedly. It's now, officially, permanently, that name.", xp: 20 } },
+        { label: "Let them keep the honor", outcome: { text: "They settle on something deeply improper that you're fairly sure will get the label rejected at market. Neither cares even slightly.", gold: 15 } }
+      ]
+    },
+    { // 15
+      type: "quest",
+      text: "\"Swamp gas got into batch twenty-two somehow,\" the wiry brother says, staring at a jar with real suspicion. \"Don't ask how. We don't rightly know how. It ain't right, but it ain't NOT right either.\"",
+      choices: [
+        { label: "Insist on disposing of it safely", outcome: { text: "You bury it well away from the still. Both brothers watch the burial with the solemnity of a funeral.", xp: 25 } },
+        { label: "Ask to study it out of curiosity", outcome: { text: "Nobody learns anything conclusive, but it's a genuinely fascinating and mildly alarming afternoon.", gold: 20 } }
+      ]
+    },
+    { // 16
+      type: "combat",
+      text: "A gator's taken up residence uncomfortably close to the still's water source, and neither brother seems eager to be the one to relocate it personally.",
+      enemy: { id: "mcclureGator", name: "Territorial Gator", icon: "🐊", hp: 38, atk: 12, def: 5, speed: 4, gold: [25, 40] },
+      victoryOutcome: { text: "The gator relocates itself, permanently and enthusiastically, downstream. The water source is safe, and both brothers buy you a round for your trouble.", gold: 40, xp: 35 }
+    },
+    { // 17
+      type: "choice",
+      text: "\"Y'ain't from round here originally, are ya,\" the big brother observes, not unkindly, studying you over a jar. \"Where's home, before all this?\"",
+      choices: [
+        { label: "Tell them your story", outcome: { text: "They listen with real interest, the way only two people with absolutely nowhere else to be can listen.", xp: 20 } },
+        { label: "Keep it vague", outcome: { text: "\"Fair enough,\" the wiry one shrugs. \"Man's business is his own business, out here.\"", gold: 15 } }
+      ]
+    },
+    { // 18
+      type: "quest",
+      text: "\"Got a delivery needs makin',\" the wiry brother says, nodding at a wagon loaded suspiciously heavy for a load of \"just vegetables.\" \"Discreet-like. You understand.\"",
+      choices: [
+        { label: "Make the delivery", outcome: { text: "You get where you're going without incident, and the recipient tips generously for the discretion.", gold: 35 } },
+        { label: "Ask what's really in the crates", outcome: { text: "\"Vegetables,\" the big brother insists, deadpan, while the crates very audibly clink.", xp: 20 } }
+      ]
+    },
+    { // 19
+      type: "choice",
+      text: "The brothers have built an elaborate, entirely unnecessary scarecrow near the still - not for crows, they clarify, but \"for the look of the thing.\" It is, undeniably, extremely fashionable for a scarecrow.",
+      choices: [
+        { label: "Compliment the scarecrow", outcome: { text: "They are absurdly proud. The big one names it. It now has more personality than most actual people you've met this week.", hp: 8 } },
+        { label: "Ask what it's actually for", outcome: { text: "\"Morale,\" the wiry one says, entirely serious. You decide not to push further.", gold: 15 } }
+      ]
+    },
+    { // 20 - milestone
+      type: "quest",
+      text: "\"Gonna let you in on something,\" the wiry brother says, unusually solemn, leading you to a second, smaller, much older still hidden deeper in the brush. \"This is the ORIGINAL. Everything else is just practice.\"",
+      choices: [
+        { label: "Ask to see how it works", outcome: { text: "It's a beautiful, ancient piece of equipment, and something about understanding its craft settles into your bones as a real, lasting steadiness.", permanentRelicId: "ironSkin", xp: 35 } },
+        { label: "Thank them for the trust", outcome: { text: "\"Figured you earned it,\" the big brother says, gruffly moved, and presses a keepsake flask into your hand.", permanentRelicId: "ironSkin", gold: 30 } }
+      ]
+    },
+    { // 21
+      type: "quest",
+      text: "\"County fair's comin' up,\" the big brother says, eyes lighting up. \"We enter every year. Never won. Gonna be the year, I can feel it.\" He has said this, apparently, every year.",
+      choices: [
+        { label: "Help them prep for the fair", outcome: { text: "You spend a whole day helping polish, package, and present the entry. It doesn't win, but it places, for the first time ever.", xp: 30 } },
+        { label: "Wish them luck from a safe distance", outcome: { text: "They appreciate the sentiment regardless, and insist on toasting your good wishes immediately.", gold: 15 } }
+      ]
+    },
+    { // 22
+      type: "choice",
+      text: "\"Dog's gone and had puppies in the still shed,\" the wiry brother reports, equal parts exasperated and delighted, gesturing at a very smug hound and a squirming pile of pups.",
+      choices: [
+        { label: "Help find the puppies homes", outcome: { text: "Half the county ends up with a McClure hound puppy by month's end. Both brothers consider this a great success.", xp: 25 } },
+        { label: "Suggest they keep them all", outcome: { text: "\"Now THAT's an idea,\" the big brother says, far too enthusiastically, already naming several of them.", gold: 20 } }
+      ]
+    },
+    { // 23
+      type: "combat",
+      text: "The cousin's rival outfit is back, and bolder this time, apparently having decided the last lesson didn't stick. The brothers look less amused and more genuinely irritated now.",
+      enemy: { id: "mcclureCousinBoss", name: "The Ridge Cousin", icon: "🥃", hp: 42, atk: 13, def: 4, speed: 5, gold: [35, 55] },
+      victoryOutcome: { text: "The cousin finally backs off for good, muttering about family reunions being awkward now. The brothers are already planning how to bring this up at Thanksgiving.", gold: 45, xp: 40 }
+    },
+    { // 24
+      type: "quest",
+      text: "\"Reckon we oughta write the recipe down proper,\" the wiry brother muses. \"Case somethin' ever happens to us. Trouble is, neither of us agrees on half of it.\"",
+      choices: [
+        { label: "Help mediate a final recipe", outcome: { text: "It takes hours of good-natured arguing, but you help them settle on one true version, finally, after years of disagreement.", xp: 35 } },
+        { label: "Suggest keeping some mystery", outcome: { text: "\"Huh. Family secret oughta stay a LITTLE secret,\" the big one agrees, visibly relieved not to have to compromise.", gold: 20 } }
+      ]
+    },
+    { // 25 - companion
+      type: "choice",
+      text: "The barn owl that's been quietly guarding the still from the rafters for years - alerting the brothers to every revenuer and raccoon alike - has taken a liking to riding on your shoulder instead lately.",
+      choices: [
+        { label: "Take the owl with you", outcome: { text: "\"She's chosen, I reckon,\" the wiry brother says, a little wistfully. \"Good judge of character, that bird. Always has been.\"", companionPet: "owlFamiliar", xp: 30 } },
+        { label: "Suggest she stays to guard the still", outcome: { text: "\"Preciate that,\" the big brother says, relieved. \"Still wouldn't be the same without her keepin' watch.\"", companionPet: "owlFamiliar", gold: 25 } }
+      ]
+    },
+    { // 26
+      type: "combat",
+      text: "A whole crew's shown up this time, organized and serious, clearly done underestimating two brothers and a still. \"Bigger fight than usual,\" the wiry one admits, for once looking genuinely worried.",
+      enemy: { id: "mcclureCrewBoss", name: "Organized Crew Boss", icon: "🎩", hp: 46, atk: 14, def: 5, speed: 5, gold: [40, 60], elite: true },
+      victoryOutcome: { text: "The crew scatters, thoroughly beaten and thoroughly done with this particular stretch of ridge. The brothers throw an impromptu party that lasts well into the next day.", gold: 55, xp: 45 }
+    },
+    { // 27
+      type: "choice",
+      text: "\"Ever wonder why we do this?\" the wiry brother asks, unusually quiet, watching the still work. \"Coulda done anything. Ended up here anyway. Don't regret it, mostly. Just wonder sometimes.\"",
+      choices: [
+        { label: "Ask what else he might have done", outcome: { text: "He talks, wistfully, about a life that never happened - a few roads not taken. He seems lighter for having said it out loud.", xp: 25 } },
+        { label: "Point out he seems genuinely happy here", outcome: { text: "\"Reckon I am, at that,\" he admits, brightening. \"Good thing to be reminded, now and then.\"", hp: 14 } }
+      ]
+    },
+    { // 28
+      type: "challenge",
+      text: "\"Drinking contest,\" the big brother announces, entirely too excited about this idea, setting out three jars. This is, transparently, a terrible idea for you specifically.",
+      choices: [
+        { label: "Accept the contest", outcome: { text: "You lose, decisively, embarrassingly, and memorably. The brothers will bring this up for years.", hp: -10, gold: 20 } },
+        { label: "Suggest an arm-wrestling contest instead", outcome: { text: "A far more survivable substitute. You still lose, but with considerably more dignity intact.", xp: 25 } }
+      ]
+    },
+    { // 29
+      type: "combat",
+      text: "The cousin, humiliated one too many times, has called in help from outside the family entirely - a hired gun with no stake in the feud and no interest in backing down.",
+      enemy: { id: "mcclureHiredGun", name: "Outside Hired Gun", icon: "🔫", hp: 50, atk: 15, def: 5, speed: 6, gold: [45, 70], elite: true },
+      victoryOutcome: { text: "The hired gun leaves the county entirely, unwilling to fight a feud that isn't even his. The cousin, mortified, finally lets the whole thing drop.", gold: 60, xp: 50, gear: { defId: "throwingAxe", rarity: "rare" } }
+    },
+    { // 30 - finale milestone
+      type: "choice",
+      text: "The brothers sit you down between them - a rare, deliberate formality from two men who do almost nothing formally. \"Fam'ly recipe's fam'ly for a reason,\" the wiry one says. \"Figure you've more'n earned bein' called fam'ly, at this point.\"",
+      choices: [
+        { label: "Accept the honor", outcome: { text: "They toast you properly, the whole ritual, no jokes for once. Something about the moment sticks with you for good.", permanentStatBoost: { maxHp: 4, def: 1 }, gold: 60, xp: 65 } },
+        { label: "Ask what being family actually means to them", outcome: { text: "\"Means we'd go to the mat for you,\" the big brother says, simply. \"Same as for each other. That's the whole of it, really.\"", permanentStatBoost: { atk: 2 }, gold: 45, xp: 65 } }
+      ]
+    }
   ]
 };
 
